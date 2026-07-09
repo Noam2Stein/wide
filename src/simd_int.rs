@@ -11,6 +11,7 @@ macro_rules! impl_simd_int {
       N = $N:literal,
       Simd = $Simd:ident,
       UnsignedSimd = $UnsignedSimd:ident,
+      unsigned_simd_literal = $unsigned_simd_literal:literal,
       [$($index:literal),* $(,)?],
     }
 
@@ -310,6 +311,7 @@ macro_rules! impl_simd_int {
         Self::new([$(self_array[$index].saturating_div(rhs_array[$index])),*])
       }
 
+      #[cfg(feature = $unsigned_simd_literal)]
       #[inline]
       #[must_use]
       pub fn unsigned_abs(self) -> $UnsignedSimd {

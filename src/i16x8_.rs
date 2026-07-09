@@ -449,6 +449,7 @@ impl_simd_int! {
     N = 8,
     Simd = i16x8,
     UnsignedSimd = u16x8,
+    unsigned_simd_literal = "u16x8",
     [0, 1, 2, 3, 4, 5, 6, 7],
   }
 

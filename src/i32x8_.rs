@@ -250,6 +250,7 @@ impl_simd_int! {
     N = 8,
     Simd = i32x8,
     UnsignedSimd = u32x8,
+    unsigned_simd_literal = "u32x8",
     [0, 1, 2, 3, 4, 5, 6, 7],
   }
 
@@ -672,6 +673,7 @@ impl i32x8 {
     }
   }
 
+  #[cfg(feature = "f32x8")]
   #[inline]
   #[must_use]
   pub fn round_float(self) -> f32x8 {

@@ -798,6 +798,7 @@ impl u32x4 {
   ///
   /// Effectively does two multiplies on 128 bit platforms, but is easier
   /// to use than wrapping `mul_widen_u32_odd_m128i` individually.
+  #[cfg(feature = "u64x4")]
   #[inline]
   #[must_use]
   pub fn mul_widen(self, rhs: Self) -> u64x4 {

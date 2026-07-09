@@ -331,6 +331,7 @@ impl_simd_int! {
     N = 4,
     Simd = i32x4,
     UnsignedSimd = u32x4,
+    unsigned_simd_literal = "u32x4",
     [0, 1, 2, 3],
   }
 
@@ -875,6 +876,7 @@ impl i32x4 {
   ///
   /// Effectively does two multiplies on 128 bit platforms, but is easier
   /// to use than wrapping `mul_widen_i32_odd_m128i` individually.
+  #[cfg(feature = "i64x4")]
   #[inline]
   #[must_use]
   pub fn mul_widen(self, rhs: Self) -> i64x4 {
@@ -917,6 +919,7 @@ impl i32x4 {
     }
   }
 
+  #[cfg(feature = "f32x4")]
   #[inline]
   #[must_use]
   pub fn round_float(self) -> f32x4 {
