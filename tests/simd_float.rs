@@ -767,7 +767,7 @@ fn test_fract() {
 }
 
 #[test]
-fn test_mul_add() {
+fn test_fast_mul_add() {
   for_simd_types!(|T: Float, N| {
     for [value, a, b] in simd_chunks!(
       [
@@ -799,7 +799,7 @@ fn test_mul_add() {
     ) {
       let expected =
         Simd::new(std::array::from_fn(|i| value[i].mul_add(a[i], b[i])));
-      let actual = Simd::new(value).mul_add(Simd::new(a), Simd::new(b));
+      let actual = Simd::new(value).fast_mul_add(Simd::new(a), Simd::new(b));
 
       assert!(
         (actual - expected).abs().simd_le(expected.abs() * 1e-6).all(),
@@ -822,7 +822,7 @@ fn test_mul_add() {
 }
 
 #[test]
-fn test_mul_neg_add() {
+fn test_fast_mul_neg_add() {
   for_simd_types!(|T: Float, N| {
     for [value, a, b] in simd_chunks!(
       [
@@ -853,7 +853,8 @@ fn test_mul_neg_add() {
       ],
     ) {
       let expected = Simd::new(std::array::from_fn(|i| b[i] - value[i] * a[i]));
-      let actual = Simd::new(value).mul_neg_add(Simd::new(a), Simd::new(b));
+      let actual =
+        Simd::new(value).fast_mul_neg_add(Simd::new(a), Simd::new(b));
 
       assert!(
         (actual - expected).abs().simd_le(expected.abs() * 1e-6).all(),
@@ -864,7 +865,7 @@ fn test_mul_neg_add() {
 }
 
 #[test]
-fn test_mul_sub() {
+fn test_fast_mul_sub() {
   for_simd_types!(|T: Float, N| {
     for [value, a, b] in simd_chunks!(
       [
@@ -895,7 +896,7 @@ fn test_mul_sub() {
       ],
     ) {
       let expected = Simd::new(std::array::from_fn(|i| value[i] * a[i] - b[i]));
-      let actual = Simd::new(value).mul_sub(Simd::new(a), Simd::new(b));
+      let actual = Simd::new(value).fast_mul_sub(Simd::new(a), Simd::new(b));
 
       assert!(
         (actual - expected).abs().simd_le(expected.abs() * 1e-6).all(),
@@ -906,7 +907,7 @@ fn test_mul_sub() {
 }
 
 #[test]
-fn test_mul_neg_sub() {
+fn test_fast_mul_neg_sub() {
   for_simd_types!(|T: Float, N| {
     for [value, a, b] in simd_chunks!(
       [
@@ -938,7 +939,8 @@ fn test_mul_neg_sub() {
     ) {
       let expected =
         Simd::new(std::array::from_fn(|i| -value[i] * a[i] - b[i]));
-      let actual = Simd::new(value).mul_neg_sub(Simd::new(a), Simd::new(b));
+      let actual =
+        Simd::new(value).fast_mul_neg_sub(Simd::new(a), Simd::new(b));
 
       assert!(
         (actual - expected).abs().simd_le(expected.abs() * 1e-6).all(),

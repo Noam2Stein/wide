@@ -758,13 +758,13 @@ impl_simd_float! {
   /// let b = f64x8::from([2.0; 8]);
   /// let c = f64x8::from([10.0; 8]);
   ///
-  /// let result = a.mul_add(b, c);
+  /// let result = a.fast_mul_add(b, c);
   ///
   /// let expected = f64x8::from([12.0; 8]);
   /// assert_eq!(result, expected);
   /// ```
   #[inline]
-  pub fn mul_add(self, m: Self, a: Self) -> Self {
+  pub fn fast_mul_add(self, m: Self, a: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f",target_feature="fma"))] {
         Self { avx512: fused_mul_add_m512d(self.avx512, m.avx512, a.avx512) }
@@ -773,8 +773,8 @@ impl_simd_float! {
         (self * m) + a
       } else {
         Self {
-          a : self.a.mul_add(m.a, a.a),
-          b : self.b.mul_add(m.b, a.b),
+          a : self.a.fast_mul_add(m.a, a.a),
+          b : self.b.fast_mul_add(m.b, a.b),
         }
       }
     }
@@ -795,13 +795,13 @@ impl_simd_float! {
   /// let b = f64x8::from([3.0; 8]);
   /// let c = f64x8::from([5.0; 8]);
   ///
-  /// let result = a.mul_sub(b, c);
+  /// let result = a.fast_mul_sub(b, c);
   ///
   /// let expected = f64x8::from([25.0; 8]);
   /// assert_eq!(result, expected);
   /// ```
   #[inline]
-  pub fn mul_sub(self, m: Self, s: Self) -> Self {
+  pub fn fast_mul_sub(self, m: Self, s: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f",target_feature="fma"))] {
         Self { avx512: fused_mul_sub_m512d(self.avx512, m.avx512, s.avx512) }
@@ -810,8 +810,8 @@ impl_simd_float! {
         (self * m) - s
       } else {
         Self {
-          a : self.a.mul_sub(m.a, s.a),
-          b : self.b.mul_sub(m.b, s.b),
+          a : self.a.fast_mul_sub(m.a, s.a),
+          b : self.b.fast_mul_sub(m.b, s.b),
         }
       }
     }
@@ -832,13 +832,13 @@ impl_simd_float! {
   /// let b = f64x8::from([2.0; 8]);
   /// let c = f64x8::from([10.0; 8]);
   ///
-  /// let result = a.mul_neg_add(b, c);
+  /// let result = a.fast_mul_neg_add(b, c);
   ///
   /// let expected = f64x8::from([2.0; 8]);
   /// assert_eq!(result, expected);
   /// ```
   #[inline]
-  pub fn mul_neg_add(self, m: Self, a: Self) -> Self {
+  pub fn fast_mul_neg_add(self, m: Self, a: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f",target_feature="fma"))] {
         Self { avx512: fused_mul_neg_add_m512d(self.avx512, m.avx512, a.avx512) }
@@ -847,8 +847,8 @@ impl_simd_float! {
         a - (self * m)
       } else {
         Self {
-          a : self.a.mul_neg_add(m.a, a.a),
-          b : self.b.mul_neg_add(m.b, a.b),
+          a : self.a.fast_mul_neg_add(m.a, a.a),
+          b : self.b.fast_mul_neg_add(m.b, a.b),
         }
       }
     }
@@ -869,13 +869,13 @@ impl_simd_float! {
   /// let b = f64x8::from([2.0; 8]);
   /// let c = f64x8::from([1.0; 8]);
   ///
-  /// let result = a.mul_neg_sub(b, c);
+  /// let result = a.fast_mul_neg_sub(b, c);
   ///
   /// let expected = f64x8::from([-9.0; 8]);
   /// assert_eq!(result, expected);
   /// ```
   #[inline]
-  pub fn mul_neg_sub(self, m: Self, s: Self) -> Self {
+  pub fn fast_mul_neg_sub(self, m: Self, s: Self) -> Self {
     pick! {
        if #[cfg(all(target_feature="avx512f",target_feature="fma"))] {
          Self { avx512: fused_mul_neg_sub_m512d(self.avx512, m.avx512, s.avx512) }
@@ -884,8 +884,8 @@ impl_simd_float! {
           -(self * m) - s
         } else {
          Self {
-           a : self.a.mul_neg_sub(m.a, s.a),
-           b : self.b.mul_neg_sub(m.b, s.b),
+           a : self.a.fast_mul_neg_sub(m.a, s.a),
+           b : self.b.fast_mul_neg_sub(m.b, s.b),
          }
        }
     }
@@ -937,20 +937,20 @@ impl_simd_float! {
     let ef = x1.exponent();
     let ef = mask.select(ef + f64x8::ONE, ef);
     let e1 = (ef * n).round_ties_even();
-    let yr = ef.mul_sub(n, e1);
+    let yr = ef.fast_mul_sub(n, e1);
 
-    let lg = f64x8::HALF.mul_neg_add(x2, x) + lg1;
-    let x2err = (f64x8::HALF * x).mul_sub(x, f64x8::HALF * x2);
-    let lg_err = f64x8::HALF.mul_add(x2, lg - x) - lg1;
+    let lg = f64x8::HALF.fast_mul_neg_add(x2, x) + lg1;
+    let x2err = (f64x8::HALF * x).fast_mul_sub(x, f64x8::HALF * x2);
+    let lg_err = f64x8::HALF.fast_mul_add(x2, lg - x) - lg1;
 
     let e2 = (lg * n * f64x8::LOG2_E).round_ties_even();
-    let v = lg.mul_sub(n, e2 * ln2d_hi);
-    let v = e2.mul_neg_add(ln2d_lo, v);
-    let v = v - (lg_err + x2err).mul_sub(n, yr * f64x8::LN_2);
+    let v = lg.fast_mul_sub(n, e2 * ln2d_hi);
+    let v = e2.fast_mul_neg_add(ln2d_lo, v);
+    let v = v - (lg_err + x2err).fast_mul_sub(n, yr * f64x8::LN_2);
 
     let x = v;
     let e3 = (x * f64x8::LOG2_E).round_ties_even();
-    let x = e3.mul_neg_add(f64x8::LN_2, x);
+    let x = e3.fast_mul_neg_add(f64x8::LN_2, x);
     let z =
       polynomial_13!(x, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13)
         + f64x8::ONE;
@@ -1059,8 +1059,8 @@ impl_simd_float! {
     let excess = r - max_r;
     let excess = big.select(excess, Self::ZERO);
     let scale = Self::vm_pow2n(excess);
-    let x = r.mul_neg_add(LN2D_HI, self);
-    let x = r.mul_neg_add(LN2D_LO, x);
+    let x = r.fast_mul_neg_add(LN2D_HI, self);
+    let x = r.fast_mul_neg_add(LN2D_LO, x);
     let z =
       polynomial_13!(x, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13);
     let n2 = Self::vm_pow2n(r_safe);
@@ -1111,7 +1111,7 @@ impl_simd_float! {
     let fract_partial_exp2 =
       polynomial_8!(fract, P2, P3, P4, P5, P6, P7, P8, P9, P10);
     let fract2 = fract * fract;
-    let fract_exp2 = fract_partial_exp2.mul_add(fract2, fract) + Self::ONE;
+    let fract_exp2 = fract_partial_exp2.fast_mul_add(fract2, fract) + Self::ONE;
 
     let n2 = Self::vm_pow2n(r_safe);
     let result = fract_exp2 * scale * n2;
@@ -1165,9 +1165,9 @@ impl_simd_float! {
     let px = x2 * x * px;
     let qx = polynomial_5n!(x, Q0, Q1, Q2, Q3, Q4);
     let res = px / qx;
-    let res = fe.mul_add(LN2F_LO, res);
-    let res = res + x2.mul_neg_add(HALF, x);
-    let res = fe.mul_add(LN2F_HI, res);
+    let res = fe.fast_mul_add(LN2F_LO, res);
+    let res = res + x2.fast_mul_neg_add(HALF, x);
+    let res = fe.fast_mul_add(LN2F_HI, res);
     let overflow = !self.is_finite();
     let underflow = x1.simd_lt(VM_SMALLEST_NORMAL);
     let mask = overflow | underflow;
@@ -1222,7 +1222,7 @@ impl_simd_float! {
     // Newton for 1/cbrt: x = x - (d * x^4 - x) / 3.
     let x2 = x * x;
     let x4 = x2 * x2;
-    x = x - d.mul_add(x4, -x) * Self::from(1.0 / 3.0);
+    x = x - d.fast_mul_add(x4, -x) * Self::from(1.0 / 3.0);
 
     // cbrt(d) = d * x^2, then polish
     let mut y = (d * x) * x;
@@ -1299,18 +1299,18 @@ impl_simd_float! {
     let mut qx = f64x8::default();
 
     if do_big {
-      rx = x3.mul_add(R3asin, x2 * R2asin)
-        + x4.mul_add(R4asin, x1.mul_add(R1asin, R0asin));
+      rx = x3.fast_mul_add(R3asin, x2 * R2asin)
+        + x4.fast_mul_add(R4asin, x1.fast_mul_add(R1asin, R0asin));
       sx =
-        x3.mul_add(S3asin, x4) + x2.mul_add(S2asin, x1.mul_add(S1asin, S0asin));
+        x3.fast_mul_add(S3asin, x4) + x2.fast_mul_add(S2asin, x1.fast_mul_add(S1asin, S0asin));
     }
     if do_small {
-      px = x3.mul_add(P3asin, P0asin)
-        + x4.mul_add(P4asin, x1 * P1asin)
-        + x5.mul_add(P5asin, x2 * P2asin);
-      qx = x4.mul_add(Q4asin, x5)
-        + x3.mul_add(Q3asin, x1 * Q1asin)
-        + x2.mul_add(Q2asin, Q0asin);
+      px = x3.fast_mul_add(P3asin, P0asin)
+        + x4.fast_mul_add(P4asin, x1 * P1asin)
+        + x5.fast_mul_add(P5asin, x2 * P2asin);
+      qx = x4.fast_mul_add(Q4asin, x5)
+        + x3.fast_mul_add(Q3asin, x1 * Q1asin)
+        + x2.fast_mul_add(Q2asin, Q0asin);
     };
 
     let vx = big.select(rx, px);
@@ -1322,11 +1322,11 @@ impl_simd_float! {
     let mut z2 = f64x8::default();
     if do_big {
       let xb = (x1 + x1).sqrt();
-      z1 = xb.mul_add(y1, xb);
+      z1 = xb.fast_mul_add(y1, xb);
     }
 
     if do_small {
-      z2 = xa.mul_add(y1, xa);
+      z2 = xa.fast_mul_add(y1, xa);
     }
 
     // asin
@@ -1385,18 +1385,18 @@ impl_simd_float! {
     let mut qx = f64x8::default();
 
     if do_big {
-      rx = x3.mul_add(R3asin, x2 * R2asin)
-        + x4.mul_add(R4asin, x1.mul_add(R1asin, R0asin));
+      rx = x3.fast_mul_add(R3asin, x2 * R2asin)
+        + x4.fast_mul_add(R4asin, x1.fast_mul_add(R1asin, R0asin));
       sx =
-        x3.mul_add(S3asin, x4) + x2.mul_add(S2asin, x1.mul_add(S1asin, S0asin));
+        x3.fast_mul_add(S3asin, x4) + x2.fast_mul_add(S2asin, x1.fast_mul_add(S1asin, S0asin));
     }
     if do_small {
-      px = x3.mul_add(P3asin, P0asin)
-        + x4.mul_add(P4asin, x1 * P1asin)
-        + x5.mul_add(P5asin, x2 * P2asin);
-      qx = x4.mul_add(Q4asin, x5)
-        + x3.mul_add(Q3asin, x1 * Q1asin)
-        + x2.mul_add(Q2asin, Q0asin);
+      px = x3.fast_mul_add(P3asin, P0asin)
+        + x4.fast_mul_add(P4asin, x1 * P1asin)
+        + x5.fast_mul_add(P5asin, x2 * P2asin);
+      qx = x4.fast_mul_add(Q4asin, x5)
+        + x3.fast_mul_add(Q3asin, x1 * Q1asin)
+        + x2.fast_mul_add(Q2asin, Q0asin);
     };
 
     let vx = big.select(rx, px);
@@ -1408,11 +1408,11 @@ impl_simd_float! {
     let mut z2 = f64x8::default();
     if do_big {
       let xb = (x1 + x1).sqrt();
-      z1 = xb.mul_add(y1, xb);
+      z1 = xb.fast_mul_add(y1, xb);
     }
 
     if do_small {
-      z2 = xa.mul_add(y1, xa);
+      z2 = xa.fast_mul_add(y1, xa);
     }
 
     // acos
@@ -1470,7 +1470,7 @@ impl_simd_float! {
     let px = polynomial_4!(zz, P0atan, P1atan, P2atan, P3atan, P4atan);
     let qx = polynomial_5n!(zz, Q0atan, Q1atan, Q2atan, Q3atan, Q4atan);
 
-    let mut re = (px / qx).mul_add(z * zz, z);
+    let mut re = (px / qx).fast_mul_add(z * zz, z);
     re += s + fac;
 
     // get sign bit
@@ -1545,7 +1545,7 @@ impl_simd_float! {
     let px = polynomial_4!(zz, P0atan, P1atan, P2atan, P3atan, P4atan);
     let qx = polynomial_5n!(zz, Q0atan, Q1atan, Q2atan, Q3atan, Q4atan);
 
-    let mut re = (px / qx).mul_add(z * zz, z);
+    let mut re = (px / qx).fast_mul_add(z * zz, z);
     re += s + fac;
 
     // move back in place
@@ -1589,14 +1589,14 @@ impl_simd_float! {
     let y = (xa * TWO_OVER_PI).round_ties_even();
     let q = y.round_int();
 
-    let x = y.mul_neg_add(DP3, y.mul_neg_add(DP2, y.mul_neg_add(DP1, xa)));
+    let x = y.fast_mul_neg_add(DP3, y.fast_mul_neg_add(DP2, y.fast_mul_neg_add(DP1, xa)));
 
     let x2 = x * x;
     let mut s = polynomial_5!(x2, P0sin, P1sin, P2sin, P3sin, P4sin, P5sin);
     let mut c = polynomial_5!(x2, P0cos, P1cos, P2cos, P3cos, P4cos, P5cos);
-    s = (x * x2).mul_add(s, x);
+    s = (x * x2).fast_mul_add(s, x);
     c =
-      (x2 * x2).mul_add(c, x2.mul_neg_add(f64x8::from(0.5), f64x8::from(1.0)));
+      (x2 * x2).fast_mul_add(c, x2.fast_mul_neg_add(f64x8::from(0.5), f64x8::from(1.0)));
 
     let swap = !((q & i64x8::from(1)).simd_eq(i64x8::from(0)));
 
@@ -1672,19 +1672,19 @@ impl_simd_float! {
     let mut qx = f64x8::default();
 
     if do_big {
-      rx = x3.mul_add(R3asin, x2 * R2asin)
-        + x4.mul_add(R4asin, x1.mul_add(R1asin, R0asin));
+      rx = x3.fast_mul_add(R3asin, x2 * R2asin)
+        + x4.fast_mul_add(R4asin, x1.fast_mul_add(R1asin, R0asin));
       sx =
-        x3.mul_add(S3asin, x4) + x2.mul_add(S2asin, x1.mul_add(S1asin, S0asin));
+        x3.fast_mul_add(S3asin, x4) + x2.fast_mul_add(S2asin, x1.fast_mul_add(S1asin, S0asin));
     }
 
     if do_small {
-      px = x3.mul_add(P3asin, P0asin)
-        + x4.mul_add(P4asin, x1 * P1asin)
-        + x5.mul_add(P5asin, x2 * P2asin);
-      qx = x4.mul_add(Q4asin, x5)
-        + x3.mul_add(Q3asin, x1 * Q1asin)
-        + x2.mul_add(Q2asin, Q0asin);
+      px = x3.fast_mul_add(P3asin, P0asin)
+        + x4.fast_mul_add(P4asin, x1 * P1asin)
+        + x5.fast_mul_add(P5asin, x2 * P2asin);
+      qx = x4.fast_mul_add(Q4asin, x5)
+        + x3.fast_mul_add(Q3asin, x1 * Q1asin)
+        + x2.fast_mul_add(Q2asin, Q0asin);
     };
 
     let vx = big.select(rx, px);
@@ -1696,11 +1696,11 @@ impl_simd_float! {
     let mut z2 = f64x8::default();
     if do_big {
       let xb = (x1 + x1).sqrt();
-      z1 = xb.mul_add(y1, xb);
+      z1 = xb.fast_mul_add(y1, xb);
     }
 
     if do_small {
-      z2 = xa.mul_add(y1, xa);
+      z2 = xa.fast_mul_add(y1, xa);
     }
 
     // asin
@@ -1752,8 +1752,8 @@ impl_simd_float! {
     let excess = r - max_r;
     let excess = big.select(excess, Self::ZERO);
     let scale = Self::vm_pow2n(excess);
-    let x = r.mul_neg_add(LN2D_HI, self);
-    let x = r.mul_neg_add(LN2D_LO, x);
+    let x = r.fast_mul_neg_add(LN2D_HI, self);
+    let x = r.fast_mul_neg_add(LN2D_LO, x);
     let z =
       polynomial_13!(x, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13);
     let n2 = Self::vm_pow2n(r_safe);

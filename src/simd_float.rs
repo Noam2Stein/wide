@@ -50,10 +50,10 @@ macro_rules! impl_simd_float {
     $fn_trunc:item
     $fn_trunc_int:item
     $fn_fast_trunc_int:item
-    $fn_mul_add:item
-    $fn_mul_sub:item
-    $fn_mul_neg_add:item
-    $fn_mul_neg_sub:item
+    $fn_fast_mul_add:item
+    $fn_fast_mul_sub:item
+    $fn_fast_mul_neg_add:item
+    $fn_fast_mul_neg_sub:item
     $fn_powf_simd:item
     $fn_sqrt:item
     $fn_exp:item
@@ -396,7 +396,7 @@ macro_rules! impl_simd_float {
       /// a single rounding operation. Without FMA support, it falls back to
       /// separate multiply and add operations with two roundings.
       #[must_use]
-      $fn_mul_add
+      $fn_fast_mul_add
 
       /// Performs a multiply-subtract operation: `self * m - s`
       ///
@@ -404,7 +404,7 @@ macro_rules! impl_simd_float {
       /// a single rounding operation. Without FMA support, it falls back to
       /// separate multiply and subtract operations with two roundings.
       #[must_use]
-      $fn_mul_sub
+      $fn_fast_mul_sub
 
       /// Performs a negative multiply-add operation: `a - (self * m)`
       ///
@@ -412,7 +412,7 @@ macro_rules! impl_simd_float {
       /// a single rounding operation. Without FMA support, it falls back to
       /// separate operations with two roundings.
       #[must_use]
-      $fn_mul_neg_add
+      $fn_fast_mul_neg_add
 
       /// Performs a negative multiply-subtract operation: `-(self * m) - s`
       ///
@@ -420,7 +420,7 @@ macro_rules! impl_simd_float {
       /// a single rounding operation. Without FMA support, it falls back to
       /// separate operations with two roundings.
       #[must_use]
-      $fn_mul_neg_sub
+      $fn_fast_mul_neg_sub
 
       #[inline]
       #[must_use]
