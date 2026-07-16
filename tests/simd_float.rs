@@ -797,26 +797,29 @@ fn test_fast_mul_add() {
         8.0, 6.0, 53.0,
       ],
     ) {
-      let expected =
+      let expected_fused =
         Simd::new(std::array::from_fn(|i| value[i].mul_add(a[i], b[i])));
+      let expected_seperate =
+        Simd::new(std::array::from_fn(|i| value[i] * a[i] + b[i]));
       let actual = Simd::new(value).fast_mul_add(Simd::new(a), Simd::new(b));
 
-      assert!(
-        (actual - expected).abs().simd_le(expected.abs() * 1e-6).all(),
-        "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
-      );
-
-      #[cfg(any(
+      if cfg!(any(
         all(
           target_feature = "fma",
           any(target_arch = "x86", target_arch = "x86_64"),
         ),
         all(target_feature = "neon", target_arch = "aarch64"),
-      ))]
-      assert!(
-        actual == expected,
-        "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
-      );
+      )) {
+        assert!(
+          actual == expected_fused,
+          "expected: {expected_fused:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
+        );
+      } else {
+        assert!(
+          actual == expected_fused || actual == expected_seperate,
+          "expected: {expected_fused:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
+        );
+      }
     }
   });
 }
@@ -852,12 +855,13 @@ fn test_fast_mul_neg_add() {
         8.0, 6.0, 53.0,
       ],
     ) {
-      let expected = Simd::new(std::array::from_fn(|i| b[i] - value[i] * a[i]));
+      // Whether to fuse should always match `fast_mul_add` exactly.
+      let expected = Simd::new(value).fast_mul_add(-Simd::new(a), Simd::new(b));
       let actual =
         Simd::new(value).fast_mul_neg_add(Simd::new(a), Simd::new(b));
 
       assert!(
-        (actual - expected).abs().simd_le(expected.abs() * 1e-6).all(),
+        actual == expected,
         "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
       );
     }
@@ -895,11 +899,12 @@ fn test_fast_mul_sub() {
         8.0, 6.0, 53.0,
       ],
     ) {
-      let expected = Simd::new(std::array::from_fn(|i| value[i] * a[i] - b[i]));
+      // Whether to fuse should always match `fast_mul_add` exactly.
+      let expected = Simd::new(value).fast_mul_add(Simd::new(a), -Simd::new(b));
       let actual = Simd::new(value).fast_mul_sub(Simd::new(a), Simd::new(b));
 
       assert!(
-        (actual - expected).abs().simd_le(expected.abs() * 1e-6).all(),
+        actual == expected,
         "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
       );
     }
@@ -937,13 +942,14 @@ fn test_fast_mul_neg_sub() {
         8.0, 6.0, 53.0,
       ],
     ) {
+      // Whether to fuse should always match `fast_mul_add` exactly.
       let expected =
-        Simd::new(std::array::from_fn(|i| -value[i] * a[i] - b[i]));
+        Simd::new(value).fast_mul_add(-Simd::new(a), -Simd::new(b));
       let actual =
         Simd::new(value).fast_mul_neg_sub(Simd::new(a), Simd::new(b));
 
       assert!(
-        (actual - expected).abs().simd_le(expected.abs() * 1e-6).all(),
+        actual == expected,
         "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
       );
     }
