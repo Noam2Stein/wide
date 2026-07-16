@@ -758,6 +758,11 @@ impl_simd_float! {
     }
   }
 
+  #[inline]
+  pub fn mul_add(self, a: Self, b: Self) -> Self {
+    todo!()
+  }
+
   ///
   /// # Platform-specific behavior (may change in the future)
   ///
@@ -781,6 +786,11 @@ impl_simd_float! {
         }
       }
     }
+  }
+
+  #[inline]
+  pub fn mul_sub(self, a: Self, b: Self) -> Self {
+    todo!()
   }
 
   ///
@@ -808,6 +818,11 @@ impl_simd_float! {
     }
   }
 
+  #[inline]
+  pub fn mul_neg_add(self, a: Self, b: Self) -> Self {
+    todo!()
+  }
+
   ///
   /// # Platform-specific behavior (may change in the future)
   ///
@@ -831,6 +846,11 @@ impl_simd_float! {
         }
       }
     }
+  }
+
+  #[inline]
+  pub fn mul_neg_sub(self, a: Self, b: Self) -> Self {
+    todo!()
   }
 
   ///

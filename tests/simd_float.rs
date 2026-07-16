@@ -767,6 +767,51 @@ fn test_fract() {
 }
 
 #[test]
+fn test_mul_add() {
+  for_simd_types!(|T: Float, N| {
+    for [value, a, b] in simd_chunks!(
+      [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.7,
+        9.2,
+        11.5,
+        12.2,
+        1.0,
+        2.0,
+        -34578.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        4538093452.0,
+      ],
+      [
+        4.0, 5.0, 6.0, 7.0, 1.5, 8.9, 4.2, 5.6, 2.0, 3.0, 23.0, 5.0, 6.0, 7.0,
+        8.0, 9.0,
+      ],
+      [
+        1.5, 8.9, 4.2, 5.6, 2.0, 3.5, 4.0, 5.1, 9.0, 4.0, 5.32, 6.03, 7.12,
+        8.0, 6.0, 53.0,
+      ],
+    )
+    .chain(random_iter())
+    {
+      let expected =
+        Simd::new(std::array::from_fn(|i| value[i].mul_add(a[i], b[i])));
+      let actual = Simd::new(value).mul_add(Simd::new(a), Simd::new(b));
+
+      assert!(
+        (actual.simd_eq(expected) | actual.is_nan() & expected.is_nan()).all(),
+        "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
+      );
+    }
+  });
+}
+
+#[test]
 fn test_fast_mul_add() {
   for_simd_types!(|T: Float, N| {
     for [value, a, b] in simd_chunks!(
@@ -825,6 +870,51 @@ fn test_fast_mul_add() {
 }
 
 #[test]
+fn test_mul_neg_add() {
+  for_simd_types!(|T: Float, N| {
+    for [value, a, b] in simd_chunks!(
+      [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.7,
+        9.2,
+        11.5,
+        12.2,
+        1.0,
+        2.0,
+        -34578.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        4538093452.0,
+      ],
+      [
+        4.0, 5.0, 6.0, 7.0, 1.5, 8.9, 4.2, 5.6, 2.0, 3.0, 23.0, 5.0, 6.0, 7.0,
+        8.0, 9.0,
+      ],
+      [
+        1.5, 8.9, 4.2, 5.6, 2.0, 3.5, 4.0, 5.1, 9.0, 4.0, 5.32, 6.03, 7.12,
+        8.0, 6.0, 53.0,
+      ],
+    )
+    .chain(random_iter())
+    {
+      let expected =
+        Simd::new(std::array::from_fn(|i| value[i].mul_add(-a[i], b[i])));
+      let actual = Simd::new(value).mul_neg_add(Simd::new(a), Simd::new(b));
+
+      assert!(
+        (actual.simd_eq(expected) | actual.is_nan() & expected.is_nan()).all(),
+        "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
+      );
+    }
+  });
+}
+
+#[test]
 fn test_fast_mul_neg_add() {
   for_simd_types!(|T: Float, N| {
     for [value, a, b] in simd_chunks!(
@@ -869,6 +959,51 @@ fn test_fast_mul_neg_add() {
 }
 
 #[test]
+fn test_mul_sub() {
+  for_simd_types!(|T: Float, N| {
+    for [value, a, b] in simd_chunks!(
+      [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.7,
+        9.2,
+        11.5,
+        12.2,
+        1.0,
+        2.0,
+        -34578.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        4538093452.0,
+      ],
+      [
+        4.0, 5.0, 6.0, 7.0, 1.5, 8.9, 4.2, 5.6, 2.0, 3.0, 23.0, 5.0, 6.0, 7.0,
+        8.0, 9.0,
+      ],
+      [
+        1.5, 8.9, 4.2, 5.6, 2.0, 3.5, 4.0, 5.1, 9.0, 4.0, 5.32, 6.03, 7.12,
+        8.0, 6.0, 53.0,
+      ],
+    )
+    .chain(random_iter())
+    {
+      let expected =
+        Simd::new(std::array::from_fn(|i| value[i].mul_add(a[i], -b[i])));
+      let actual = Simd::new(value).mul_sub(Simd::new(a), Simd::new(b));
+
+      assert!(
+        (actual.simd_eq(expected) | actual.is_nan() & expected.is_nan()).all(),
+        "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
+      );
+    }
+  });
+}
+
+#[test]
 fn test_fast_mul_sub() {
   for_simd_types!(|T: Float, N| {
     for [value, a, b] in simd_chunks!(
@@ -905,6 +1040,51 @@ fn test_fast_mul_sub() {
 
       assert!(
         actual == expected,
+        "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
+      );
+    }
+  });
+}
+
+#[test]
+fn test_mul_neg_sub() {
+  for_simd_types!(|T: Float, N| {
+    for [value, a, b] in simd_chunks!(
+      [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.7,
+        9.2,
+        11.5,
+        12.2,
+        1.0,
+        2.0,
+        -34578.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        4538093452.0,
+      ],
+      [
+        4.0, 5.0, 6.0, 7.0, 1.5, 8.9, 4.2, 5.6, 2.0, 3.0, 23.0, 5.0, 6.0, 7.0,
+        8.0, 9.0,
+      ],
+      [
+        1.5, 8.9, 4.2, 5.6, 2.0, 3.5, 4.0, 5.1, 9.0, 4.0, 5.32, 6.03, 7.12,
+        8.0, 6.0, 53.0,
+      ],
+    )
+    .chain(random_iter())
+    {
+      let expected =
+        Simd::new(std::array::from_fn(|i| value[i].mul_add(-a[i], -b[i])));
+      let actual = Simd::new(value).mul_neg_sub(Simd::new(a), Simd::new(b));
+
+      assert!(
+        (actual.simd_eq(expected) | actual.is_nan() & expected.is_nan()).all(),
         "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
       );
     }

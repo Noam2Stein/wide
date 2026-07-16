@@ -50,9 +50,13 @@ macro_rules! impl_simd_float {
     $fn_trunc:item
     $fn_trunc_int:item
     $fn_fast_trunc_int:item
+    $fn_mul_add:item
     $fn_fast_mul_add:item
+    $fn_mul_sub:item
     $fn_fast_mul_sub:item
+    $fn_mul_neg_add:item
     $fn_fast_mul_neg_add:item
+    $fn_mul_neg_sub:item
     $fn_fast_mul_neg_sub:item
     $fn_powf_simd:item
     $fn_sqrt:item
@@ -391,6 +395,25 @@ macro_rules! impl_simd_float {
       }
 
       /// Fused multiply-add. Computes `(self * a) + b` with only one rounding
+      /// error, yielding a more accurate result than an unfused multiply-add.
+      ///
+      /// This always returns the precise result, even if there is no hardware
+      /// `fma` support. In past versions, this function used to fallback to an
+      /// unfused multiply-add, instead of a precise but slow software
+      /// implementation. The previous behavior has been moved to
+      /// [`fast_mul_add`].
+      ///
+      /// # Unspecified precision
+      ///
+      /// The precision of this function is non-deterministic. This means it
+      /// varies by platform, version, and can even differ within the same
+      /// execution from one invocation to the next.
+      ///
+      /// [`fast_mul_add`]: Self::fast_mul_add
+      #[must_use]
+      $fn_mul_add
+
+      /// Fused multiply-add. Computes `(self * a) + b` with only one rounding
       /// error if possible.
       ///
       /// If there is hardware FMA support, this computes the result with only
@@ -398,6 +421,26 @@ macro_rules! impl_simd_float {
       /// add operations, resulting in two rounding errors.
       #[must_use]
       $fn_fast_mul_add
+
+      /// Fused multiply-subtract. Computes `(self * a) - b` with only one
+      /// rounding error, yielding a more accurate result than an unfused
+      /// multiply-subtract.
+      ///
+      /// This always returns the precise result, even if there is no hardware
+      /// `fma` support. In past versions, this function used to fallback to an
+      /// unfused multiply-subtract, instead of a precise but slow software
+      /// implementation. The previous behavior has been moved to
+      /// [`fast_mul_sub`].
+      ///
+      /// # Unspecified precision
+      ///
+      /// The precision of this function is non-deterministic. This means it
+      /// varies by platform, version, and can even differ within the same
+      /// execution from one invocation to the next.
+      ///
+      /// [`fast_mul_sub`]: Self::fast_mul_sub
+      #[must_use]
+      $fn_mul_sub
 
       /// Fused multiply-subtract. Computes `(self * a) - b` with only one
       /// rounding error if possible.
@@ -409,6 +452,26 @@ macro_rules! impl_simd_float {
       $fn_fast_mul_sub
 
       /// Fused multiply-negate-add. Computes `-(self * a) + b` with only one
+      /// rounding error, yielding a more accurate result than an unfused
+      /// multiply-negate-add.
+      ///
+      /// This always returns the precise result, even if there is no hardware
+      /// `fma` support. In past versions, this function used to fallback to an
+      /// unfused multiply-negate-add, instead of a precise but slow software
+      /// implementation. The previous behavior has been moved to
+      /// [`fast_mul_neg_add`].
+      ///
+      /// # Unspecified precision
+      ///
+      /// The precision of this function is non-deterministic. This means it
+      /// varies by platform, version, and can even differ within the same
+      /// execution from one invocation to the next.
+      ///
+      /// [`fast_mul_neg_add`]: Self::fast_mul_neg_add
+      #[must_use]
+      $fn_mul_neg_add
+
+      /// Fused multiply-negate-add. Computes `-(self * a) + b` with only one
       /// rounding error if possible.
       ///
       /// If there is hardware FMA support, this computes the result with only
@@ -416,6 +479,26 @@ macro_rules! impl_simd_float {
       /// add operations, resulting in two rounding errors.
       #[must_use]
       $fn_fast_mul_neg_add
+
+      /// Fused multiply-negate-subtract. Computes `-(self * a) - b` with only
+      /// one rounding error, yielding a more accurate result than an unfused
+      /// multiply-negate-subtract.
+      ///
+      /// This always returns the precise result, even if there is no hardware
+      /// `fma` support. In past versions, this function used to fallback to an
+      /// unfused multiply-negate-subtract, instead of a precise but slow
+      /// software implementation. The previous behavior has been moved to
+      /// [`fast_mul_neg_sub`].
+      ///
+      /// # Unspecified precision
+      ///
+      /// The precision of this function is non-deterministic. This means it
+      /// varies by platform, version, and can even differ within the same
+      /// execution from one invocation to the next.
+      ///
+      /// [`fast_mul_neg_sub`]: Self::fast_mul_neg_sub
+      #[must_use]
+      $fn_mul_neg_sub
 
       /// Fused multiply-negate-subtract. Computes `-(self * a) - b` with only
       /// one rounding error if possible.
