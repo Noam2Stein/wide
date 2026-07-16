@@ -785,24 +785,12 @@ impl_simd_float! {
   }
 
   ///
-  /// # Platform-specific behavior
+  /// # Platform-specific behavior (may change in the future)
+  ///
   /// - On `x86`/`x86_64` with AVX+FMA: Uses `vfmadd` (single rounding, best
   ///   accuracy)
   /// - On `x86`/`x86_64` with AVX only: Uses `(self * m) + a` (two roundings)
   /// - Other platforms: Delegates to [`f32x4`] (may use NEON FMA or fallback)
-  ///
-  /// # Examples
-  /// ```
-  /// # use wide::f32x8;
-  /// let a = f32x8::from([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-  /// let b = f32x8::from([2.0; 8]);
-  /// let c = f32x8::from([10.0; 8]);
-  ///
-  /// let result = a.fast_mul_add(b, c);
-  ///
-  /// let expected = f32x8::from([12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 24.0, 26.0]);
-  /// assert_eq!(result, expected);
-  /// ```
   #[inline]
   pub fn fast_mul_add(self, m: Self, a: Self) -> Self {
     pick! {
@@ -821,24 +809,12 @@ impl_simd_float! {
   }
 
   ///
-  /// # Platform-specific behavior
+  /// # Platform-specific behavior (may change in the future)
+  ///
   /// - On `x86`/`x86_64` with AVX+FMA: Uses `vfmsub` (single rounding, best
   ///   accuracy)
   /// - On `x86`/`x86_64` with AVX only: Uses `(self * m) - s` (two roundings)
   /// - Other platforms: Delegates to [`f32x4`] (may use NEON FMA or fallback)
-  ///
-  /// # Examples
-  /// ```
-  /// # use wide::f32x8;
-  /// let a = f32x8::from([10.0; 8]);
-  /// let b = f32x8::from([2.0; 8]);
-  /// let c = f32x8::from([5.0; 8]);
-  ///
-  /// let result = a.fast_mul_sub(b, c);
-  ///
-  /// let expected = f32x8::from([15.0; 8]);
-  /// assert_eq!(result, expected);
-  /// ```
   #[inline]
   pub fn fast_mul_sub(self, m: Self, s: Self) -> Self {
     pick! {
@@ -857,24 +833,12 @@ impl_simd_float! {
   }
 
   ///
-  /// # Platform-specific behavior
+  /// # Platform-specific behavior (may change in the future)
+  ///
   /// - On `x86`/`x86_64` with AVX+FMA: Uses `vfnmadd` (single rounding, best
   ///   accuracy)
   /// - On `x86`/`x86_64` with AVX only: Uses `a - (self * m)` (two roundings)
   /// - Other platforms: Delegates to [`f32x4`] (may use NEON FMA or fallback)
-  ///
-  /// # Examples
-  /// ```
-  /// # use wide::f32x8;
-  /// let a = f32x8::from([3.0; 8]);
-  /// let b = f32x8::from([2.0; 8]);
-  /// let c = f32x8::from([10.0; 8]);
-  ///
-  /// let result = a.fast_mul_neg_add(b, c);
-  ///
-  /// let expected = f32x8::from([4.0; 8]);
-  /// assert_eq!(result, expected);
-  /// ```
   #[inline]
   pub fn fast_mul_neg_add(self, m: Self, a: Self) -> Self {
     pick! {
@@ -893,24 +857,12 @@ impl_simd_float! {
   }
 
   ///
-  /// # Platform-specific behavior
+  /// # Platform-specific behavior (may change in the future)
+  ///
   /// - On `x86`/`x86_64` with AVX+FMA: Uses `vfnmsub` (single rounding, best
   ///   accuracy)
   /// - On `x86`/`x86_64` with AVX only: Uses `-(self * m) - s` (two roundings)
   /// - Other platforms: Delegates to [`f32x4`] (may use NEON FMA or fallback)
-  ///
-  /// # Examples
-  /// ```
-  /// # use wide::f32x8;
-  /// let a = f32x8::from([3.0; 8]);
-  /// let b = f32x8::from([2.0; 8]);
-  /// let c = f32x8::from([1.0; 8]);
-  ///
-  /// let result = a.fast_mul_neg_sub(b, c);
-  ///
-  /// let expected = f32x8::from([-7.0; 8]);
-  /// assert_eq!(result, expected);
-  /// ```
   #[inline]
   pub fn fast_mul_neg_sub(self, m: Self, s: Self) -> Self {
     pick! {
