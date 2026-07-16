@@ -767,17 +767,17 @@ impl_simd_float! {
   ///   roundings)
   /// - Other platforms: Delegates to [`f32x8`] (inherits its FMA behavior)
   #[inline]
-  pub fn fast_mul_add(self, m: Self, a: Self) -> Self {
+  pub fn fast_mul_add(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f",target_feature="fma"))] {
-        Self { avx512: fused_mul_add_m512(self.avx512, m.avx512, a.avx512) }
+        Self { avx512: fused_mul_add_m512(self.avx512, a.avx512, b.avx512) }
       } else if #[cfg(target_feature="avx512f")] {
         // still want to use 512 bit ops
-        (self * m) + a
+        (self * a) + b
       } else {
         Self {
-          a: self.a.fast_mul_add(m.a, a.a),
-          b: self.b.fast_mul_add(m.b, a.b),
+          a: self.a.fast_mul_add(a.a, b.a),
+          b: self.b.fast_mul_add(a.b, b.b),
         }
       }
     }
@@ -792,17 +792,17 @@ impl_simd_float! {
   ///   roundings)
   /// - Other platforms: Delegates to [`f32x8`] (inherits its FMA behavior)
   #[inline]
-  pub fn fast_mul_sub(self, m: Self, s: Self) -> Self {
+  pub fn fast_mul_sub(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f",target_feature="fma"))] {
-        Self { avx512: fused_mul_sub_m512(self.avx512, m.avx512, s.avx512) }
+        Self { avx512: fused_mul_sub_m512(self.avx512, a.avx512, b.avx512) }
       } else if #[cfg(target_feature="avx512f")] {
         // still want to use 512 bit ops
-        (self * m) - s
+        (self * a) - b
       } else {
         Self {
-          a: self.a.fast_mul_sub(m.a, s.a),
-          b: self.b.fast_mul_sub(m.b, s.b),
+          a: self.a.fast_mul_sub(a.a, b.a),
+          b: self.b.fast_mul_sub(a.b, b.b),
         }
       }
     }
@@ -817,17 +817,17 @@ impl_simd_float! {
   ///   roundings)
   /// - Other platforms: Delegates to [`f32x8`] (inherits its FMA behavior)
   #[inline]
-  pub fn fast_mul_neg_add(self, m: Self, a: Self) -> Self {
+  pub fn fast_mul_neg_add(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f",target_feature="fma"))] {
-        Self { avx512: fused_mul_neg_add_m512(self.avx512, m.avx512, a.avx512) }
+        Self { avx512: fused_mul_neg_add_m512(self.avx512, a.avx512, b.avx512) }
       } else if #[cfg(target_feature="avx512f")] {
         // still want to use 512 bit ops
-        a - (self * m)
+        b - (self * a)
       } else {
         Self {
-          a: self.a.fast_mul_neg_add(m.a, a.a),
-          b: self.b.fast_mul_neg_add(m.b, a.b),
+          a: self.a.fast_mul_neg_add(a.a, b.a),
+          b: self.b.fast_mul_neg_add(a.b, b.b),
         }
       }
     }
@@ -842,17 +842,17 @@ impl_simd_float! {
   ///   roundings)
   /// - Other platforms: Delegates to [`f32x8`] (inherits its FMA behavior)
   #[inline]
-  pub fn fast_mul_neg_sub(self, m: Self, s: Self) -> Self {
+  pub fn fast_mul_neg_sub(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f",target_feature="fma"))] {
-        Self { avx512: fused_mul_neg_sub_m512(self.avx512, m.avx512, s.avx512) }
+        Self { avx512: fused_mul_neg_sub_m512(self.avx512, a.avx512, b.avx512) }
       } else if #[cfg(target_feature="avx512f")] {
         // still want to use 512 bit ops
-        -(self * m) - s
+        -(self * a) - b
       } else {
         Self {
-          a: self.a.fast_mul_neg_sub(m.a, s.a),
-          b: self.b.fast_mul_neg_sub(m.b, s.b),
+          a: self.a.fast_mul_neg_sub(a.a, b.a),
+          b: self.b.fast_mul_neg_sub(a.b, b.b),
         }
       }
     }

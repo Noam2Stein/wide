@@ -747,17 +747,17 @@ impl_simd_float! {
   /// - On `x86`/`x86_64` with AVX only: Uses `(self * m) + a` (two roundings)
   /// - Other platforms: Delegates to [`f64x2`] (may use NEON FMA or fallback)
   #[inline]
-  pub fn fast_mul_add(self, m: Self, a: Self) -> Self {
+  pub fn fast_mul_add(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx",target_feature="fma"))] {
-        Self { avx: fused_mul_add_m256d(self.avx, m.avx, a.avx) }
+        Self { avx: fused_mul_add_m256d(self.avx, a.avx, b.avx) }
       } else if #[cfg(target_feature="avx")] {
         // still want to use 256 bit ops
-        (self * m) + a
+        (self * a) + b
       } else {
         Self {
-          a : self.a.fast_mul_add(m.a, a.a),
-          b : self.b.fast_mul_add(m.b, a.b),
+          a : self.a.fast_mul_add(a.a, b.a),
+          b : self.b.fast_mul_add(a.b, b.b),
         }
       }
     }
@@ -771,17 +771,17 @@ impl_simd_float! {
   /// - On `x86`/`x86_64` with AVX only: Uses `(self * m) - s` (two roundings)
   /// - Other platforms: Delegates to [`f64x2`] (may use NEON FMA or fallback)
   #[inline]
-  pub fn fast_mul_sub(self, m: Self, s: Self) -> Self {
+  pub fn fast_mul_sub(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx",target_feature="fma"))] {
-        Self { avx: fused_mul_sub_m256d(self.avx, m.avx, s.avx) }
+        Self { avx: fused_mul_sub_m256d(self.avx, a.avx, b.avx) }
       } else if #[cfg(target_feature="avx")] {
         // still want to use 256 bit ops
-        (self * m) - s
+        (self * a) - b
       } else {
         Self {
-          a : self.a.fast_mul_sub(m.a, s.a),
-          b : self.b.fast_mul_sub(m.b, s.b),
+          a : self.a.fast_mul_sub(a.a, b.a),
+          b : self.b.fast_mul_sub(a.b, b.b),
         }
       }
     }
@@ -795,17 +795,17 @@ impl_simd_float! {
   /// - On `x86`/`x86_64` with AVX only: Uses `a - (self * m)` (two roundings)
   /// - Other platforms: Delegates to [`f64x2`] (may use NEON FMA or fallback)
   #[inline]
-  pub fn fast_mul_neg_add(self, m: Self, a: Self) -> Self {
+  pub fn fast_mul_neg_add(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx",target_feature="fma"))] {
-        Self { avx: fused_mul_neg_add_m256d(self.avx, m.avx, a.avx) }
+        Self { avx: fused_mul_neg_add_m256d(self.avx, a.avx, b.avx) }
       } else if #[cfg(target_feature="avx")] {
         // still want to use 256 bit ops
-        a - (self * m)
+        b - (self * a)
       } else {
         Self {
-          a : self.a.fast_mul_neg_add(m.a, a.a),
-          b : self.b.fast_mul_neg_add(m.b, a.b),
+          a : self.a.fast_mul_neg_add(a.a, b.a),
+          b : self.b.fast_mul_neg_add(a.b, b.b),
         }
       }
     }
@@ -819,17 +819,17 @@ impl_simd_float! {
   /// - On `x86`/`x86_64` with AVX only: Uses `-(self * m) - s` (two roundings)
   /// - Other platforms: Delegates to [`f64x2`] (may use NEON FMA or fallback)
   #[inline]
-  pub fn fast_mul_neg_sub(self, m: Self, s: Self) -> Self {
+  pub fn fast_mul_neg_sub(self, a: Self, b: Self) -> Self {
     pick! {
        if #[cfg(all(target_feature="avx",target_feature="fma"))] {
-         Self { avx: fused_mul_neg_sub_m256d(self.avx, m.avx, s.avx) }
+         Self { avx: fused_mul_neg_sub_m256d(self.avx, a.avx, b.avx) }
         } else if #[cfg(target_feature="avx")] {
           // still want to use 256 bit ops
-          -(self * m) - s
+          -(self * a) - b
         } else {
          Self {
-           a : self.a.fast_mul_neg_sub(m.a, s.a),
-           b : self.b.fast_mul_neg_sub(m.b, s.b),
+           a : self.a.fast_mul_neg_sub(a.a, b.a),
+           b : self.b.fast_mul_neg_sub(a.b, b.b),
          }
        }
     }

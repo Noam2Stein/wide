@@ -980,14 +980,14 @@ impl_simd_float! {
   /// - On ARM64 with NEON: Uses `vfmaq_f64` (single rounding, best accuracy)
   /// - Without FMA support: Uses `(self * m) + a` (two roundings)
   #[inline]
-  pub fn fast_mul_add(self, m: Self, a: Self) -> Self {
+  pub fn fast_mul_add(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="fma"))] {
-        Self { sse: fused_mul_add_m128d(self.sse, m.sse, a.sse) }
+        Self { sse: fused_mul_add_m128d(self.sse, a.sse, b.sse) }
       } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
-        unsafe { Self { neon: vfmaq_f64(a.neon, self.neon, m.neon) } }
+        unsafe { Self { neon: vfmaq_f64(b.neon, self.neon, a.neon) } }
       } else {
-        (self * m) + a
+        (self * a) + b
       }
     }
   }
@@ -1001,14 +1001,14 @@ impl_simd_float! {
   ///   accuracy)
   /// - Without FMA support: Uses `(self * m) - s` (two roundings)
   #[inline]
-  pub fn fast_mul_sub(self, m: Self, s: Self) -> Self {
+  pub fn fast_mul_sub(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="fma"))] {
-        Self { sse: fused_mul_sub_m128d(self.sse, m.sse, s.sse) }
+        Self { sse: fused_mul_sub_m128d(self.sse, a.sse, b.sse) }
       } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
-        unsafe { Self { neon: vfmaq_f64(vnegq_f64(s.neon), self.neon, m.neon) } }
+        unsafe { Self { neon: vfmaq_f64(vnegq_f64(b.neon), self.neon, a.neon) } }
       } else {
-        (self * m) - s
+        (self * a) - b
       }
     }
   }
@@ -1021,14 +1021,14 @@ impl_simd_float! {
   /// - On ARM64 with NEON: Uses `vfmsq_f64` (single rounding, best accuracy)
   /// - Without FMA support: Uses `a - (self * m)` (two roundings)
   #[inline]
-  pub fn fast_mul_neg_add(self, m: Self, a: Self) -> Self {
+  pub fn fast_mul_neg_add(self, a: Self, b: Self) -> Self {
     pick! {
         if #[cfg(all(target_feature="fma"))] {
-          Self { sse: fused_mul_neg_add_m128d(self.sse, m.sse, a.sse) }
+          Self { sse: fused_mul_neg_add_m128d(self.sse, a.sse, b.sse) }
         } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
-          unsafe { Self { neon: vfmsq_f64(a.neon, self.neon, m.neon) } }
+          unsafe { Self { neon: vfmsq_f64(b.neon, self.neon, a.neon) } }
         } else {
-          a - (self * m)
+          b - (self * a)
         }
     }
   }
@@ -1042,14 +1042,14 @@ impl_simd_float! {
   ///   best accuracy)
   /// - Without FMA support: Uses `-(self * m) - s` (two roundings)
   #[inline]
-  pub fn fast_mul_neg_sub(self, m: Self, s: Self) -> Self {
+  pub fn fast_mul_neg_sub(self, a: Self, b: Self) -> Self {
     pick! {
         if #[cfg(all(target_feature="fma"))] {
-          Self { sse: fused_mul_neg_sub_m128d(self.sse, m.sse, s.sse) }
+          Self { sse: fused_mul_neg_sub_m128d(self.sse, a.sse, b.sse) }
         } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
-          unsafe { Self { neon: vnegq_f64(vfmaq_f64(s.neon, self.neon, m.neon)) } }
+          unsafe { Self { neon: vnegq_f64(vfmaq_f64(b.neon, self.neon, a.neon)) } }
         } else {
-          -(self * m) - s
+          -(self * a) - b
         }
     }
   }
