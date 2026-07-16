@@ -1084,9 +1084,23 @@ impl_simd_float! {
     }
   }
 
+  ///
+  /// # Platform-specific behavior (may change in the future)
+  ///
+  /// - On `x86`/`x86_64` with FMA: Uses `vfmadd`
+  /// - On ARM64 with NEON: Uses `vfmaq_f32`
+  /// - Without FMA support: Uses software implementation
   #[inline]
   pub fn mul_add(self, a: Self, b: Self) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "sse2", target_feature = "fma"))] {
+        Self { sse: fused_mul_add_m128(self.sse, a.sse, b.sse) }
+      } else if #[cfg(all(target_feature = "neon", target_arch = "aarch64"))] {
+        unsafe { Self { neon: vfmaq_f32(b.neon, self.neon, a.neon) } }
+      } else {
+        todo!("add software implementation")
+      }
+    }
   }
 
   ///
@@ -1109,9 +1123,25 @@ impl_simd_float! {
     }
   }
 
+  ///
+  /// # Platform-specific behavior (may change in the future)
+  ///
+  /// - On `x86`/`x86_64` with FMA: Uses `vfmsub`
+  /// - On ARM64 with NEON: Uses `vfmaq_f32(-s, self, m)`
+  /// - Without FMA support: Uses software implementation
   #[inline]
   pub fn mul_sub(self, a: Self, b: Self) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "sse2", target_feature = "fma"))] {
+        Self { sse: fused_mul_sub_m128(self.sse, a.sse, b.sse) }
+      } else if #[cfg(all(target_feature = "neon", target_arch = "aarch64"))] {
+        unsafe { Self { neon: vfmaq_f32(vnegq_f32(b.neon), self.neon, a.neon) } }
+      } else {
+        // Since the software implementation is pretty long, its not worth it to
+        // duplicate it for each sign variant.
+        self.mul_add(a, -b)
+      }
+    }
   }
 
   ///
@@ -1135,9 +1165,25 @@ impl_simd_float! {
     }
   }
 
+  ///
+  /// # Platform-specific behavior (may change in the future)
+  ///
+  /// - On `x86`/`x86_64` with FMA: Uses `vfnmadd`
+  /// - On ARM64 with NEON: Uses `vfmsq_f32`
+  /// - Without FMA support: Uses software implementation
   #[inline]
   pub fn mul_neg_add(self, a: Self, b: Self) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "sse2", target_feature = "fma"))] {
+        Self { sse: fused_mul_neg_add_m128(self.sse, a.sse, b.sse) }
+      } else if #[cfg(all(target_feature = "neon", target_arch = "aarch64"))] {
+        unsafe { Self { neon: vfmsq_f32(b.neon, self.neon, a.neon) } }
+      } else {
+        // Since the software implementation is pretty long, its not worth it to
+        // duplicate it for each sign variant.
+        self.mul_add(-a, b)
+      }
+    }
   }
 
   ///
@@ -1160,9 +1206,26 @@ impl_simd_float! {
     }
   }
 
+  ///
+  /// # Platform-specific behavior (may change in the future)
+  ///
+  /// - On `x86`/`x86_64` with FMA: Uses `vfnmsub`
+  /// - On ARM64 with NEON: Uses `-(vfmaq_f32(s, self, m))` (single rounding,
+  ///   best accuracy)
+  /// - Without FMA support: Uses software implementation
   #[inline]
   pub fn mul_neg_sub(self, a: Self, b: Self) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "sse2", target_feature = "fma"))] {
+        Self { sse: fused_mul_neg_sub_m128(self.sse, a.sse, b.sse) }
+      } else if #[cfg(all(target_feature = "neon", target_arch = "aarch64"))] {
+        unsafe { Self { neon: vnegq_f32(vfmaq_f32(b.neon, self.neon, a.neon)) } }
+      } else {
+        // Since the software implementation is pretty long, its not worth it to
+        // duplicate it for each sign variant.
+        -self.mul_add(a, b)
+      }
+    }
   }
 
   ///

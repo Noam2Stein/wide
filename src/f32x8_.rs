@@ -784,9 +784,26 @@ impl_simd_float! {
     }
   }
 
+  ///
+  /// # Platform-specific behavior (may change in the future)
+  ///
+  /// - On `x86`/`x86_64` with AVX+FMA: Uses `vfmadd`
+  /// - On `x86`/`x86_64` with AVX only: Uses software implementation
+  /// - Other platforms: Delegates to [`f32x4`]
   #[inline]
   pub fn mul_add(self, a: Self, b: Self) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "avx", target_feature = "fma"))] {
+        Self { avx: fused_mul_add_m256(self.avx, a.avx, b.avx) }
+      } else if #[cfg(target_feature = "avx")] {
+        todo!("add software implementation")
+      } else {
+        Self {
+          a: self.a.mul_add(a.a, b.a),
+          b: self.b.mul_add(a.b, b.b),
+        }
+      }
+    }
   }
 
   ///
@@ -813,9 +830,28 @@ impl_simd_float! {
     }
   }
 
+  ///
+  /// # Platform-specific behavior (may change in the future)
+  ///
+  /// - On `x86`/`x86_64` with AVX+FMA: Uses `vfmsub`
+  /// - On `x86`/`x86_64` with AVX only: Uses software implementation
+  /// - Other platforms: Delegates to [`f32x4`]
   #[inline]
   pub fn mul_sub(self, a: Self, b: Self) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "avx", target_feature = "fma"))] {
+        Self { avx: fused_mul_sub_m256(self.avx, a.avx, b.avx) }
+      } else if #[cfg(target_feature="avx")] {
+        // Since the software implementation is pretty long, its not worth it to
+        // duplicate it for each sign variant.
+        self.mul_add(a, -b)
+      } else {
+        Self {
+          a: self.a.mul_sub(a.a, b.a),
+          b: self.b.mul_sub(a.b, b.b),
+        }
+      }
+    }
   }
 
   ///
@@ -842,9 +878,28 @@ impl_simd_float! {
     }
   }
 
+  ///
+  /// # Platform-specific behavior (may change in the future)
+  ///
+  /// - On `x86`/`x86_64` with AVX+FMA: Uses `vfnmadd`
+  /// - On `x86`/`x86_64` with AVX only: Uses software implementation
+  /// - Other platforms: Delegates to [`f32x4`]
   #[inline]
   pub fn mul_neg_add(self, a: Self, b: Self) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "avx", target_feature = "fma"))] {
+        Self { avx: fused_mul_neg_add_m256(self.avx, a.avx, b.avx) }
+      } else if #[cfg(target_feature = "avx")] {
+        // Since the software implementation is pretty long, its not worth it to
+        // duplicate it for each sign variant.
+        self.mul_add(-a, b)
+      } else {
+        Self {
+          a: self.a.mul_neg_add(a.a, b.a),
+          b: self.b.mul_neg_add(a.b, b.b),
+        }
+      }
+    }
   }
 
   ///
@@ -871,9 +926,28 @@ impl_simd_float! {
     }
   }
 
+  ///
+  /// # Platform-specific behavior (may change in the future)
+  ///
+  /// - On `x86`/`x86_64` with AVX+FMA: Uses `vfnmsub`
+  /// - On `x86`/`x86_64` with AVX only: Uses software implementation
+  /// - Other platforms: Delegates to [`f32x4`]
   #[inline]
   pub fn mul_neg_sub(self, a: Self, b: Self) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "avx", target_feature = "fma"))] {
+        Self { avx: fused_mul_neg_sub_m256(self.avx, a.avx, b.avx) }
+      } else if #[cfg(target_feature = "avx")] {
+        // Since the software implementation is pretty long, its not worth it to
+        // duplicate it for each sign variant.
+        -self.mul_add(a, b)
+      } else {
+        Self {
+          a: self.a.mul_neg_sub(a.a, b.a),
+          b: self.b.mul_neg_sub(a.b, b.b),
+        }
+      }
+    }
   }
 
   ///
