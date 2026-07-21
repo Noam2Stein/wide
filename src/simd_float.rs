@@ -670,3 +670,134 @@ macro_rules! impl_simd_float {
     }
   };
 }
+
+/// Precise implementation of `mul_add` that is used when there is no hardware
+/// support.
+///
+/// TODO(perf): For `f32` types, it might be faster to emulate `mul_add` using
+/// `f64` operations. See this `libm` implementation:
+///
+/// https://docs.rs/libm/0.2.16/src/libm/math/generic/fma_wide.rs.html
+macro_rules! software_mul_add {
+  (
+    $Float:ident,
+    $Int:ident,
+    $Uint:ident,
+    $SimdFloat:ident,
+    $SimdInt:ident,
+    $SimdUint:ident,
+    $BITS:literal,
+    $self:ident,
+    $a:ident,
+    $b:ident $(,)?
+  ) => {
+    // Based on `https://docs.rs/libm/0.2.16/src/libm/math/generic/fma.rs.html`.
+
+    const SIG_BITS: $Uint = $Float::MANTISSA_DIGITS - 1;
+    const EXP_BITS: $Uint = $BITS - SIG_BITS - 1;
+
+    const EXP_SAT: $Uint = (1 << EXP_BITS) - 1;
+    const EXP_BIAS: $Uint = EXP_SAT >> 1;
+    const EXP_UNBIAS: $Uint = EXP_BIAS + SIG_BITS + 1;
+
+    const SIG_MASK: $Uint = (1 << SIG_BITS) - 1;
+    const IMPLICIT_BIT: $Uint = 1 << SIG_BITS;
+
+    // Scaling used temporarely to normalize subnormals
+    const SUBNORMAL_SCALE: $Float = ($BITS - 1) as $Float;
+    const SUBNORMAL_SCALE_XOR_1: $Float =
+      $Float::from_bits(SUBNORMAL_SCALE.to_bits() ^ (1 as $Float).to_bits());
+
+    // Exponent adjustments
+    const EXP_OFFSET: $Int = -(SUBNORMAL_SCALE as $Int) - EXP_UNBIAS as $Int;
+    const SENTINEL_0_EXP: $Int = 1 << EXP_BITS;
+    const SENTINEL_0_EXP_XOR_EXP_OFFSET: $Int = SENTINEL_0_EXP ^ EXP_OFFSET;
+    /// Values greater than this had a saturated exponent (infinity or NaN), OR were zero and we
+    /// adjusted the exponent such that it exceeds this threashold.
+    const ZERO_INF_NAN: $Uint = EXP_SAT - EXP_UNBIAS;
+
+    // Splatted SIMD constants
+    const EXP_SAT_SIMD: $SimdUint = $SimdUint::splat(EXP_SAT);
+    const SIG_MASK_SIMD: $SimdUint = $SimdUint::splat(SIG_MASK);
+    const IMPLICIT_BIT_SIMD: $SimdUint = $SimdUint::splat(IMPLICIT_BIT);
+    const SUBNORMAL_SCALE_SIMD: $SimdFloat = $SimdFloat::splat(SUBNORMAL_SCALE);
+    const SUBNORMAL_SCALE_XOR_1_SIMD: $SimdFloat =
+      $SimdFloat::splat(SUBNORMAL_SCALE_XOR_1);
+    const EXP_OFFSET_SIMD: $SimdInt = $SimdInt::splat(EXP_OFFSET);
+    const SENTINEL_0_EXP_XOR_EXP_OFFSET_SIMD: $SimdInt =
+      $SimdInt::splat(SENTINEL_0_EXP_XOR_EXP_OFFSET);
+    const ZERO_INF_NAN_SIMD: $SimdUint = $SimdUint::splat(ZERO_INF_NAN);
+
+    /// Returns the exponent, not adjusting for bias, not accounting for
+    /// subnormals or zero.
+    #[inline]
+    fn ex(x: $SimdFloat) -> $SimdUint {
+      (x.to_bits() >> SIG_BITS) & EXP_SAT_SIMD
+    }
+
+    /// Converts to a float representation that has handled subnormals.
+    ///
+    /// Returns a tuple with:
+    ///
+    /// - The normalized significand with one guard bit, unsigned.
+    ///
+    /// - The exponent of the mantissa such that `m * 2^e = x`. Accounts for the
+    ///   shift in the mantissa and the guard bit; that is, 1.0 will normalize
+    ///   as `m = 1 << 53` and `e = -53`.
+    fn norm(x: $SimdFloat) -> ($SimdUint, $SimdInt) {
+      let exp_bits = ex(x);
+
+      // Normalize subnormals by multiplication
+      let is_subnormal =
+        $SimdFloat::from_bits(exp_bits.simd_eq($SimdUint::ZERO));
+      // Compute select for constants
+      let scale = $SimdFloat::ONE ^ (is_subnormal & SUBNORMAL_SCALE_XOR_1_SIMD);
+      let x = x * scale;
+      // Need to recompute exponent
+      let exp_bits = ex(x);
+
+      let sig = ((x.to_bits() & SIG_MASK_SIMD) | IMPLICIT_BIT_SIMD) << 1;
+
+      // If the exponent is still zero, the input was zero. Artifically set this
+      // value such that the final exponent will exceed `ZERO_INF_NAN`.
+      let is_zero = exp_bits.simd_eq($SimdUint::ZERO).cast_signed();
+      // Compute select for constants
+      let exp_offset =
+        EXP_OFFSET_SIMD ^ (is_zero & SENTINEL_0_EXP_XOR_EXP_OFFSET_SIMD);
+      let exp = exp_bits.cast_signed() + exp_offset;
+
+      (sig, exp)
+    }
+
+    /// Returns true if `exp` is neither zero, NaN, or infinite.
+    #[inline]
+    fn is_not_zero_nan_inf(exp: i32x4) -> f32x4 {
+      $SimdFloat::from_bits(
+        exp.simd_lt(ZERO_INF_NAN_SIMD.cast_signed()).cast_unsigned(),
+      )
+    }
+
+    #[inline]
+    fn is_zero(exp: i32x4) -> u32x4 {
+      // The only exponent that strictly exceeds this value is our sentinel
+      // value for zero.
+      exp.simd_gt(ZERO_INF_NAN_SIMD.cast_signed()).cast_unsigned()
+    }
+
+    // Normalize such that the top of the mantissa is zero and we have a guard
+    // bit.
+    let (self_sig, self_exp) = norm($self);
+    let (a_sig, a_exp) = norm($a);
+    let (b_sig, b_exp) = norm($b);
+
+    let result = todo!();
+
+    // If these are false, our algorithm breaks, but unfused mul add actually
+    // works.
+    let use_fused = is_not_zero_nan_inf(self_exp)
+      & is_not_zero_nan_inf(a_exp)
+      & is_not_zero_nan_inf(b_exp);
+
+    use_fused.select(result, $self * $a + $b)
+  };
+}
