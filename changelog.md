@@ -10,6 +10,8 @@
   correctly zero their output lane (previously leaked `self[..][0]`).
 * Made `to_array`, `as_array` and `as_mut_array` available in const contexts.
 * Added four unbounded-shift functions for integers.
+* Changed the four `mul_add` functions to always returning the precise result,
+  and renamed the old behavior to `fast_mul_add`.
 * Renamed float function `pow_{simd-type-name}` to `powf_simd` and deprecated `powf`.
 * Added conversions between `wide` types and native intrinsics SIMD types.
 * Added `reduce_mul` for integers.
