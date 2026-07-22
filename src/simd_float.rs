@@ -677,7 +677,7 @@ macro_rules! impl_simd_float {
 /// TODO(perf): For `f32` types, it might be faster to emulate `mul_add` using
 /// `f64` operations. See this `libm` implementation:
 ///
-/// https://docs.rs/libm/0.2.16/src/libm/math/generic/fma_wide.rs.html
+/// <https://docs.rs/libm/0.2.16/src/libm/math/generic/fma_wide.rs.html>
 macro_rules! software_mul_add {
   (
     $Float:ident,
@@ -686,15 +686,16 @@ macro_rules! software_mul_add {
     $SimdFloat:ident,
     $SimdInt:ident,
     $SimdUint:ident,
-    $BITS:literal,
     $self:ident,
     $a:ident,
-    $b:ident $(,)?
+    $b:ident
   ) => {
     // Based on `https://docs.rs/libm/0.2.16/src/libm/math/generic/fma.rs.html`.
 
-    const SIG_BITS: $Uint = $Float::MANTISSA_DIGITS - 1;
-    const EXP_BITS: $Uint = $BITS - SIG_BITS - 1;
+    const BITS: $Uint = (size_of::<$Float>() * 8) as $Uint;
+    const MANTISSA_DIGITS: $Uint = $Float::MANTISSA_DIGITS as $Uint;
+    const SIG_BITS: $Uint = MANTISSA_DIGITS - 1;
+    const EXP_BITS: $Uint = BITS - SIG_BITS - 1;
 
     const EXP_SAT: $Uint = (1 << EXP_BITS) - 1;
     const EXP_BIAS: $Uint = EXP_SAT >> 1;
@@ -704,7 +705,7 @@ macro_rules! software_mul_add {
     const IMPLICIT_BIT: $Uint = 1 << SIG_BITS;
 
     // Scaling used temporarely to normalize subnormals
-    const SUBNORMAL_SCALE: $Float = ($BITS - 1) as $Float;
+    const SUBNORMAL_SCALE: $Float = (BITS - 1) as $Float;
     const SUBNORMAL_SCALE_XOR_1: $Float =
       $Float::from_bits(SUBNORMAL_SCALE.to_bits() ^ (1 as $Float).to_bits());
 
@@ -717,10 +718,10 @@ macro_rules! software_mul_add {
     const ZERO_INF_NAN: $Uint = EXP_SAT - EXP_UNBIAS;
 
     // Splatted SIMD constants
+    const BITS_SIMD: $SimdUint = $SimdUint::splat(BITS);
     const EXP_SAT_SIMD: $SimdUint = $SimdUint::splat(EXP_SAT);
     const SIG_MASK_SIMD: $SimdUint = $SimdUint::splat(SIG_MASK);
     const IMPLICIT_BIT_SIMD: $SimdUint = $SimdUint::splat(IMPLICIT_BIT);
-    const SUBNORMAL_SCALE_SIMD: $SimdFloat = $SimdFloat::splat(SUBNORMAL_SCALE);
     const SUBNORMAL_SCALE_XOR_1_SIMD: $SimdFloat =
       $SimdFloat::splat(SUBNORMAL_SCALE_XOR_1);
     const EXP_OFFSET_SIMD: $SimdInt = $SimdInt::splat(EXP_OFFSET);
@@ -744,6 +745,7 @@ macro_rules! software_mul_add {
     /// - The exponent of the mantissa such that `m * 2^e = x`. Accounts for the
     ///   shift in the mantissa and the guard bit; that is, 1.0 will normalize
     ///   as `m = 1 << 53` and `e = -53`.
+    #[inline]
     fn norm(x: $SimdFloat) -> ($SimdUint, $SimdInt) {
       let exp_bits = ex(x);
 
@@ -789,6 +791,58 @@ macro_rules! software_mul_add {
     let (self_sig, self_exp) = norm($self);
     let (a_sig, a_exp) = norm($a);
     let (b_sig, b_exp) = norm($b);
+
+    // Compute multiplication
+    let (mul_sig_low, mul_sig_high) = self_sig.mul_keep_low_high(a_sig);
+    let mul_exp = self_exp + a_exp;
+
+    // Before addition can be done, the exponent of the multiplication and `b`
+    // need to be adjusted to be the same
+    let exp_diff = b_exp - mul_exp;
+
+    let exp_diff_minus_bits = exp_diff - BITS_SIMD.cast_signed();
+    let exp_diff_plus_bits = exp_diff + BITS_SIMD.cast_signed();
+    let bits_minus_exp_diff = -exp_diff_minus_bits;
+    let twobits_minus_exp_diff = BITS_SIMD.cast_signed() - exp_diff_minus_bits;
+    let exp_diff_is_negative = exp_diff.is_negative().cast_unsigned();
+    let exp_diff_is_positive = exp_diff.is_positive().cast_unsigned();
+    let exp_diff_lt_bits = exp_diff_minus_bits.is_negative().cast_unsigned();
+    let exp_diff_eq_bits = exp_diff_minus_bits.simd_eq($SimdInt::ZERO).cast_unsigned();
+    let exp_diff_gt_bits = exp_diff_minus_bits.is_positive().cast_unsigned();
+    let exp_diff_lt_2bits = exp_diff_minus_bits.simd_lt(BITS_SIMD.cast_signed()).cast_unsigned();
+    let exp_diff_gt_neg_bits = exp_diff.simd_gt(-BITS_SIMD.cast_signed()).cast_unsigned();
+
+    let exp = exp_diff_lt_bits.cast_signed().select(mul_exp, b_exp - BITS_SIMD.cast_signed());
+    let b_sig_low = exp_diff_is_negative.select(
+      b_sig.unbounded_shr(-exp_diff.cast_unsigned())
+        | -((b_sig << exp_diff_plus_bits).simd_ne($SimdUint::ZERO) | exp_diff_gt_neg_bits),
+      b_sig.unbounded_shl(exp_diff.cast_unsigned()),
+    );
+    let b_sig_high = b_sig.unbounded_shr(bits_minus_exp_diff.max($SimdInt::ZERO).cast_unsigned());
+    let mul_sig_low = exp_diff_gt_bits.select(
+      exp_diff_lt_2bits.select(
+        (mul_sig_high << twobits_minus_exp_diff) | (mul_sig_low >> exp_diff_minus_bits),
+        $SimdUint::ONE,
+      ),
+      mul_sig_low,
+    );
+    let mul_sig_low = exp_diff_is_positive.select(
+      exp_diff_lt_bits.select(
+        mul_sig_low,
+        exp_diff_eq_bits.select(
+          mul_sig_low,
+          exp_diff_lt_2bits.select(
+            mul_sig_low | (mul_sig_low << twobits_minus_exp_diff).simd_ne($SimdUint::ZERO) & $SimdUint::ONE,
+            mul_sig_low,
+          ),
+        ),
+      ),
+      mul_sig_low,
+    );
+    let mul_sig_high = mul_sig_high.unbounded_shr(exp_diff_minus_bits.max($SimdInt::ZERO).cast_unsigned());
+
+    let mul_neg = $self.is_sign_negative() ^ $a.is_sign_negative();
+    let samesign = mul_neg ^ $b.is_sign_positive();
 
     let result = todo!();
 

@@ -1098,7 +1098,7 @@ impl_simd_float! {
       } else if #[cfg(all(target_feature = "neon", target_arch = "aarch64"))] {
         unsafe { Self { neon: vfmaq_f32(b.neon, self.neon, a.neon) } }
       } else {
-        software_mul_add!(f32, i32, u32, f32x4, i32x4, u32x4, 32, self, a, b)
+        software_mul_add!(f32, i32, u32, f32x4, i32x4, u32x4, self, a, b)
       }
     }
   }
