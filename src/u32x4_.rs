@@ -8,9 +8,9 @@ pick! {
     /// vectors.
     ///
     /// [crate level documentation]: crate
+    #[repr(transparent)]
     #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    #[repr(C, align(16))]
-    pub struct u32x4 { pub(crate) sse: m128i }
+    pub struct u32x4(pub(crate) m128i);
   } else if #[cfg(target_feature="simd128")] {
     use core::arch::wasm32::*;
 
@@ -20,9 +20,9 @@ pick! {
     /// vectors.
     ///
     /// [crate level documentation]: crate
-    #[derive(Clone, Copy)]
     #[repr(transparent)]
-    pub struct u32x4 { pub(crate) simd: v128 }
+    #[derive(Clone, Copy)]
+    pub struct u32x4(pub(crate) v128);
 
     impl Default for u32x4 {
       fn default() -> Self {
@@ -46,9 +46,9 @@ pick! {
     /// vectors.
     ///
     /// [crate level documentation]: crate
-    #[repr(C)]
+    #[repr(transparent)]
     #[derive(Copy, Clone)]
-    pub struct u32x4 { pub(crate) neon : uint32x4_t }
+    pub struct u32x4(pub(crate) uint32x4_t);
 
     impl Default for u32x4 {
       #[inline]
@@ -72,9 +72,13 @@ pick! {
     /// vectors.
     ///
     /// [crate level documentation]: crate
+    #[repr(transparent)]
     #[derive(Default, Clone, Copy, PartialEq, Eq)]
+    pub struct u32x4(pub(crate) Inner);
+
     #[repr(C, align(16))]
-    pub struct u32x4 { arr: [u32;4] }
+    #[derive(Default, Clone, Copy, PartialEq, Eq)]
+    pub(crate) struct Inner(pub [u32; 4]);
   }
 }
 

@@ -8,9 +8,9 @@ pick! {
     /// vectors.
     ///
     /// [crate level documentation]: crate
+    #[repr(transparent)]
     #[derive(Default, Clone, Copy, PartialEq)]
-    #[repr(C, align(64))]
-    pub struct f32x16 { pub(crate) avx512: m512 }
+    pub struct f32x16(pub(crate) m512);
   } else {
     /// A SIMD vector with 16 elements of type [`f32`].
     ///
@@ -18,9 +18,13 @@ pick! {
     /// vectors.
     ///
     /// [crate level documentation]: crate
+    #[repr(transparent)]
     #[derive(Default, Clone, Copy, PartialEq)]
+    pub struct f32x16(pub(crate) Inner);
+
     #[repr(C, align(64))]
-    pub struct f32x16 { pub(crate) a : f32x8, pub(crate) b : f32x8 }
+    #[derive(Default, Clone, Copy, PartialEq)]
+    pub(crate) struct Inner(pub f32x8, pub f32x8);
   }
 }
 

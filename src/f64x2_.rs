@@ -8,9 +8,9 @@ pick! {
     /// vectors.
     ///
     /// [crate level documentation]: crate
+    #[repr(transparent)]
     #[derive(Default, Clone, Copy, PartialEq)]
-    #[repr(C, align(16))]
-    pub struct f64x2 { pub(crate) sse: m128d }
+    pub struct f64x2(pub(crate) m128d);
   } else if #[cfg(target_feature="simd128")] {
     use core::arch::wasm32::*;
 
@@ -20,9 +20,9 @@ pick! {
     /// vectors.
     ///
     /// [crate level documentation]: crate
-    #[derive(Clone, Copy)]
     #[repr(transparent)]
-    pub struct f64x2 { pub(crate) simd: v128 }
+    #[derive(Clone, Copy)]
+    pub struct f64x2(pub(crate) v128);
 
     impl Default for f64x2 {
       fn default() -> Self {
@@ -44,9 +44,9 @@ pick! {
     /// vectors.
     ///
     /// [crate level documentation]: crate
-    #[repr(C)]
+    #[repr(transparent)]
     #[derive(Copy, Clone)]
-    pub struct f64x2 { pub(crate) neon: float64x2_t }
+    pub struct f64x2(pub(crate) float64x2_t);
 
     impl Default for f64x2 {
       #[inline]
@@ -72,9 +72,13 @@ pick! {
     /// vectors.
     ///
     /// [crate level documentation]: crate
+    #[repr(transparent)]
     #[derive(Default, Clone, Copy, PartialEq)]
+    pub struct f64x2(pub(crate) Inner);
+
     #[repr(C, align(16))]
-    pub struct f64x2 { pub(crate) arr: [f64;2] }
+    #[derive(Default, Clone, Copy, PartialEq)]
+    pub(crate) struct Inner(pub [f64; 2]);
   }
 }
 
