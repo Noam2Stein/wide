@@ -1,5 +1,7 @@
 use super::*;
 
+use crate::{f64x8, i64x4, u64x4, u64x8};
+
 pick! {
   if #[cfg(target_feature="avx512f")] {
     /// A SIMD vector with eight elements of type [`i64`].
@@ -42,12 +44,9 @@ impl_simd! {
   fn simd_eq(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_i64_m512i::<{cmp_int_op!(Eq)}>(self.avx512, rhs.avx512) }
+        Self(cmp_op_mask_i64_m512i::<{cmp_int_op!(Eq)}>(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_eq(rhs.a),
-          b : self.b.simd_eq(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_eq(rhs.0.0), self.0.1.simd_eq(rhs.0.1)))
       }
     }
   }
@@ -56,12 +55,9 @@ impl_simd! {
   fn simd_ne(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_i64_m512i::<{cmp_int_op!(Ne)}>(self.avx512, rhs.avx512) }
+        Self(cmp_op_mask_i64_m512i::<{cmp_int_op!(Ne)}>(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_ne(rhs.a),
-          b : self.b.simd_ne(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_ne(rhs.0.0), self.0.1.simd_ne(rhs.0.1)))
       }
     }
   }
@@ -70,12 +66,9 @@ impl_simd! {
   fn simd_lt(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_i64_m512i::<{cmp_int_op!(Lt)}>(self.avx512, rhs.avx512) }
+        Self(cmp_op_mask_i64_m512i::<{cmp_int_op!(Lt)}>(self.0, rhs.0))
       } else {
-        Self {
-          a : rhs.a.simd_gt(self.a),
-          b : rhs.b.simd_gt(self.b),
-        }
+        Self(Inner(rhs.0.0.simd_gt(self.0.0), rhs.0.1.simd_gt(self.0.1)))
       }
     }
   }
@@ -84,12 +77,9 @@ impl_simd! {
   fn simd_gt(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_i64_m512i::<{cmp_int_op!(Nle)}>(self.avx512, rhs.avx512) }
+        Self(cmp_op_mask_i64_m512i::<{cmp_int_op!(Nle)}>(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_gt(rhs.a),
-          b : self.b.simd_gt(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_gt(rhs.0.0), self.0.1.simd_gt(rhs.0.1)))
       }
     }
   }
@@ -98,12 +88,9 @@ impl_simd! {
   fn simd_le(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_i64_m512i::<{cmp_int_op!(Le)}>(self.avx512, rhs.avx512) }
+        Self(cmp_op_mask_i64_m512i::<{cmp_int_op!(Le)}>(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_le(rhs.a),
-          b : self.b.simd_le(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_le(rhs.0.0), self.0.1.simd_le(rhs.0.1)))
       }
     }
   }
@@ -112,12 +99,9 @@ impl_simd! {
   fn simd_ge(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_i64_m512i::<{cmp_int_op!(Nlt)}>(self.avx512, rhs.avx512) }
+        Self(cmp_op_mask_i64_m512i::<{cmp_int_op!(Nlt)}>(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_ge(rhs.a),
-          b : self.b.simd_ge(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_ge(rhs.0.0), self.0.1.simd_ge(rhs.0.1)))
       }
     }
   }
@@ -126,17 +110,15 @@ impl_simd! {
   pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self {
-          avx512: bitor_m512i(
-            bitand_m512i(if_one.avx512, self.avx512),
-            bitandnot_m512i(self.avx512, if_zero.avx512),
-          ),
-        }
+        Self(bitor_m512i(
+          bitand_m512i(if_one.0, self.0),
+          bitandnot_m512i(self.0, if_zero.0),
+        ))
       } else {
-        Self {
-          a : self.a.bitselect(if_one.a, if_zero.a),
-          b : self.b.bitselect(if_one.b, if_zero.b),
-        }
+        Self(Inner(
+          self.0.0.bitselect(if_one.0.0, if_zero.0.0),
+          self.0.1.bitselect(if_one.0.1, if_zero.0.1),
+        ))
       }
     }
   }
@@ -145,12 +127,12 @@ impl_simd! {
   pub fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: blend_varying_i8_m512i(if_false.avx512,if_true.avx512,movepi8_mask_m512i(self.avx512)) }
+        Self(blend_varying_i8_m512i(if_false.0,if_true.0,movepi8_mask_m512i(self.0)))
       } else {
-        Self {
-          a : self.a.select(if_true.a, if_false.a),
-          b : self.b.select(if_true.b, if_false.b),
-        }
+        Self(Inner(
+          self.0.0.select(if_true.0.0, if_false.0.0),
+          self.0.1.select(if_true.0.1, if_false.0.1),
+        ))
       }
     }
   }
@@ -162,9 +144,9 @@ impl_simd! {
     pick! {
       if #[cfg(target_feature="avx512dq")] {
         // use f64 move_mask since it is the same size as i64
-        movepi64_mask_m512d(cast(self.avx512)) as u32
+        movepi64_mask_m512d(cast(self.0)) as u32
       } else {
-        self.a.to_bitmask() | (self.b.to_bitmask() << 4)
+        self.0.0.to_bitmask() | (self.0.1.to_bitmask() << 4)
       }
     }
   }
@@ -174,7 +156,7 @@ impl_simd! {
   pub fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        movepi64_mask_m512d(cast(self.avx512)) != 0
+        movepi64_mask_m512d(cast(self.0)) != 0
       } else {
         let [a, b]: [i64x4; 2] = cast(self);
         (a | b).any()
@@ -187,7 +169,7 @@ impl_simd! {
   pub fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
-        movepi64_mask_m512d(cast(self.avx512)) == 0b11111111
+        movepi64_mask_m512d(cast(self.0)) == 0b11111111
       } else {
         let [a, b]: [i64x4; 2] = cast(self);
         (a & b).all()
@@ -244,7 +226,7 @@ impl_simd_int! {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         // TODO(safe_arch): add shr_each_i64_m512i (arithmetic right shift)
-        // Self { avx512: shr_each_i64_m512i(self.avx512, rhs.avx512) }
+        // Self(shr_each_i64_m512i(self.0, rhs.0))
         // Fallback for now:
         let a: [i64; 8] = cast(self);
         let r: [u64; 8] = cast(rhs);
@@ -260,10 +242,7 @@ impl_simd_int! {
         ])
       } else {
         // widen via two halves
-        Self {
-          a: self.a.shr(rhs.a),
-          b: self.b.shr(rhs.b),
-        }
+        Self(Inner(self.0.0.shr(rhs.0.0), self.0.1.shr(rhs.0.1)))
       }
     }
   }
@@ -275,12 +254,9 @@ impl_simd_int! {
         // Use `rhs % 64` to perform wrapping shift and not unbounded shift.
         #[expect(clippy::suspicious_arithmetic_impl)]
         let shift = rhs as u64 & 63;
-        Self { avx512: shr_all_i64_m512i(self.avx512, shift) }
+        Self(shr_all_i64_m512i(self.0, shift))
       } else {
-        Self {
-          a : self.a.shr(rhs),
-          b : self.b.shr(rhs),
-        }
+        Self(Inner(self.0.0.shr(rhs), self.0.1.shr(rhs)))
       }
     }
   }
@@ -289,12 +265,9 @@ impl_simd_int! {
   pub fn max(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: max_i64_m512i(self.avx512, rhs.avx512) }
+        Self(max_i64_m512i(self.0, rhs.0))
       } else {
-        Self {
-          a: self.a.max(rhs.a),
-          b: self.b.max(rhs.b),
-        }
+        Self(Inner(self.0.0.max(rhs.0.0), self.0.1.max(rhs.0.1)))
       }
     }
   }
@@ -303,12 +276,9 @@ impl_simd_int! {
   pub fn min(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: min_i64_m512i(self.avx512, rhs.avx512) }
+        Self(min_i64_m512i(self.0, rhs.0))
       } else {
-        Self {
-          a: self.a.min(rhs.a),
-          b: self.b.min(rhs.b),
-        }
+        Self(Inner(self.0.0.min(rhs.0.0), self.0.1.min(rhs.0.1)))
       }
     }
   }
@@ -328,7 +298,7 @@ impl_simd_int! {
   #[inline]
   pub fn unbounded_shr(self, rhs: u64x8) -> Self {
     // TODO(safe_arch): add shr_each_i64_m512i (arithmetic right shift)
-    // Self { avx512: shr_each_i64_m512i(self.avx512, rhs.avx512) }
+    // Self(shr_each_i64_m512i(self.0, rhs.0))
     // Fallback for now:
 
     let [self_a, self_b] = cast::<i64x8, [i64x4; 2]>(self);
@@ -341,12 +311,12 @@ impl_simd_int! {
   pub fn unbounded_shr_scalar(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: shr_all_i64_m512i(self.avx512, rhs as u64) }
+        Self(shr_all_i64_m512i(self.0, rhs as u64))
       } else {
-        Self {
-          a: self.a.unbounded_shr_scalar(rhs),
-          b: self.b.unbounded_shr_scalar(rhs),
-        }
+        Self(Inner(
+          self.0.0.unbounded_shr_scalar(rhs),
+          self.0.1.unbounded_shr_scalar(rhs),
+        ))
       }
     }
   }
@@ -362,10 +332,10 @@ impl_simd_int! {
         // If overflow occurs return `MAX` if positive or `MIN` if negative.
         overflow.select(Self::MAX ^ negative, result)
       } else {
-        Self {
-          a: self.a.saturating_add(rhs.a),
-          b: self.b.saturating_add(rhs.b),
-        }
+        Self(Inner(
+          self.0.0.saturating_add(rhs.0.0),
+          self.0.1.saturating_add(rhs.0.1),
+        ))
       }
     }
   }
@@ -381,10 +351,10 @@ impl_simd_int! {
         // If overflow occurs return `MAX` if positive or `MIN` if negative.
         overflow.select(Self::MAX ^ negative, result)
       } else {
-        Self {
-          a: self.a.saturating_sub(rhs.a),
-          b: self.b.saturating_sub(rhs.b),
-        }
+        Self(Inner(
+          self.0.0.saturating_sub(rhs.0.0),
+          self.0.1.saturating_sub(rhs.0.1),
+        ))
       }
     }
   }
@@ -514,10 +484,7 @@ impl_simd_int! {
             arr[7].wrapping_abs(),
           ])
       } else {
-        Self {
-          a : self.a.abs(),
-          b : self.b.abs(),
-        }
+        Self(Inner(self.0.0.abs(), self.0.1.abs()))
       }
     }
   }
@@ -527,10 +494,7 @@ impl_simd_int! {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // `neon` has dedicated greater-than-zero intrinsics.
-        Self {
-          a: self.a.is_positive(),
-          b: self.b.is_positive(),
-        }
+        Self(Inner(self.0.0.is_positive(), self.0.1.is_positive()))
       } else {
         self.simd_gt(Self::ZERO)
       }
@@ -542,10 +506,7 @@ impl_simd_int! {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // `neon` has dedicated less-than-zero intrinsics.
-        Self {
-          a: self.a.is_negative(),
-          b: self.b.is_negative(),
-        }
+        Self(Inner(self.0.0.is_negative(), self.0.1.is_negative()))
       } else {
         self.simd_lt(Self::ZERO)
       }

@@ -1,5 +1,9 @@
 use super::*;
 
+#[cfg(not(target_feature = "avx512f"))]
+use crate::f64x4;
+use crate::{i32x8, i64x8, u64x8};
+
 pick! {
   if #[cfg(target_feature="avx512f")] {
     /// A SIMD vector with eight elements of type [`f64`].
@@ -49,12 +53,9 @@ impl_simd! {
   fn simd_eq(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_m512d::<{cmp_op!(EqualOrdered)}>(self.avx512, rhs.avx512) }
+        Self(cmp_op_mask_m512d::<{cmp_op!(EqualOrdered)}>(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_eq(rhs.a),
-          b : self.b.simd_eq(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_eq(rhs.0.0), self.0.1.simd_eq(rhs.0.1)))
       }
     }
   }
@@ -63,12 +64,9 @@ impl_simd! {
   fn simd_ne(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_m512d::<{cmp_op!(NotEqualUnordered)}>(self.avx512, rhs.avx512) }
+        Self(cmp_op_mask_m512d::<{cmp_op!(NotEqualUnordered)}>(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_ne(rhs.a),
-          b : self.b.simd_ne(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_ne(rhs.0.0), self.0.1.simd_ne(rhs.0.1)))
       }
     }
   }
@@ -77,12 +75,9 @@ impl_simd! {
   fn simd_lt(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_m512d::<{cmp_op!(LessThanOrdered)}>(self.avx512, rhs.avx512) }
+        Self(cmp_op_mask_m512d::<{cmp_op!(LessThanOrdered)}>(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_lt(rhs.a),
-          b : self.b.simd_lt(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_lt(rhs.0.0), self.0.1.simd_lt(rhs.0.1)))
       }
     }
   }
@@ -91,12 +86,9 @@ impl_simd! {
   fn simd_gt(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_m512d::<{cmp_op!(GreaterThanOrdered)}>(self.avx512, rhs.avx512) }
+        Self(cmp_op_mask_m512d::<{cmp_op!(GreaterThanOrdered)}>(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_gt(rhs.a),
-          b : self.b.simd_gt(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_gt(rhs.0.0), self.0.1.simd_gt(rhs.0.1)))
       }
     }
   }
@@ -105,12 +97,9 @@ impl_simd! {
   fn simd_le(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_m512d::<{cmp_op!(LessEqualOrdered)}>(self.avx512, rhs.avx512) }
+        Self(cmp_op_mask_m512d::<{cmp_op!(LessEqualOrdered)}>(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_le(rhs.a),
-          b : self.b.simd_le(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_le(rhs.0.0), self.0.1.simd_le(rhs.0.1)))
       }
     }
   }
@@ -119,12 +108,9 @@ impl_simd! {
   fn simd_ge(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_m512d::<{cmp_op!(GreaterEqualOrdered)}>(self.avx512, rhs.avx512) }
+        Self(cmp_op_mask_m512d::<{cmp_op!(GreaterEqualOrdered)}>(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_ge(rhs.a),
-          b : self.b.simd_ge(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_ge(rhs.0.0), self.0.1.simd_ge(rhs.0.1)))
       }
     }
   }
@@ -133,17 +119,15 @@ impl_simd! {
   pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self {
-          avx512: bitor_m512d(
-            bitand_m512d(if_one.avx512, self.avx512),
-            bitandnot_m512d(self.avx512, if_zero.avx512),
-          ),
-        }
+        Self(bitor_m512d(
+          bitand_m512d(if_one.0, self.0),
+          bitandnot_m512d(self.0, if_zero.0),
+        ))
       } else {
-        Self {
-          a: self.a.bitselect(if_one.a, if_zero.a),
-          b: self.b.bitselect(if_one.b, if_zero.b),
-        }
+        Self(Inner(
+          self.0.0.bitselect(if_one.0.0, if_zero.0.0),
+          self.0.1.bitselect(if_one.0.1, if_zero.0.1),
+        ))
       }
     }
   }
@@ -152,12 +136,12 @@ impl_simd! {
   pub fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: blend_varying_m512d(if_false.avx512, if_true.avx512, movepi64_mask_m512d(self.avx512)) }
+        Self(blend_varying_m512d(if_false.0, if_true.0, movepi64_mask_m512d(self.0)))
       } else {
-        Self {
-          a : self.a.select(if_true.a, if_false.a),
-          b : self.b.select(if_true.b, if_false.b),
-        }
+        Self(Inner(
+          self.0.0.select(if_true.0.0, if_false.0.0),
+          self.0.1.select(if_true.0.1, if_false.0.1),
+        ))
       }
     }
   }
@@ -166,9 +150,9 @@ impl_simd! {
   pub fn to_bitmask(self) -> u32 {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        movepi64_mask_m512d(self.avx512) as u32
+        movepi64_mask_m512d(self.0) as u32
       } else {
-        (self.b.to_bitmask() << 4) | self.a.to_bitmask()
+        (self.0.1.to_bitmask() << 4) | self.0.0.to_bitmask()
       }
     }
   }
@@ -177,9 +161,9 @@ impl_simd! {
   pub fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        movepi64_mask_m512d(self.avx512) != 0
+        movepi64_mask_m512d(self.0) != 0
       } else {
-        self.a.any() || self.b.any()
+        self.0.0.any() || self.0.1.any()
       }
     }
   }
@@ -188,9 +172,9 @@ impl_simd! {
   pub fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        movepi64_mask_m512d(self.avx512) == 0b11111111
+        movepi64_mask_m512d(self.0) == 0b11111111
       } else {
-        self.a.all() && self.b.all()
+        self.0.0.all() && self.0.1.all()
       }
     }
   }
@@ -242,12 +226,9 @@ impl_simd_float! {
   fn neg(self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: bitxor_m512d(self.avx512, Self::splat(-0.0).avx512) }
+        Self(bitxor_m512d(self.0, Self::splat(-0.0).0))
       } else {
-        Self {
-          a : self.a.neg(),
-          b : self.b.neg(),
-        }
+        Self(Inner(self.0.0.neg(), self.0.1.neg()))
       }
     }
   }
@@ -256,12 +237,9 @@ impl_simd_float! {
   fn not(self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: bitxor_m512d(self.avx512, set_splat_m512d(f64::from_bits(u64::MAX))) }
+        Self(bitxor_m512d(self.0, set_splat_m512d(f64::from_bits(u64::MAX))))
       } else {
-        Self {
-          a : self.a.not(),
-          b : self.b.not(),
-        }
+        Self(Inner(self.0.0.not(), self.0.1.not()))
       }
     }
   }
@@ -270,12 +248,9 @@ impl_simd_float! {
   fn add(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: add_m512d(self.avx512, rhs.avx512) }
+        Self(add_m512d(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.add(rhs.a),
-          b : self.b.add(rhs.b),
-        }
+        Self(Inner(self.0.0.add(rhs.0.0), self.0.1.add(rhs.0.1)))
       }
     }
   }
@@ -284,12 +259,9 @@ impl_simd_float! {
   fn sub(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: sub_m512d(self.avx512, rhs.avx512) }
+        Self(sub_m512d(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.sub(rhs.a),
-          b : self.b.sub(rhs.b),
-        }
+        Self(Inner(self.0.0.sub(rhs.0.0), self.0.1.sub(rhs.0.1)))
       }
     }
   }
@@ -298,9 +270,9 @@ impl_simd_float! {
   fn mul(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: mul_m512d(self.avx512, rhs.avx512) }
+        Self(mul_m512d(self.0, rhs.0))
       } else {
-        Self { a: self.a.mul(rhs.a), b: self.b.mul(rhs.b) }
+        Self(Inner(self.0.0.mul(rhs.0.0), self.0.1.mul(rhs.0.1)))
       }
     }
   }
@@ -309,9 +281,9 @@ impl_simd_float! {
   fn div(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: div_m512d(self.avx512, rhs.avx512) }
+        Self(div_m512d(self.0, rhs.0))
       } else {
-        Self { a: self.a.div(rhs.a), b: self.b.div(rhs.b) }
+        Self(Inner(self.0.0.div(rhs.0.0), self.0.1.div(rhs.0.1)))
       }
     }
   }
@@ -334,12 +306,9 @@ impl_simd_float! {
   fn bitand(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: bitand_m512d(self.avx512, rhs.avx512) }
+        Self(bitand_m512d(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.bitand(rhs.a),
-          b : self.b.bitand(rhs.b),
-        }
+        Self(Inner(self.0.0.bitand(rhs.0.0), self.0.1.bitand(rhs.0.1)))
       }
     }
   }
@@ -348,12 +317,9 @@ impl_simd_float! {
   fn bitor(self, rhs: Self) -> Self::Output {
     pick! {
     if #[cfg(target_feature="avx512f")] {
-        Self { avx512: bitor_m512d(self.avx512, rhs.avx512) }
+        Self(bitor_m512d(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.bitor(rhs.a),
-          b : self.b.bitor(rhs.b),
-        }
+        Self(Inner(self.0.0.bitor(rhs.0.0), self.0.1.bitor(rhs.0.1)))
       }
     }
   }
@@ -362,12 +328,9 @@ impl_simd_float! {
   fn bitxor(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: bitxor_m512d(self.avx512, rhs.avx512) }
+        Self(bitxor_m512d(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.bitxor(rhs.a),
-          b : self.b.bitxor(rhs.b),
-        }
+        Self(Inner(self.0.0.bitxor(rhs.0.0), self.0.1.bitxor(rhs.0.1)))
       }
     }
   }
@@ -377,8 +340,8 @@ impl_simd_float! {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         // From https://stackoverflow.com/questions/49941645/get-sum-of-values-stored-in-m256d-with-sse-avx
-        let lo = cast_to_m256d_from_m512d(self.avx512);
-        let hi = extract_m256d_from_m512d::<1>(self.avx512);
+        let lo = cast_to_m256d_from_m512d(self.0);
+        let hi = extract_m256d_from_m512d::<1>(self.0);
         let v  = add_m256d(lo, hi);                // [a0+a4, a1+a5, a2+a6, a3+a7]
         let t  = add_horizontal_m256d(v, v);       // [s01, s23, s01, s23]
         let lo = cast_to_m128d_from_m256d(t);      // s01
@@ -386,7 +349,7 @@ impl_simd_float! {
         let s  = add_m128d(lo, hi);                // [sum, ...]
         get_f64_from_m128d_s(s)
       } else {
-        self.a.reduce_add() + self.b.reduce_add()
+        self.0.0.reduce_add() + self.0.1.reduce_add()
       }
     }
   }
@@ -396,8 +359,8 @@ impl_simd_float! {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         // From https://stackoverflow.com/questions/49941645/get-sum-of-values-stored-in-m256d-with-sse-avx
-        let lo = cast_to_m256d_from_m512d(self.avx512);
-        let hi = extract_m256d_from_m512d::<1>(self.avx512);
+        let lo = cast_to_m256d_from_m512d(self.0);
+        let hi = extract_m256d_from_m512d::<1>(self.0);
         let v  = mul_m256d(lo, hi);
         let lo = cast_to_m128d_from_m256d(v);
         let hi = extract_m128d_from_m256d::<1>(v);
@@ -406,7 +369,7 @@ impl_simd_float! {
         let product = mul_m128d_s(lo,hi64);
         get_f64_from_m128d_s(product)
       } else {
-        self.a.reduce_mul() * self.b.reduce_mul()
+        self.0.0.reduce_mul() * self.0.1.reduce_mul()
       }
     }
   }
@@ -415,12 +378,9 @@ impl_simd_float! {
   pub fn is_nan(self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: cmp_op_mask_m512d::<{cmp_op!(Unordered)}>(self.avx512, self.avx512) }
+        Self(cmp_op_mask_m512d::<{cmp_op!(Unordered)}>(self.0, self.0))
       } else {
-        Self {
-          a: self.a.is_nan(),
-          b: self.b.is_nan(),
-        }
+        Self(Inner(self.0.0.is_nan(), self.0.1.is_nan()))
       }
     }
   }
@@ -481,12 +441,9 @@ impl_simd_float! {
   pub fn max(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        rhs.is_nan().select(self, Self { avx512: max_m512d(self.avx512, rhs.avx512) })
+        rhs.is_nan().select(self, Self(max_m512d(self.0, rhs.0)))
       } else {
-        Self {
-          a: self.a.max(rhs.a),
-          b: self.b.max(rhs.b),
-        }
+        Self(Inner(self.0.0.max(rhs.0.0), self.0.1.max(rhs.0.1)))
       }
     }
   }
@@ -495,12 +452,9 @@ impl_simd_float! {
   pub fn fast_max(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: max_m512d(self.avx512, rhs.avx512) }
+        Self(max_m512d(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.fast_max(rhs.a),
-          b : self.b.fast_max(rhs.b),
-        }
+        Self(Inner(self.0.0.fast_max(rhs.0.0), self.0.1.fast_max(rhs.0.1)))
       }
     }
   }
@@ -509,12 +463,9 @@ impl_simd_float! {
   pub fn min(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        rhs.is_nan().select(self, Self { avx512: min_m512d(self.avx512, rhs.avx512) })
+        rhs.is_nan().select(self, Self(min_m512d(self.0, rhs.0)))
       } else {
-        Self {
-          a: self.a.min(rhs.a),
-          b: self.b.min(rhs.b),
-        }
+        Self(Inner(self.0.0.min(rhs.0.0), self.0.1.min(rhs.0.1)))
       }
     }
   }
@@ -523,12 +474,9 @@ impl_simd_float! {
   pub fn fast_min(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: min_m512d(self.avx512, rhs.avx512) }
+        Self(min_m512d(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.fast_min(rhs.a),
-          b : self.b.fast_min(rhs.b),
-        }
+        Self(Inner(self.0.0.fast_min(rhs.0.0), self.0.1.fast_min(rhs.0.1)))
       }
     }
   }
@@ -541,10 +489,10 @@ impl_simd_float! {
         self.fast_clamp(min, max) | min.is_nan() | max.is_nan()
       } else {
         // Some targets have better implementations than the above one.
-        Self {
-          a: self.a.clamp(min.a, max.a),
-          b: self.b.clamp(min.b, max.b),
-        }
+        Self(Inner(
+          self.0.0.clamp(min.0.0, max.0.0),
+          self.0.1.clamp(min.0.1, max.0.1),
+        ))
       }
     }
   }
@@ -555,12 +503,12 @@ impl_simd_float! {
       if #[cfg(target_feature="avx512f")] {
         // For both `min_m512d` and `max_m512d` if any input is NaN, `rhs` gets
         // chosen. For `self` to be chosen, `self` must be the second argument.
-        Self { avx512: max_m512d(min.avx512, min_m512d(max.avx512, self.avx512)) }
+        Self(max_m512d(min.0, min_m512d(max.0, self.0)))
       } else {
-        Self {
-          a: self.a.fast_clamp(min.a, max.a),
-          b: self.b.fast_clamp(min.b, max.b),
-        }
+        Self(Inner(
+          self.0.0.fast_clamp(min.0.0, max.0.0),
+          self.0.1.fast_clamp(min.0.1, max.0.1),
+        ))
       }
     }
   }
@@ -572,10 +520,7 @@ impl_simd_float! {
         let non_sign_bits = f64x8::from(f64::from_bits(i64::MAX as u64));
         self & non_sign_bits
       } else {
-        Self {
-          a: self.a.abs(),
-          b: self.b.abs(),
-        }
+        Self(Inner(self.0.0.abs(), self.0.1.abs()))
       }
     }
   }
@@ -584,12 +529,9 @@ impl_simd_float! {
   pub fn floor(self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: round_m512d::<{round_op!(NegInf)}>(self.avx512) }
+        Self(round_m512d::<{round_op!(NegInf)}>(self.0))
       } else {
-        Self {
-          a : self.a.floor(),
-          b : self.b.floor(),
-        }
+        Self(Inner(self.0.0.floor(), self.0.1.floor()))
       }
     }
   }
@@ -598,12 +540,9 @@ impl_simd_float! {
   pub fn ceil(self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: round_m512d::<{round_op!(PosInf)}>(self.avx512) }
+        Self(round_m512d::<{round_op!(PosInf)}>(self.0))
       } else {
-        Self {
-          a : self.a.ceil(),
-          b : self.b.ceil(),
-        }
+        Self(Inner(self.0.0.ceil(), self.0.1.ceil()))
       }
     }
   }
@@ -618,7 +557,7 @@ impl_simd_float! {
         let self_abs = self.abs();
 
         let adjusted_self = self_abs + Self::HALF;
-        let result_abs = Self { avx512: round_m512d::<{round_op!(Zero)}>(adjusted_self.avx512) };
+        let result_abs = Self(round_m512d::<{round_op!(Zero)}>(adjusted_self.0));
         // The addition breaks for `0.5.next_down()` which incorrectly rounds to
         // `1.0`. This resets the result back to `0.0`.
         let result_abs = result_abs & self_abs.simd_ne(HALF_NEXT_DOWN);
@@ -632,10 +571,7 @@ impl_simd_float! {
         // `abs` keeps the original sign.
         bounds_mask.abs().bitselect(result_abs, self)
       } else {
-        Self {
-          a: self.a.round(),
-          b: self.b.round(),
-        }
+        Self(Inner(self.0.0.round(), self.0.1.round()))
       }
     }
   }
@@ -655,12 +591,12 @@ impl_simd_float! {
         let flip_to_max: i64x8 = cast(self.simd_ge(Self::splat(9223372036854775808.0)));
 
         // TODO(safe_arch): Add `_mm512_cvtpd_epi64`.
-        let cast: i64x8 = cast(m512i(unsafe { _mm512_cvtpd_epi64(non_nan.avx512.0) }));
+        let cast: i64x8 = cast(m512i(unsafe { _mm512_cvtpd_epi64(non_nan.0.0) }));
         flip_to_max ^ cast
       } else {
         cast([
-          self.a.round_int(),
-          self.b.round_int(),
+          self.0.0.round_int(),
+          self.0.1.round_int(),
         ])
       }
     }
@@ -676,11 +612,11 @@ impl_simd_float! {
         use core::arch::x86_64::_mm512_cvtpd_epi64;
 
         // TODO(safe_arch): Add `_mm512_cvtpd_epi64`.
-        cast(m512i(unsafe { _mm512_cvtpd_epi64(self.avx512.0) }))
+        cast(m512i(unsafe { _mm512_cvtpd_epi64(self.0.0) }))
       } else {
         cast([
-          self.a.fast_round_int(),
-          self.b.fast_round_int(),
+          self.0.0.fast_round_int(),
+          self.0.1.fast_round_int(),
         ])
       }
     }
@@ -690,12 +626,9 @@ impl_simd_float! {
   pub fn round_ties_even(self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: round_m512d::<{round_op!(Nearest)}>(self.avx512) }
+        Self(round_m512d::<{round_op!(Nearest)}>(self.0))
       } else {
-        Self {
-          a: self.a.round_ties_even(),
-          b: self.b.round_ties_even(),
-        }
+        Self(Inner(self.0.0.round_ties_even(), self.0.1.round_ties_even()))
       }
     }
   }
@@ -704,12 +637,9 @@ impl_simd_float! {
   pub fn trunc(self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: round_m512d::<{round_op!(Zero)}>(self.avx512) }
+        Self(round_m512d::<{round_op!(Zero)}>(self.0))
       } else {
-        Self {
-          a: self.a.trunc(),
-          b: self.b.trunc(),
-        }
+        Self(Inner(self.0.0.trunc(), self.0.1.trunc()))
       }
     }
   }
@@ -729,12 +659,12 @@ impl_simd_float! {
         let flip_to_max: i64x8 = cast(self.simd_ge(Self::splat(9223372036854775808.0)));
 
         // TODO(safe_arch): Add `_mm512_cvttpd_epi64`.
-        let cast: i64x8 = cast(m512i(unsafe { _mm512_cvttpd_epi64(non_nan.avx512.0) }));
+        let cast: i64x8 = cast(m512i(unsafe { _mm512_cvttpd_epi64(non_nan.0.0) }));
         flip_to_max ^ cast
       } else {
         cast([
-          self.a.trunc_int(),
-          self.b.trunc_int(),
+          self.0.0.trunc_int(),
+          self.0.1.trunc_int(),
         ])
       }
     }
@@ -750,11 +680,11 @@ impl_simd_float! {
         use core::arch::x86_64::_mm512_cvttpd_epi64;
 
         // TODO(safe_arch): Add `_mm512_cvttpd_epi64`.
-        cast(m512i(unsafe { _mm512_cvttpd_epi64(self.avx512.0) }))
+        cast(m512i(unsafe { _mm512_cvttpd_epi64(self.0.0) }))
       } else {
         cast([
-          self.a.fast_trunc_int(),
-          self.b.fast_trunc_int(),
+          self.0.0.fast_trunc_int(),
+          self.0.1.fast_trunc_int(),
         ])
       }
     }
@@ -772,15 +702,12 @@ impl_simd_float! {
   pub fn mul_add(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f",target_feature="fma"))] {
-        Self { avx512: fused_mul_add_m512d(self.avx512, a.avx512, b.avx512) }
+        Self(fused_mul_add_m512d(self.0, a.0, b.0))
       } else if #[cfg(target_feature="avx512f")] {
         // still want to use 512 bit ops
         (self * a) + b
       } else {
-        Self {
-          a : self.a.mul_add(a.a, b.a),
-          b : self.b.mul_add(a.b, b.b),
-        }
+        Self(Inner(self.0.0.mul_add(a.0.0, b.0.0), self.0.1.mul_add(a.0.1, b.0.1)))
       }
     }
   }
@@ -797,15 +724,15 @@ impl_simd_float! {
   pub fn mul_sub(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f",target_feature="fma"))] {
-        Self { avx512: fused_mul_sub_m512d(self.avx512, a.avx512, b.avx512) }
+        Self(fused_mul_sub_m512d(self.0, a.0, b.0))
       } else if #[cfg(target_feature="avx512f")] {
         // still want to use 512 bit ops
         (self * a) - b
       } else {
-        Self {
-          a : self.a.mul_sub(a.a, b.a),
-          b : self.b.mul_sub(a.b, b.b),
-        }
+        Self(Inner(
+          self.0.0.mul_sub(a.0.0, b.0.0),
+          self.0.1.mul_sub(a.0.1, b.0.1),
+        ))
       }
     }
   }
@@ -822,15 +749,15 @@ impl_simd_float! {
   pub fn mul_neg_add(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f",target_feature="fma"))] {
-        Self { avx512: fused_mul_neg_add_m512d(self.avx512, a.avx512, b.avx512) }
+        Self(fused_mul_neg_add_m512d(self.0, a.0, b.0))
       } else if #[cfg(target_feature="avx512f")] {
         // still want to use 512 bit ops
         b - (self * a)
       } else {
-        Self {
-          a : self.a.mul_neg_add(a.a, b.a),
-          b : self.b.mul_neg_add(a.b, b.b),
-        }
+        Self(Inner(
+          self.0.0.mul_neg_add(a.0.0, b.0.0),
+          self.0.1.mul_neg_add(a.0.1, b.0.1),
+        ))
       }
     }
   }
@@ -847,15 +774,15 @@ impl_simd_float! {
   pub fn mul_neg_sub(self, a: Self, b: Self) -> Self {
     pick! {
        if #[cfg(all(target_feature="avx512f",target_feature="fma"))] {
-         Self { avx512: fused_mul_neg_sub_m512d(self.avx512, a.avx512, b.avx512) }
+         Self(fused_mul_neg_sub_m512d(self.0, a.0, b.0))
         } else if #[cfg(target_feature="avx512f")] {
           // still want to use 512 bit ops
           -(self * a) - b
         } else {
-         Self {
-           a : self.a.mul_neg_sub(a.a, b.a),
-           b : self.b.mul_neg_sub(a.b, b.b),
-         }
+          Self(Inner(
+            self.0.0.mul_neg_sub(a.0.0, b.0.0),
+            self.0.1.mul_neg_sub(a.0.1, b.0.1),
+          ))
        }
     }
   }
@@ -983,12 +910,9 @@ impl_simd_float! {
   pub fn sqrt(self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: sqrt_m512d(self.avx512) }
+        Self(sqrt_m512d(self.0))
       } else {
-        Self {
-          a : self.a.sqrt(),
-          b : self.b.sqrt(),
-        }
+        Self(Inner(self.0.0.sqrt(), self.0.1.sqrt()))
       }
     }
   }
@@ -1903,7 +1827,7 @@ impl f64x8 {
   pub fn from_i32x8(v: i32x8) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
-        Self { avx512: convert_to_m512d_from_i32_m256i(v.avx2) }
+        Self(convert_to_m512d_from_i32_m256i(v.0))
       } else {
         Self::new([
           v.as_array()[0] as f64,

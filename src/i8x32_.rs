@@ -1,5 +1,7 @@
 use super::*;
 
+use crate::{i8x16, i16x32, u8x16, u8x32};
+
 pick! {
   if #[cfg(target_feature="avx2")] {
     /// A SIMD vector with 32 elements of type [`i8`].
@@ -42,12 +44,9 @@ impl_simd! {
   fn simd_eq(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx : cmp_eq_mask_i8_m256i(self.avx,rhs.avx) }
+        Self(cmp_eq_mask_i8_m256i(self.0,rhs.0))
       } else {
-        Self {
-          a : self.a.simd_eq(rhs.a),
-          b : self.b.simd_eq(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_eq(rhs.0.0), self.0.1.simd_eq(rhs.0.1)))
       }
     }
   }
@@ -58,10 +57,7 @@ impl_simd! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_eq(rhs)
       } else {
-        Self {
-          a : self.a.simd_ne(rhs.a),
-          b : self.b.simd_ne(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_ne(rhs.0.0), self.0.1.simd_ne(rhs.0.1)))
       }
     }
   }
@@ -75,12 +71,9 @@ impl_simd! {
   fn simd_gt(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx : cmp_gt_mask_i8_m256i(self.avx,rhs.avx) }
+        Self(cmp_gt_mask_i8_m256i(self.0,rhs.0))
       } else {
-        Self {
-          a : self.a.simd_gt(rhs.a),
-          b : self.b.simd_gt(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_gt(rhs.0.0), self.0.1.simd_gt(rhs.0.1)))
       }
     }
   }
@@ -91,10 +84,7 @@ impl_simd! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_gt(rhs)
       } else {
-        Self {
-          a : self.a.simd_le(rhs.a),
-          b : self.b.simd_le(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_le(rhs.0.0), self.0.1.simd_le(rhs.0.1)))
       }
     }
   }
@@ -105,10 +95,7 @@ impl_simd! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_lt(rhs)
       } else {
-        Self {
-          a : self.a.simd_ge(rhs.a),
-          b : self.b.simd_ge(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_ge(rhs.0.0), self.0.1.simd_ge(rhs.0.1)))
       }
     }
   }
@@ -117,17 +104,15 @@ impl_simd! {
   pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self {
-          avx: bitor_m256i(
-            bitand_m256i(if_one.avx, self.avx),
-            bitandnot_m256i(self.avx, if_zero.avx),
-          ),
-        }
+        Self(bitor_m256i(
+          bitand_m256i(if_one.0, self.0),
+          bitandnot_m256i(self.0, if_zero.0),
+        ))
       } else {
-        Self {
-          a : self.a.bitselect(if_one.a, if_zero.a),
-          b : self.b.bitselect(if_one.b, if_zero.b),
-        }
+        Self(Inner(
+          self.0.0.bitselect(if_one.0.0, if_zero.0.0),
+          self.0.1.bitselect(if_one.0.1, if_zero.0.1),
+        ))
       }
     }
   }
@@ -136,12 +121,12 @@ impl_simd! {
   pub fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx: blend_varying_i8_m256i(if_false.avx, if_true.avx, self.avx) }
+        Self(blend_varying_i8_m256i(if_false.0, if_true.0, self.0))
       } else {
-        Self {
-          a : self.a.select(if_true.a, if_false.a),
-          b : self.b.select(if_true.b, if_false.b),
-        }
+        Self(Inner(
+          self.0.0.select(if_true.0.0, if_false.0.0),
+          self.0.1.select(if_true.0.1, if_false.0.1),
+        ))
       }
     }
   }
@@ -150,9 +135,9 @@ impl_simd! {
   pub fn to_bitmask(self) -> u32 {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        move_mask_i8_m256i(self.avx) as u32
+        move_mask_i8_m256i(self.0) as u32
       } else {
-        self.a.to_bitmask() | (self.b.to_bitmask() << 16)
+        self.0.0.to_bitmask() | (self.0.1.to_bitmask() << 16)
       }
     }
   }
@@ -161,9 +146,9 @@ impl_simd! {
   pub fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        move_mask_i8_m256i(self.avx) != 0
+        move_mask_i8_m256i(self.0) != 0
       } else {
-        (self.a | self.b).any()
+        (self.0.0 | self.0.1).any()
       }
     }
   }
@@ -172,9 +157,9 @@ impl_simd! {
   pub fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        move_mask_i8_m256i(self.avx) == -1
+        move_mask_i8_m256i(self.0) == -1
       } else {
-        (self.a & self.b).all()
+        (self.0.0 & self.0.1).all()
       }
     }
   }
@@ -297,12 +282,9 @@ impl_simd_int! {
   pub fn max(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx: max_i8_m256i(self.avx,rhs.avx) }
+        Self(max_i8_m256i(self.0,rhs.0))
       } else {
-        Self {
-          a : self.a.max(rhs.a),
-          b : self.b.max(rhs.b),
-        }
+        Self(Inner(self.0.0.max(rhs.0.0), self.0.1.max(rhs.0.1)))
       }
     }
   }
@@ -311,12 +293,9 @@ impl_simd_int! {
   pub fn min(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx: min_i8_m256i(self.avx,rhs.avx) }
+        Self(min_i8_m256i(self.0,rhs.0))
       } else {
-        Self {
-          a : self.a.min(rhs.a),
-          b : self.b.min(rhs.b),
-        }
+        Self(Inner(self.0.0.min(rhs.0.0), self.0.1.min(rhs.0.1)))
       }
     }
   }
@@ -356,12 +335,12 @@ impl_simd_int! {
   pub fn saturating_add(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx: add_saturating_i8_m256i(self.avx, rhs.avx) }
+        Self(add_saturating_i8_m256i(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.saturating_add(rhs.a),
-          b : self.b.saturating_add(rhs.b),
-        }
+        Self(Inner(
+          self.0.0.saturating_add(rhs.0.0),
+          self.0.1.saturating_add(rhs.0.1),
+        ))
       }
     }
   }
@@ -370,12 +349,12 @@ impl_simd_int! {
   pub fn saturating_sub(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx: sub_saturating_i8_m256i(self.avx, rhs.avx) }
+        Self(sub_saturating_i8_m256i(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.saturating_sub(rhs.a),
-          b : self.b.saturating_sub(rhs.b),
-        }
+        Self(Inner(
+          self.0.0.saturating_sub(rhs.0.0),
+          self.0.1.saturating_sub(rhs.0.1),
+        ))
       }
     }
   }
@@ -430,12 +409,9 @@ impl_simd_int! {
   pub fn abs(self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx: abs_i8_m256i(self.avx) }
+        Self(abs_i8_m256i(self.0))
       } else {
-        Self {
-          a : self.a.abs(),
-          b : self.b.abs(),
-        }
+        Self(Inner(self.0.0.abs(), self.0.1.abs()))
       }
     }
   }
@@ -445,10 +421,7 @@ impl_simd_int! {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // `neon` has dedicated greater-than-zero intrinsics.
-        Self {
-          a: self.a.is_positive(),
-          b: self.b.is_positive(),
-        }
+        Self(Inner(self.0.0.is_positive(), self.0.1.is_positive()))
       } else {
         self.simd_gt(Self::ZERO)
       }
@@ -460,10 +433,7 @@ impl_simd_int! {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // `neon` has dedicated less-than-zero intrinsics.
-        Self {
-          a: self.a.is_negative(),
-          b: self.b.is_negative(),
-        }
+        Self(Inner(self.0.0.is_negative(), self.0.1.is_negative()))
       } else {
         self.simd_lt(Self::ZERO)
       }
@@ -486,12 +456,9 @@ impl i8x32 {
   pub fn swizzle_half(self, rhs: i8x32) -> i8x32 {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx: shuffle_av_i8z_half_m256i(self.avx, add_saturating_u8_m256i(rhs.avx, set_splat_i8_m256i(0x70))) }
+        Self(shuffle_av_i8z_half_m256i(self.0, add_saturating_u8_m256i(rhs.0, set_splat_i8_m256i(0x70))))
       } else {
-          Self {
-            a : self.a.swizzle(rhs.a),
-            b : self.b.swizzle(rhs.b),
-          }
+        Self(Inner(self.0.0.swizzle(rhs.0.0), self.0.1.swizzle(rhs.0.1)))
       }
     }
   }
@@ -509,12 +476,12 @@ impl i8x32 {
   pub fn swizzle_half_relaxed(self, rhs: i8x32) -> i8x32 {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx: shuffle_av_i8z_half_m256i(self.avx, rhs.avx) }
+        Self(shuffle_av_i8z_half_m256i(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.swizzle_relaxed(rhs.a),
-          b : self.b.swizzle_relaxed(rhs.b),
-        }
+        Self(Inner(
+          self.0.0.swizzle_relaxed(rhs.0.0),
+          self.0.1.swizzle_relaxed(rhs.0.1),
+        ))
       }
     }
   }
@@ -537,30 +504,30 @@ impl i8x32 {
         // vpermb takes the index mod 32 and never zeroes, so zero the
         // out-of-range lanes ourselves: (rhs & 0xE0) == 0  <=>  rhs < 32.
         // TODO(safe_arch): Add `_mm256_permutexvar_epi8`.
-        let permuted = m256i(unsafe { _mm256_permutexvar_epi8(rhs.avx.0, self.avx.0) });
-        let hi_bits = bitand_m256i(rhs.avx, set_splat_i8_m256i(0xE0_u8 as i8));
+        let permuted = m256i(unsafe { _mm256_permutexvar_epi8(rhs.0.0, self.0.0) });
+        let hi_bits = bitand_m256i(rhs.0, set_splat_i8_m256i(0xE0_u8 as i8));
         let in_range = cmp_eq_mask_i8_m256i(hi_bits, zeroed_m256i());
-        Self { avx: bitand_m256i(permuted, in_range) }
+        Self(bitand_m256i(permuted, in_range))
       } else if #[cfg(target_feature="avx2")] {
         // Broadcast each 16-byte table half into both 128-bit lanes, pshufb
         // each by the index, blend by index bit 4. Fold the >=32 zeroing into
         // pshufb with an unsigned saturating add of 0x60 (0x60 + 32 = 0x80).
-        let idx = add_saturating_u8_m256i(rhs.avx, set_splat_i8_m256i(0x60));
-        let tbl_lo = shuffle_abi_i128z_all_m256i::<0x00>(self.avx, self.avx);
-        let tbl_hi = shuffle_abi_i128z_all_m256i::<0x11>(self.avx, self.avx);
+        let idx = add_saturating_u8_m256i(rhs.0, set_splat_i8_m256i(0x60));
+        let tbl_lo = shuffle_abi_i128z_all_m256i::<0x00>(self.0, self.0);
+        let tbl_hi = shuffle_abi_i128z_all_m256i::<0x11>(self.0, self.0);
         let res_lo = shuffle_av_i8z_half_m256i(tbl_lo, idx);
         let res_hi = shuffle_av_i8z_half_m256i(tbl_hi, idx);
         // move index bit 4 into the sign bit (bit 7) for blendv.
-        let sel = shl_imm_u16_m256i::<3>(rhs.avx);
-        Self { avx: blend_varying_i8_m256i(res_lo, res_hi, sel) }
+        let sel = shl_imm_u16_m256i::<3>(rhs.0);
+        Self(blend_varying_i8_m256i(res_lo, res_hi, sel))
       } else if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         use core::arch::aarch64::{int8x16x2_t, vqtbl2q_s8, vreinterpretq_u8_s8};
         unsafe {
-          let table = int8x16x2_t(self.a.neon, self.b.neon);
-          Self {
-            a: i8x16 { neon: vqtbl2q_s8(table, vreinterpretq_u8_s8(rhs.a.neon)) },
-            b: i8x16 { neon: vqtbl2q_s8(table, vreinterpretq_u8_s8(rhs.b.neon)) },
-          }
+          let table = int8x16x2_t(self.0.0.0, self.0.1.0);
+          Self(Inner(
+            i8x16(vqtbl2q_s8(table, vreinterpretq_u8_s8(rhs.0.0.0))),
+            i8x16(vqtbl2q_s8(table, vreinterpretq_u8_s8(rhs.0.1.0))),
+          ))
         }
       } else {
         // Generic {a,b}: each output half pulls from either table half.
@@ -568,10 +535,10 @@ impl i8x32 {
         // nonzero domains are disjoint, so a bitwise OR selects correctly and
         // out-of-range (>=32) falls out as 0 with no extra mask.
         let sixteen = i8x16::splat(16);
-        Self {
-          a: self.a.swizzle(rhs.a) | self.b.swizzle(rhs.a - sixteen),
-          b: self.a.swizzle(rhs.b) | self.b.swizzle(rhs.b - sixteen),
-        }
+        Self(Inner(
+          self.0.0.swizzle(rhs.0.0) | self.0.1.swizzle(rhs.0.0 - sixteen),
+          self.0.0.swizzle(rhs.0.1) | self.0.1.swizzle(rhs.0.1 - sixteen),
+        ))
       }
     }
   }
@@ -588,32 +555,32 @@ impl i8x32 {
         #[cfg(target_arch = "x86_64")]
         use core::arch::x86_64::_mm256_permutexvar_epi8;
         // TODO(safe_arch): Add `_mm256_permutexvar_epi8`.
-        Self { avx: m256i(unsafe { _mm256_permutexvar_epi8(rhs.avx.0, self.avx.0) }) }
+        Self(m256i(unsafe { _mm256_permutexvar_epi8(rhs.0.0, self.0.0) }))
       } else if #[cfg(target_feature="avx2")] {
         // Same broadcast+blend as strict, but skip the 0x60 zeroing fold.
-        let tbl_lo = shuffle_abi_i128z_all_m256i::<0x00>(self.avx, self.avx);
-        let tbl_hi = shuffle_abi_i128z_all_m256i::<0x11>(self.avx, self.avx);
-        let res_lo = shuffle_av_i8z_half_m256i(tbl_lo, rhs.avx);
-        let res_hi = shuffle_av_i8z_half_m256i(tbl_hi, rhs.avx);
-        let sel = shl_imm_u16_m256i::<3>(rhs.avx);
-        Self { avx: blend_varying_i8_m256i(res_lo, res_hi, sel) }
+        let tbl_lo = shuffle_abi_i128z_all_m256i::<0x00>(self.0, self.0);
+        let tbl_hi = shuffle_abi_i128z_all_m256i::<0x11>(self.0, self.0);
+        let res_lo = shuffle_av_i8z_half_m256i(tbl_lo, rhs.0);
+        let res_hi = shuffle_av_i8z_half_m256i(tbl_hi, rhs.0);
+        let sel = shl_imm_u16_m256i::<3>(rhs.0);
+        Self(blend_varying_i8_m256i(res_lo, res_hi, sel))
       } else if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // vqtbl2 zeroes out-of-range anyway; identical to strict.
         use core::arch::aarch64::{int8x16x2_t, vqtbl2q_s8, vreinterpretq_u8_s8};
         unsafe {
-          let table = int8x16x2_t(self.a.neon, self.b.neon);
-          Self {
-            a: i8x16 { neon: vqtbl2q_s8(table, vreinterpretq_u8_s8(rhs.a.neon)) },
-            b: i8x16 { neon: vqtbl2q_s8(table, vreinterpretq_u8_s8(rhs.b.neon)) },
-          }
+          let table = int8x16x2_t(self.0.0.0, self.0.1.0);
+          Self(Inner(
+            i8x16(vqtbl2q_s8(table, vreinterpretq_u8_s8(rhs.0.0.0))),
+            i8x16(vqtbl2q_s8(table, vreinterpretq_u8_s8(rhs.0.1.0))),
+          ))
         }
       } else {
         // Strict fallback is a valid relaxed implementation (it zeroes OOR).
         let sixteen = i8x16::splat(16);
-        Self {
-          a: self.a.swizzle(rhs.a) | self.b.swizzle(rhs.a - sixteen),
-          b: self.a.swizzle(rhs.b) | self.b.swizzle(rhs.b - sixteen),
-        }
+        Self(Inner(
+          self.0.0.swizzle(rhs.0.0) | self.0.1.swizzle(rhs.0.0 - sixteen),
+          self.0.0.swizzle(rhs.0.1) | self.0.1.swizzle(rhs.0.1 - sixteen),
+        ))
       }
     }
   }

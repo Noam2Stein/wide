@@ -1,5 +1,7 @@
 use super::*;
 
+use crate::{f64x4, i64x2, u64x2, u64x4};
+
 pick! {
   if #[cfg(target_feature="avx2")] {
     /// A SIMD vector with four elements of type [`i64`].
@@ -42,12 +44,9 @@ impl_simd! {
   fn simd_eq(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx2: cmp_eq_mask_i64_m256i(self.avx2, rhs.avx2) }
+        Self(cmp_eq_mask_i64_m256i(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_eq(rhs.a),
-          b : self.b.simd_eq(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_eq(rhs.0.0), self.0.1.simd_eq(rhs.0.1)))
       }
     }
   }
@@ -58,10 +57,7 @@ impl_simd! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_eq(rhs)
       } else {
-        Self {
-          a : self.a.simd_ne(rhs.a),
-          b : self.b.simd_ne(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_ne(rhs.0.0), self.0.1.simd_ne(rhs.0.1)))
       }
     }
   }
@@ -70,12 +66,9 @@ impl_simd! {
   fn simd_lt(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx2: !(cmp_gt_mask_i64_m256i(self.avx2, rhs.avx2) ^ cmp_eq_mask_i64_m256i(self.avx2, rhs.avx2)) }
+        Self(!(cmp_gt_mask_i64_m256i(self.0, rhs.0) ^ cmp_eq_mask_i64_m256i(self.0, rhs.0)))
       } else {
-        Self {
-          a : self.a.simd_lt(rhs.a),
-          b : self.b.simd_lt(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_lt(rhs.0.0), self.0.1.simd_lt(rhs.0.1)))
       }
     }
   }
@@ -84,12 +77,9 @@ impl_simd! {
   fn simd_gt(self, rhs: Self) -> Self::Output {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx2: cmp_gt_mask_i64_m256i(self.avx2, rhs.avx2) }
+        Self(cmp_gt_mask_i64_m256i(self.0, rhs.0))
       } else {
-        Self {
-          a : self.a.simd_gt(rhs.a),
-          b : self.b.simd_gt(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_gt(rhs.0.0), self.0.1.simd_gt(rhs.0.1)))
       }
     }
   }
@@ -100,10 +90,7 @@ impl_simd! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_gt(rhs)
       } else {
-        Self {
-          a : self.a.simd_le(rhs.a),
-          b : self.b.simd_le(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_le(rhs.0.0), self.0.1.simd_le(rhs.0.1)))
       }
     }
   }
@@ -114,10 +101,7 @@ impl_simd! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_lt(rhs)
       } else {
-        Self {
-          a : self.a.simd_ge(rhs.a),
-          b : self.b.simd_ge(rhs.b),
-        }
+        Self(Inner(self.0.0.simd_ge(rhs.0.0), self.0.1.simd_ge(rhs.0.1)))
       }
     }
   }
@@ -126,17 +110,15 @@ impl_simd! {
   pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self {
-          avx2: bitor_m256i(
-            bitand_m256i(if_one.avx2, self.avx2),
-            bitandnot_m256i(self.avx2, if_zero.avx2),
-          ),
-        }
+        Self(bitor_m256i(
+          bitand_m256i(if_one.0, self.0),
+          bitandnot_m256i(self.0, if_zero.0),
+        ))
       } else {
-        Self {
-          a: self.a.bitselect(if_one.a, if_zero.a),
-          b: self.b.bitselect(if_one.b, if_zero.b),
-        }
+        Self(Inner(
+          self.0.0.bitselect(if_one.0.0, if_zero.0.0),
+          self.0.1.bitselect(if_one.0.1, if_zero.0.1),
+        ))
       }
     }
   }
@@ -145,12 +127,12 @@ impl_simd! {
   pub fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        Self { avx2: blend_varying_i8_m256i(if_false.avx2,if_true.avx2,self.avx2) }
+        Self(blend_varying_i8_m256i(if_false.0,if_true.0,self.0))
       } else {
-        Self {
-          a : self.a.select(if_true.a, if_false.a),
-          b : self.b.select(if_true.b, if_false.b),
-        }
+        Self(Inner(
+          self.0.0.select(if_true.0.0, if_false.0.0),
+          self.0.1.select(if_true.0.1, if_false.0.1),
+        ))
       }
     }
   }
@@ -162,9 +144,9 @@ impl_simd! {
     pick! {
       if #[cfg(target_feature="avx2")] {
         // use f64 move_mask since it is the same size as i64
-        move_mask_m256d(cast(self.avx2)) as u32
+        move_mask_m256d(cast(self.0)) as u32
       } else {
-        self.a.to_bitmask() | (self.b.to_bitmask() << 2)
+        self.0.0.to_bitmask() | (self.0.1.to_bitmask() << 2)
       }
     }
   }
@@ -174,9 +156,9 @@ impl_simd! {
   pub fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        move_mask_m256d(cast(self.avx2)) != 0
+        move_mask_m256d(cast(self.0)) != 0
       } else {
-        (self.a | self.b).any()
+        (self.0.0 | self.0.1).any()
       }
     }
   }
@@ -186,9 +168,9 @@ impl_simd! {
   pub fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        move_mask_m256d(cast(self.avx2)) == 0b1111
+        move_mask_m256d(cast(self.0)) == 0b1111
       } else {
-        (self.a & self.b).all()
+        (self.0.0 & self.0.1).all()
       }
     }
   }
@@ -256,10 +238,7 @@ impl_simd_int! {
           arr[3].wrapping_shr(rhs[3] as u32),
         ])
       } else {
-        Self {
-          a : self.a.shr(rhs.a),
-          b : self.b.shr(rhs.b),
-        }
+        Self(Inner(self.0.0.shr(rhs.0.0), self.0.1.shr(rhs.0.1)))
       }
     }
   }
@@ -319,10 +298,10 @@ impl_simd_int! {
         // If overflow occurs return `MAX` if positive or `MIN` if negative.
         overflow.select(Self::MAX ^ negative, result)
       } else {
-        Self {
-          a: self.a.saturating_add(rhs.a),
-          b: self.b.saturating_add(rhs.b),
-        }
+        Self(Inner(
+          self.0.0.saturating_add(rhs.0.0),
+          self.0.1.saturating_add(rhs.0.1),
+        ))
       }
     }
   }
@@ -338,10 +317,10 @@ impl_simd_int! {
         // If overflow occurs return `MAX` if positive or `MIN` if negative.
         overflow.select(Self::MAX ^ negative, result)
       } else {
-        Self {
-          a: self.a.saturating_sub(rhs.a),
-          b: self.b.saturating_sub(rhs.b),
-        }
+        Self(Inner(
+          self.0.0.saturating_sub(rhs.0.0),
+          self.0.1.saturating_sub(rhs.0.1),
+        ))
       }
     }
   }
@@ -434,10 +413,7 @@ impl_simd_int! {
             arr[3].wrapping_abs(),
           ])
       } else {
-        Self {
-          a : self.a.abs(),
-          b : self.b.abs(),
-        }
+        Self(Inner(self.0.0.abs(), self.0.1.abs()))
       }
     }
   }
@@ -447,10 +423,7 @@ impl_simd_int! {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // `neon` has dedicated greater-than-zero intrinsics.
-        Self {
-          a: self.a.is_positive(),
-          b: self.b.is_positive(),
-        }
+        Self(Inner(self.0.0.is_positive(), self.0.1.is_positive()))
       } else {
         self.simd_gt(Self::ZERO)
       }
@@ -462,10 +435,7 @@ impl_simd_int! {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // `neon` has dedicated less-than-zero intrinsics.
-        Self {
-          a: self.a.is_negative(),
-          b: self.b.is_negative(),
-        }
+        Self(Inner(self.0.0.is_negative(), self.0.1.is_negative()))
       } else {
         self.simd_lt(Self::ZERO)
       }
@@ -495,7 +465,7 @@ impl i64x4 {
         let [ba, _]: [i64x2; 2] = cast(b);
         cast([aa.unpack_lo(ba), aa.unpack_hi(ba)])
       } else {
-        Self { a: self.a.unpack_lo(b.a), b: self.a.unpack_hi(b.a) }
+        Self(Inner(self.0.0.unpack_lo(b.0.0), self.0.0.unpack_hi(b.0.0)))
       }
     }
   }
@@ -511,7 +481,7 @@ impl i64x4 {
         let [_, bb]: [i64x2; 2] = cast(b);
         cast([ab.unpack_lo(bb), ab.unpack_hi(bb)])
       } else {
-        Self { a: self.b.unpack_lo(b.b), b: self.b.unpack_hi(b.b) }
+        Self(Inner(self.0.1.unpack_lo(b.0.1), self.0.1.unpack_hi(b.0.1)))
       }
     }
   }
