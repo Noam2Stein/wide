@@ -1,3 +1,42 @@
+/// A generic SIMD vector with `N` elements of type `T`.
+///
+/// Note that only specific combinations of `T` and `N` are supported. Supported types implement the [`SupportedSimd`] trait.
+/// TODO NOW improve this doc.
+///
+/// See the [crate level documentation] for more information about SIMD
+/// vectors.
+///
+/// [crate level documentation]: crate
+#[derive(Clone, Copy)]
+pub struct Simd<T, const N: usize>(pub(crate) <Self as SimdBackend>::Inner)
+where
+  Self: SupportedSimd;
+
+/// A marker trait for SIMD TODO NOW doc this.
+#[expect(private_bounds)]
+#[diagnostic::on_unimplemented(
+  message = "`{Self}` is not a supported SIMD type",
+  note = "see type aliases for a list of supported types"
+)]
+pub trait SupportedSimd: Copy + SimdBackend {}
+
+/// Controls the internal implementation of a [`Simd`] type. This includes
+/// controlling its internal field type and its function implementations.
+///
+/// # Safety
+///
+/// The following requirements must be met:
+///
+/// - `Self` must be [`Simd`] of a certain `T` and `N`
+/// - `T` must satisty all requirements of `bytemuck::Pod`
+/// - `N` must be a power of two
+/// - `Inner` must satisty all requirements of `bytemuck::Pod`
+/// - `Inner` must have a size and alignment equal to `size_of::<T>() * N`
+pub(crate) unsafe trait SimdBackend {
+  /// Specifies the internal representation of this [`Simd`] type.
+  type Inner: Copy;
+}
+
 macro_rules! impl_simd {
   (
     // SAFETY: The contents of this macro assume that:
