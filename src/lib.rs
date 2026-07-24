@@ -1016,9 +1016,17 @@ pub trait CmpLe<Rhs = Self> {
   fn simd_le(self, rhs: Rhs) -> Self::Output;
 }
 
-/// A trait for SIMD variants of [`align_to`] functions.
+/// A deprecated trait for the [`simd_align_to`] and [`simd_align_to_mut`]
+/// functions.
 ///
-/// [`align_to`]: https://doc.rust-lang.org/std/primitive.slice.html#method.align_to
+/// This trait has been deprecated in favor of inheret functions.
+///
+/// [`simd_align_to`]: Simd::simd_align_to
+/// [`simd_align_to_mut`]: Simd::simd_align_to_mut
+#[deprecated(
+  since = "1.6.0",
+  note = "trait has been replaced with inherent functions"
+)]
 pub trait AlignTo
 where
   Self: Pod + Default + PartialEq + From<Self::Elem>,
@@ -1029,6 +1037,9 @@ where
 
   /// A SIMD variant of [`align_to`].
   ///
+  /// This is a method of the deprecated [`AlignTo`] trait. Use the inherent
+  /// function instead.
+  ///
   /// [`align_to`]: https://doc.rust-lang.org/std/primitive.slice.html#method.align_to
   #[inline]
   fn simd_align_to(
@@ -1038,6 +1049,9 @@ where
   }
 
   /// A SIMD variant of [`align_to_mut`].
+  ///
+  /// This is a method of the deprecated [`AlignTo`] trait. Use the inherent
+  /// function instead.
   ///
   /// [`align_to_mut`]: https://doc.rust-lang.org/std/primitive.slice.html#method.align_to_mut
   #[inline]

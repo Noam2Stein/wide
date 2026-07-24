@@ -1,8 +1,7 @@
-use bytemuck::Pod;
+use bytemuck::{Pod, pod_align_to, pod_align_to_mut};
 
-use crate::AlignTo;
 #[expect(deprecated)]
-use crate::{CmpEq, CmpGe, CmpGt, CmpLe, CmpLt, CmpNe};
+use crate::{AlignTo, CmpEq, CmpGe, CmpGt, CmpLe, CmpLt, CmpNe};
 
 /// A generic SIMD vector with `N` elements of type `T`.
 ///
@@ -369,6 +368,7 @@ where
   }
 }
 
+#[expect(deprecated)]
 impl<T, const N: usize> AlignTo for Simd<T, N>
 where
   Self: SupportedSimd,
@@ -629,6 +629,28 @@ where
         [Simd<T, N>; N],
       >(&result)
     }
+  }
+
+  /// A SIMD variant of [`align_to`].
+  ///
+  /// [`align_to`]: https://doc.rust-lang.org/std/primitive.slice.html#method.align_to
+  #[inline]
+  pub fn simd_align_to(slice: &[T]) -> (&[T], &[Self], &[T])
+  where
+    T: Pod,
+  {
+    pod_align_to(slice)
+  }
+
+  /// A SIMD variant of [`align_to_mut`].
+  ///
+  /// [`align_to_mut`]: https://doc.rust-lang.org/std/primitive.slice.html#method.align_to_mut
+  #[inline]
+  pub fn simd_align_to_mut(slice: &mut [T]) -> (&mut [T], &mut [Self], &mut [T])
+  where
+    T: Pod,
+  {
+    pod_align_to_mut(slice)
   }
 
   /// Elementwise selection.
