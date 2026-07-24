@@ -48,6 +48,26 @@ pub(crate) unsafe trait SimdBackend: SimdAssociatedTypes {
   /// Specifies the internal representation of this [`Simd`] type.
   type Inner: Copy;
 
+  fn neg(self) -> Self;
+
+  fn not(self) -> Self;
+
+  fn add(self, rhs: Self) -> Self;
+
+  fn sub(self, rhs: Self) -> Self;
+
+  fn mul(self, rhs: Self) -> Self;
+
+  fn div(self, rhs: Self) -> Self;
+
+  fn rem(self, rhs: Self) -> Self;
+
+  fn bitand(self, rhs: Self) -> Self;
+
+  fn bitor(self, rhs: Self) -> Self;
+
+  fn bitxor(self, rhs: Self) -> Self;
+
   fn simd_eq(self, other: Self) -> Self;
 
   fn simd_ne(self, other: Self) -> Self;
@@ -59,6 +79,10 @@ pub(crate) unsafe trait SimdBackend: SimdAssociatedTypes {
   fn simd_le(self, other: Self) -> Self;
 
   fn simd_ge(self, other: Self) -> Self;
+
+  fn reduce_add(self) -> Self::T;
+
+  fn reduce_mul(self) -> Self::T;
 
   fn bitselect(self, if_one: Self, if_zero: Self) -> Self;
 
@@ -75,6 +99,7 @@ pub(crate) unsafe trait SimdBackend: SimdAssociatedTypes {
 
 /// TODO doc this
 pub(crate) trait SimdAssociatedTypes {
+  type T;
   type Matrix;
   type Bitmask;
 }
@@ -204,6 +229,8 @@ where
     result
   }
 }
+
+impl<T, const N: usize> Neg for Simd<T, N> where Self: SupportedSimd {}
 
 #[expect(deprecated)]
 impl<T: PartialEq, const N: usize> CmpEq for Simd<T, N>
@@ -678,6 +705,7 @@ impl<T, const N: usize> SimdAssociatedTypes for Simd<T, N>
 where
   Self: SupportedSimd,
 {
+  type T = T;
   type Matrix = [Self; N];
   type Bitmask = <Self as SupportedSimd>::Bitmask;
 }

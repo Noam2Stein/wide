@@ -19,6 +19,119 @@ unsafe impl SimdBackend for f64x8 {
   }
 
   #[inline]
+  fn neg(self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(bitxor_m512d(self.0, Self::splat(-0.0).0))
+      } else {
+        Self(Inner(self.0.0.neg(), self.0.1.neg()))
+      }
+    }
+  }
+
+  #[inline]
+  fn not(self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(bitxor_m512d(self.0, set_splat_m512d(f64::from_bits(u64::MAX))))
+      } else {
+        Self(Inner(self.0.0.not(), self.0.1.not()))
+      }
+    }
+  }
+
+  #[inline]
+  fn add(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(add_m512d(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.add(rhs.0.0), self.0.1.add(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn sub(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(sub_m512d(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.sub(rhs.0.0), self.0.1.sub(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn mul(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(mul_m512d(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.mul(rhs.0.0), self.0.1.mul(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn div(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(div_m512d(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.div(rhs.0.0), self.0.1.div(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn rem(self, rhs: Self) -> Self::Output {
+    Self::new([
+      self.to_array()[0] % rhs.to_array()[0],
+      self.to_array()[1] % rhs.to_array()[1],
+      self.to_array()[2] % rhs.to_array()[2],
+      self.to_array()[3] % rhs.to_array()[3],
+      self.to_array()[4] % rhs.to_array()[4],
+      self.to_array()[5] % rhs.to_array()[5],
+      self.to_array()[6] % rhs.to_array()[6],
+      self.to_array()[7] % rhs.to_array()[7],
+    ])
+  }
+
+  #[inline]
+  fn bitand(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(bitand_m512d(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.bitand(rhs.0.0), self.0.1.bitand(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn bitor(self, rhs: Self) -> Self::Output {
+    pick! {
+    if #[cfg(target_feature="avx512f")] {
+        Self(bitor_m512d(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.bitor(rhs.0.0), self.0.1.bitor(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn bitxor(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(bitxor_m512d(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.bitxor(rhs.0.0), self.0.1.bitxor(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
   fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
@@ -80,6 +193,45 @@ unsafe impl SimdBackend for f64x8 {
         Self(cmp_op_mask_m512d::<{cmp_op!(GreaterEqualOrdered)}>(self.0, rhs.0))
       } else {
         Self(Inner(self.0.0.simd_ge(rhs.0.0), self.0.1.simd_ge(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn reduce_add(self) -> f64 {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        // From https://stackoverflow.com/questions/49941645/get-sum-of-values-stored-in-m256d-with-sse-avx
+        let lo = cast_to_m256d_from_m512d(self.0);
+        let hi = extract_m256d_from_m512d::<1>(self.0);
+        let v  = add_m256d(lo, hi);                // [a0+a4, a1+a5, a2+a6, a3+a7]
+        let t  = add_horizontal_m256d(v, v);       // [s01, s23, s01, s23]
+        let lo = cast_to_m128d_from_m256d(t);      // s01
+        let hi = extract_m128d_from_m256d::<1>(t); // s23
+        let s  = add_m128d(lo, hi);                // [sum, ...]
+        get_f64_from_m128d_s(s)
+      } else {
+        self.0.0.reduce_add() + self.0.1.reduce_add()
+      }
+    }
+  }
+
+  #[inline]
+  fn reduce_mul(self) -> f64 {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        // From https://stackoverflow.com/questions/49941645/get-sum-of-values-stored-in-m256d-with-sse-avx
+        let lo = cast_to_m256d_from_m512d(self.0);
+        let hi = extract_m256d_from_m512d::<1>(self.0);
+        let v  = mul_m256d(lo, hi);
+        let lo = cast_to_m128d_from_m256d(v);
+        let hi = extract_m128d_from_m256d::<1>(v);
+        let lo = mul_m128d(lo,hi);
+        let hi64 = unpack_high_m128d(lo,lo);
+        let product = mul_m128d_s(lo,hi64);
+        get_f64_from_m128d_s(product)
+      } else {
+        self.0.0.reduce_mul() * self.0.1.reduce_mul()
       }
     }
   }
@@ -195,158 +347,6 @@ impl_simd_float! {
     UnsignedSimd = u64x8,
   }
   old_powf_simd_fn_name = pow_f64x8,
-
-  #[inline]
-  fn neg(self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(bitxor_m512d(self.0, Self::splat(-0.0).0))
-      } else {
-        Self(Inner(self.0.0.neg(), self.0.1.neg()))
-      }
-    }
-  }
-
-  #[inline]
-  fn not(self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(bitxor_m512d(self.0, set_splat_m512d(f64::from_bits(u64::MAX))))
-      } else {
-        Self(Inner(self.0.0.not(), self.0.1.not()))
-      }
-    }
-  }
-
-  #[inline]
-  fn add(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(add_m512d(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.add(rhs.0.0), self.0.1.add(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn sub(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(sub_m512d(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.sub(rhs.0.0), self.0.1.sub(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn mul(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(mul_m512d(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.mul(rhs.0.0), self.0.1.mul(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn div(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(div_m512d(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.div(rhs.0.0), self.0.1.div(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn rem(self, rhs: Self) -> Self::Output {
-    Self::new([
-      self.to_array()[0] % rhs.to_array()[0],
-      self.to_array()[1] % rhs.to_array()[1],
-      self.to_array()[2] % rhs.to_array()[2],
-      self.to_array()[3] % rhs.to_array()[3],
-      self.to_array()[4] % rhs.to_array()[4],
-      self.to_array()[5] % rhs.to_array()[5],
-      self.to_array()[6] % rhs.to_array()[6],
-      self.to_array()[7] % rhs.to_array()[7],
-    ])
-  }
-
-  #[inline]
-  fn bitand(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(bitand_m512d(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.bitand(rhs.0.0), self.0.1.bitand(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn bitor(self, rhs: Self) -> Self::Output {
-    pick! {
-    if #[cfg(target_feature="avx512f")] {
-        Self(bitor_m512d(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.bitor(rhs.0.0), self.0.1.bitor(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn bitxor(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(bitxor_m512d(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.bitxor(rhs.0.0), self.0.1.bitxor(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  pub fn reduce_add(self) -> f64 {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        // From https://stackoverflow.com/questions/49941645/get-sum-of-values-stored-in-m256d-with-sse-avx
-        let lo = cast_to_m256d_from_m512d(self.0);
-        let hi = extract_m256d_from_m512d::<1>(self.0);
-        let v  = add_m256d(lo, hi);                // [a0+a4, a1+a5, a2+a6, a3+a7]
-        let t  = add_horizontal_m256d(v, v);       // [s01, s23, s01, s23]
-        let lo = cast_to_m128d_from_m256d(t);      // s01
-        let hi = extract_m128d_from_m256d::<1>(t); // s23
-        let s  = add_m128d(lo, hi);                // [sum, ...]
-        get_f64_from_m128d_s(s)
-      } else {
-        self.0.0.reduce_add() + self.0.1.reduce_add()
-      }
-    }
-  }
-
-  #[inline]
-  pub fn reduce_mul(self) -> f64 {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        // From https://stackoverflow.com/questions/49941645/get-sum-of-values-stored-in-m256d-with-sse-avx
-        let lo = cast_to_m256d_from_m512d(self.0);
-        let hi = extract_m256d_from_m512d::<1>(self.0);
-        let v  = mul_m256d(lo, hi);
-        let lo = cast_to_m128d_from_m256d(v);
-        let hi = extract_m128d_from_m256d::<1>(v);
-        let lo = mul_m128d(lo,hi);
-        let hi64 = unpack_high_m128d(lo,lo);
-        let product = mul_m128d_s(lo,hi64);
-        get_f64_from_m128d_s(product)
-      } else {
-        self.0.0.reduce_mul() * self.0.1.reduce_mul()
-      }
-    }
-  }
 
   #[inline]
   pub fn is_nan(self) -> Self {

@@ -17,6 +17,84 @@ unsafe impl SimdBackend for u16x16 {
   }
 
   #[inline]
+  fn not(self) -> Self {
+    pick! {
+      if #[cfg(target_feature="avx2")] {
+        Self(self.0.not())
+      } else {
+        Self(Inner(self.0.0.not(), self.0.1.not()))
+      }
+    }
+  }
+
+  #[inline]
+  fn add(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx2")] {
+        Self(add_i16_m256i(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.add(rhs.0.0), self.0.1.add(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn sub(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx2")] {
+        Self(sub_i16_m256i(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.sub(rhs.0.0), self.0.1.sub(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn mul(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx2")] {
+        // non-widening multiplication is the same for unsigned and signed
+        Self(mul_i16_keep_low_m256i(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.mul(rhs.0.0), self.0.1.mul(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn bitand(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx2")] {
+        Self(bitand_m256i(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.bitand(rhs.0.0), self.0.1.bitand(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn bitor(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx2")] {
+        Self(bitor_m256i(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.bitor(rhs.0.0), self.0.1.bitor(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn bitxor(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx2")] {
+        Self(bitxor_m256i(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.bitxor(rhs.0.0), self.0.1.bitxor(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
   fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
@@ -81,6 +159,18 @@ unsafe impl SimdBackend for u16x16 {
   }
 
   #[inline]
+  fn reduce_add(self) -> u16 {
+    let array: [u16x8; 2] = cast(self);
+    (array[0] + array[1]).reduce_add()
+  }
+
+  #[inline]
+  fn reduce_mul(self) -> u16 {
+    let array: [u16x8; 2] = cast(self);
+    (array[0] * array[1]).reduce_mul()
+  }
+
+  #[inline]
   fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
@@ -141,51 +231,6 @@ impl_simd_uint! {
     T_BITS = 16,
     T_BITS_MUL_2 = 32,
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-  }
-
-  #[inline]
-  fn not(self) -> Self {
-    pick! {
-      if #[cfg(target_feature="avx2")] {
-        Self(self.0.not())
-      } else {
-        Self(Inner(self.0.0.not(), self.0.1.not()))
-      }
-    }
-  }
-
-  #[inline]
-  fn add(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx2")] {
-        Self(add_i16_m256i(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.add(rhs.0.0), self.0.1.add(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn sub(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx2")] {
-        Self(sub_i16_m256i(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.sub(rhs.0.0), self.0.1.sub(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn mul(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx2")] {
-        // non-widening multiplication is the same for unsigned and signed
-        Self(mul_i16_keep_low_m256i(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.mul(rhs.0.0), self.0.1.mul(rhs.0.1)))
-      }
-    }
   }
 
   #[inline]
@@ -261,39 +306,6 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn bitand(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx2")] {
-        Self(bitand_m256i(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.bitand(rhs.0.0), self.0.1.bitand(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn bitor(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx2")] {
-        Self(bitor_m256i(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.bitor(rhs.0.0), self.0.1.bitor(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn bitxor(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx2")] {
-        Self(bitxor_m256i(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.bitxor(rhs.0.0), self.0.1.bitxor(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
   pub fn max(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
@@ -313,18 +325,6 @@ impl_simd_uint! {
         Self(Inner(self.0.0.min(rhs.0.0), self.0.1.min(rhs.0.1)))
       }
     }
-  }
-
-  #[inline]
-  pub fn reduce_add(self) -> u16 {
-    let array: [u16x8; 2] = cast(self);
-    (array[0] + array[1]).reduce_add()
-  }
-
-  #[inline]
-  pub fn reduce_mul(self) -> u16 {
-    let array: [u16x8; 2] = cast(self);
-    (array[0] * array[1]).reduce_mul()
   }
 
   #[inline]

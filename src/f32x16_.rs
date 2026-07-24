@@ -19,6 +19,127 @@ unsafe impl SimdBackend for f32x16 {
   }
 
   #[inline]
+  fn neg(self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(bitxor_m512(self.0, Self::splat(-0.0).0))
+      } else {
+        Self(Inner(self.0.0.neg(), self.0.1.neg()))
+      }
+    }
+  }
+
+  #[inline]
+  fn not(self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(bitxor_m512(self.0, set_splat_m512(f32::from_bits(u32::MAX))))
+      } else {
+        Self(Inner(self.0.0.not(), self.0.1.not()))
+      }
+    }
+  }
+
+  #[inline]
+  fn add(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(add_m512(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.add(rhs.0.0), self.0.1.add(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn sub(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(sub_m512(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.sub(rhs.0.0), self.0.1.sub(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn mul(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(mul_m512(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.mul(rhs.0.0), self.0.1.mul(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn div(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(div_m512(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.div(rhs.0.0), self.0.1.div(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn rem(self, rhs: Self) -> Self::Output {
+    Self::new([
+      self.to_array()[0] % rhs.to_array()[0],
+      self.to_array()[1] % rhs.to_array()[1],
+      self.to_array()[2] % rhs.to_array()[2],
+      self.to_array()[3] % rhs.to_array()[3],
+      self.to_array()[4] % rhs.to_array()[4],
+      self.to_array()[5] % rhs.to_array()[5],
+      self.to_array()[6] % rhs.to_array()[6],
+      self.to_array()[7] % rhs.to_array()[7],
+      self.to_array()[8] % rhs.to_array()[8],
+      self.to_array()[9] % rhs.to_array()[9],
+      self.to_array()[10] % rhs.to_array()[10],
+      self.to_array()[11] % rhs.to_array()[11],
+      self.to_array()[12] % rhs.to_array()[12],
+      self.to_array()[13] % rhs.to_array()[13],
+      self.to_array()[14] % rhs.to_array()[14],
+      self.to_array()[15] % rhs.to_array()[15],
+    ])
+  }
+
+  #[inline]
+  fn bitand(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(bitand_m512(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.bitand(rhs.0.0), self.0.1.bitand(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn bitor(self, rhs: Self) -> Self::Output {
+    pick! {
+    if #[cfg(target_feature="avx512f")] {
+        Self(bitor_m512(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.bitor(rhs.0.0), self.0.1.bitor(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn bitxor(self, rhs: Self) -> Self::Output {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        Self(bitxor_m512(self.0, rhs.0))
+      } else {
+        Self(Inner(self.0.0.bitxor(rhs.0.0), self.0.1.bitxor(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
   fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
@@ -80,6 +201,35 @@ unsafe impl SimdBackend for f32x16 {
         Self(cmp_op_mask_m512::<{cmp_op!(GreaterEqualOrdered)}>(self.0, rhs.0))
       } else {
         Self(Inner(self.0.0.simd_ge(rhs.0.0), self.0.1.simd_ge(rhs.0.1)))
+      }
+    }
+  }
+
+  #[inline]
+  fn reduce_add(self) -> f32 {
+    pick! {
+      if #[cfg(target_feature="avx512f")]{
+        reduce_add_m512(self.0)
+      } else {
+        self.0.0.reduce_add() + self.0.1.reduce_add()
+      }
+    }
+  }
+
+  #[inline]
+  fn reduce_mul(self) -> f32 {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        // TODO: Add `reduce_mul_m512` to `safe_arch` then make this function
+        // safe.
+        #[cfg(target_arch = "x86")]
+        use core::arch::x86::_mm512_reduce_mul_ps;
+        #[cfg(target_arch = "x86_64")]
+        use core::arch::x86_64::_mm512_reduce_mul_ps;
+
+        unsafe { _mm512_reduce_mul_ps(self.0.0) }
+      } else {
+        self.0.0.reduce_mul() * self.0.1.reduce_mul()
       }
     }
   }
@@ -212,156 +362,6 @@ impl_simd_float! {
     UnsignedSimd = u32x16,
   }
   old_powf_simd_fn_name = pow_f32x16,
-
-  #[inline]
-  fn neg(self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(bitxor_m512(self.0, Self::splat(-0.0).0))
-      } else {
-        Self(Inner(self.0.0.neg(), self.0.1.neg()))
-      }
-    }
-  }
-
-  #[inline]
-  fn not(self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(bitxor_m512(self.0, set_splat_m512(f32::from_bits(u32::MAX))))
-      } else {
-        Self(Inner(self.0.0.not(), self.0.1.not()))
-      }
-    }
-  }
-
-  #[inline]
-  fn add(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(add_m512(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.add(rhs.0.0), self.0.1.add(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn sub(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(sub_m512(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.sub(rhs.0.0), self.0.1.sub(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn mul(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(mul_m512(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.mul(rhs.0.0), self.0.1.mul(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn div(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(div_m512(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.div(rhs.0.0), self.0.1.div(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn rem(self, rhs: Self) -> Self::Output {
-    Self::new([
-      self.to_array()[0] % rhs.to_array()[0],
-      self.to_array()[1] % rhs.to_array()[1],
-      self.to_array()[2] % rhs.to_array()[2],
-      self.to_array()[3] % rhs.to_array()[3],
-      self.to_array()[4] % rhs.to_array()[4],
-      self.to_array()[5] % rhs.to_array()[5],
-      self.to_array()[6] % rhs.to_array()[6],
-      self.to_array()[7] % rhs.to_array()[7],
-      self.to_array()[8] % rhs.to_array()[8],
-      self.to_array()[9] % rhs.to_array()[9],
-      self.to_array()[10] % rhs.to_array()[10],
-      self.to_array()[11] % rhs.to_array()[11],
-      self.to_array()[12] % rhs.to_array()[12],
-      self.to_array()[13] % rhs.to_array()[13],
-      self.to_array()[14] % rhs.to_array()[14],
-      self.to_array()[15] % rhs.to_array()[15],
-    ])
-  }
-
-  #[inline]
-  fn bitand(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(bitand_m512(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.bitand(rhs.0.0), self.0.1.bitand(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn bitor(self, rhs: Self) -> Self::Output {
-    pick! {
-    if #[cfg(target_feature="avx512f")] {
-        Self(bitor_m512(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.bitor(rhs.0.0), self.0.1.bitor(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  fn bitxor(self, rhs: Self) -> Self::Output {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        Self(bitxor_m512(self.0, rhs.0))
-      } else {
-        Self(Inner(self.0.0.bitxor(rhs.0.0), self.0.1.bitxor(rhs.0.1)))
-      }
-    }
-  }
-
-  #[inline]
-  pub fn reduce_add(self) -> f32 {
-    pick! {
-      if #[cfg(target_feature="avx512f")]{
-        reduce_add_m512(self.0)
-      } else {
-        self.0.0.reduce_add() + self.0.1.reduce_add()
-      }
-    }
-  }
-
-  #[inline]
-  pub fn reduce_mul(self) -> f32 {
-    pick! {
-      if #[cfg(target_feature="avx512f")] {
-        // TODO: Add `reduce_mul_m512` to `safe_arch` then make this function
-        // safe.
-        #[cfg(target_arch = "x86")]
-        use core::arch::x86::_mm512_reduce_mul_ps;
-        #[cfg(target_arch = "x86_64")]
-        use core::arch::x86_64::_mm512_reduce_mul_ps;
-
-        unsafe { _mm512_reduce_mul_ps(self.0.0) }
-      } else {
-        self.0.0.reduce_mul() * self.0.1.reduce_mul()
-      }
-    }
-  }
 
   #[inline]
   pub fn is_nan(self) -> Self {

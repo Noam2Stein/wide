@@ -16,21 +16,12 @@ macro_rules! impl_simd_uint {
       [$($index:literal),* $(,)?],
     }
 
-    $fn_not:item
-    $fn_add:item
-    $fn_sub:item
-    $fn_mul:item
     $fn_shl_unsigned_simd:item
     $fn_shl_u32:item
     $fn_shr_unsigned_simd:item
     $fn_shr_u32:item
-    $fn_bitand:item
-    $fn_bitor:item
-    $fn_bitxor:item
     $fn_max:item
     $fn_min:item
-    $fn_reduce_add:item
-    $fn_reduce_mul:item
     $fn_reduce_max:item
     $fn_reduce_min:item
     $fn_unbounded_shl:item
@@ -44,105 +35,6 @@ macro_rules! impl_simd_uint {
     $fn_mul_keep_low_high:item
     $fn_mul_keep_high:item
   ) => {
-    impl_unary_operator!(
-      $Simd,
-      Neg,
-      neg,
-      #[inline]
-      fn neg(self) -> Self::Output {
-        Self::default() - self
-      }
-    );
-    impl_unary_operator!($Simd, Not, not, $fn_not);
-
-    impl_binary_operator!($T, $Simd, Add, add, AddAssign, add_assign, $fn_add);
-    impl_binary_operator!($T, $Simd, Sub, sub, SubAssign, sub_assign, $fn_sub);
-    impl_binary_operator!($T, $Simd, Mul, mul, MulAssign, mul_assign, $fn_mul);
-    impl_binary_operator!(
-        $T,
-        $Simd,
-        Div,
-        div,
-        DivAssign,
-        div_assign,
-        #[inline]
-        fn div(self, rhs: Self) -> Self::Output {
-            let self_array = self.to_array();
-            let rhs_array = rhs.to_array();
-
-            Self::new([$(self_array[$index].wrapping_div(rhs_array[$index])),*])
-        },
-        /// Divides each element of `left` by the corresponding element `right`.
-        ///
-        /// Note that because division has no hardware support, this operation
-        /// is very slow and should be avoided if possible.
-        ///
-        /// # Panics
-        ///
-        /// Panics if any element of `right` is zero.
-        ,
-        /// Divides each element of `left` by the scalar `right`.
-        ///
-        /// Note that because division has no hardware support, this operation
-        /// is very slow and should be avoided if possible.
-        ///
-        /// # Panics
-        ///
-        /// Panics if `right` is zero.
-        ,
-        /// Divides the scalar `left` by each element of `right`.
-        ///
-        /// Note that because division has no hardware support, this operation
-        /// is very slow and should be avoided if possible.
-        ///
-        /// # Panics
-        ///
-        /// Panics if any element of `right` is zero.
-    );
-    impl_binary_operator!(
-        $T,
-        $Simd,
-        Rem,
-        rem,
-        RemAssign,
-        rem_assign,
-        #[inline]
-        fn rem(self, rhs: Self) -> Self::Output {
-            let self_array = self.to_array();
-            let rhs_array = rhs.to_array();
-
-            Self::new([$(self_array[$index].wrapping_rem(rhs_array[$index])),*])
-        },
-        /// Returns the remainder of each element of `left` divided by the
-        /// corresponding element `right`.
-        ///
-        /// Note that because division has no hardware support, this operation
-        /// is very slow and should be avoided if possible.
-        ///
-        /// # Panics
-        ///
-        /// Panics if any element of `right` is zero.
-        ,
-        /// Returns the remainder of each element of `left` divided by the
-        /// scalar `right`.
-        ///
-        /// Note that because division has no hardware support, this operation
-        /// is very slow and should be avoided if possible.
-        ///
-        /// # Panics
-        ///
-        /// Panics if `right` is zero.
-        ,
-        /// Returns the remainder of the scalar `left` divided by each element
-        /// of `right`.
-        ///
-        /// Note that because division has no hardware support, this operation
-        /// is very slow and should be avoided if possible.
-        ///
-        /// # Panics
-        ///
-        /// Panics if any element of `right` is zero.
-    );
     impl_shift_operator!(
       $T,
       $Simd,
@@ -226,33 +118,6 @@ macro_rules! impl_simd_uint {
       ///
       #[doc = concat!("[`wrapping_shr`]: ", stringify!($T), "::wrapping_shr")]
       #[doc = concat!("[`unbounded_shr`]: ", stringify!($Simd), "::unbounded_shr")]
-    );
-    impl_binary_operator!(
-      $T,
-      $Simd,
-      BitAnd,
-      bitand,
-      BitAndAssign,
-      bitand_assign,
-      $fn_bitand
-    );
-    impl_binary_operator!(
-      $T,
-      $Simd,
-      BitOr,
-      bitor,
-      BitOrAssign,
-      bitor_assign,
-      $fn_bitor
-    );
-    impl_binary_operator!(
-      $T,
-      $Simd,
-      BitXor,
-      bitxor,
-      BitXorAssign,
-      bitxor_assign,
-      $fn_bitxor
     );
 
     impl<Rhs> core::iter::Sum<Rhs> for $Simd
