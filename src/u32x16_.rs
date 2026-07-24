@@ -1,32 +1,19 @@
 use super::*;
 
-use crate::{i32x16, u16x16, u32x8};
+use crate::{i32x16, simd::SimdBackend, u16x16, u32x8};
 
-pick! {
-  if #[cfg(target_feature="avx512f")] {
-    /// A SIMD vector with 16 elements of type [`u32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct u32x16(pub(crate) m512i);
-  } else {
-    /// A SIMD vector with 16 elements of type [`u32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct u32x16(pub(crate) Inner);
+#[cfg(not(target_feature = "avx512f"))]
+#[repr(C, align(64))]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Inner(pub u32x8, pub u32x8);
 
-    #[repr(C, align(64))]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub(crate) struct Inner(pub u32x8, pub u32x8);
+unsafe impl SimdBackend for u32x16 {
+  pick! {
+    if #[cfg(target_feature="avx512f")] {
+      type Inner = m512i;
+    } else {
+      type Inner = Inner;
+    }
   }
 }
 
@@ -532,13 +519,13 @@ impl From<u16x16> for u32x16 {
         ))
       } else if #[cfg(target_feature = "sse2")] {
         Self(Inner(
-          u32x8(crate::u32x8_::Inner(
-            u32x4(shr_imm_u32_m128i::<16>(unpack_low_i16_m128i(v.0.0.0, v.0.0.0))),
-            u32x4(shr_imm_u32_m128i::<16>(unpack_high_i16_m128i(v.0.0.0, v.0.0.0))),
+          Simd(crate::u32x8_::Inner(
+            Simd(shr_imm_u32_m128i::<16>(unpack_low_i16_m128i(v.0.0.0, v.0.0.0))),
+            Simd(shr_imm_u32_m128i::<16>(unpack_high_i16_m128i(v.0.0.0, v.0.0.0))),
           )),
-          u32x8(crate::u32x8_::Inner(
-            u32x4(shr_imm_u32_m128i::<16>(unpack_low_i16_m128i(v.0.1.0, v.0.1.0))),
-            u32x4(shr_imm_u32_m128i::<16>(unpack_high_i16_m128i(v.0.1.0, v.0.1.0))),
+          Simd(crate::u32x8_::Inner(
+            Simd(shr_imm_u32_m128i::<16>(unpack_low_i16_m128i(v.0.1.0, v.0.1.0))),
+            Simd(shr_imm_u32_m128i::<16>(unpack_high_i16_m128i(v.0.1.0, v.0.1.0))),
           )),
         ))
       } else {

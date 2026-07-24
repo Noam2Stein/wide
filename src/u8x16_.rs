@@ -1,86 +1,32 @@
+#[cfg(all(target_feature = "neon", target_arch = "aarch64"))]
+use core::arch::aarch64::*;
+#[cfg(target_feature = "simd128")]
+use core::arch::wasm32::*;
+
 use super::*;
 
-use crate::{i8x16, i16x8, u16x16};
+use crate::{i8x16, i16x8, simd::SimdBackend, u16x16};
 
-pick! {
-  if #[cfg(target_feature="sse2")] {
-    /// A SIMD vector with 16 elements of type [`u8`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct u8x16(pub(crate) m128i);
-  } else if #[cfg(target_feature="simd128")] {
-    use core::arch::wasm32::*;
+#[cfg(not(any(
+  target_feature = "sse2",
+  target_feature = "simd128",
+  all(target_feature = "neon", target_arch = "aarch64"),
+)))]
+#[repr(C, align(16))]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Inner(pub [u8; 16]);
 
-    /// A SIMD vector with 16 elements of type [`u8`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Clone, Copy)]
-    pub struct u8x16(pub(crate) v128);
-
-    impl Default for u8x16 {
-      fn default() -> Self {
-        Self::splat(0)
-      }
+unsafe impl SimdBackend for u8x16 {
+  pick! {
+    if #[cfg(target_feature="sse2")] {
+      type Inner = m128i;
+    } else if #[cfg(target_feature="simd128")] {
+      type Inner = v128;
+    } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
+      type Inner = uint8x16_t;
+    } else {
+      type Inner = Inner;
     }
-
-    impl PartialEq for u8x16 {
-      fn eq(&self, other: &Self) -> bool {
-        u8x16_all_true(u8x16_eq(self.0, other.0))
-      }
-    }
-
-    impl Eq for u8x16 { }
-  } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
-    use core::arch::aarch64::*;
-
-    /// A SIMD vector with 16 elements of type [`u8`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Copy, Clone)]
-    pub struct u8x16(pub(crate) uint8x16_t);
-
-    impl Default for u8x16 {
-      #[inline]
-      fn default() -> Self {
-        Self::splat(0)
-      }
-    }
-
-    impl PartialEq for u8x16 {
-      #[inline]
-      fn eq(&self, other: &Self) -> bool {
-        unsafe { vminvq_u8(vceqq_u8(self.0, other.0))==u8::MAX }
-      }
-    }
-
-    impl Eq for u8x16 { }
-  } else {
-    /// A SIMD vector with 16 elements of type [`u8`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct u8x16(pub(crate) Inner);
-
-    #[repr(C, align(16))]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub(crate) struct Inner(pub [u8; 16]);
   }
 }
 
@@ -239,8 +185,8 @@ impl_simd! {
         let self_i8 = self.bitxor(offset).0;
         let rhs_i8 = rhs.bitxor(offset).0;
         // a <= b  is equivalent to  !(b < a)  or  !(a > b)
-        let gt_mask = u8x16(cmp_gt_mask_i8_m128i(self_i8, rhs_i8));
-        Self(gt_mask.bitxor(u8x16::splat(0xFF)).0)
+        let gt_mask = Self(cmp_gt_mask_i8_m128i(self_i8, rhs_i8));
+        Self(gt_mask.bitxor(Self::splat(0xFF)).0)
       } else if #[cfg(target_feature="simd128")] {
         Self(u8x16_le(self.0, rhs.0))
       } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
@@ -277,8 +223,8 @@ impl_simd! {
         let self_i8 = self.bitxor(offset).0;
         let rhs_i8 = rhs.bitxor(offset).0;
         // a >= b  is equivalent to  !(b > a)  or  !(a < b)
-        let lt_mask = u8x16(cmp_lt_mask_i8_m128i(self_i8, rhs_i8));
-        Self(lt_mask.bitxor(u8x16::splat(0xFF)).0)
+        let lt_mask = Self(cmp_lt_mask_i8_m128i(self_i8, rhs_i8));
+        Self(lt_mask.bitxor(Self::splat(0xFF)).0)
       } else if #[cfg(target_feature="simd128")] {
         Self(u8x16_ge(self.0, rhs.0))
       } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
@@ -1381,15 +1327,15 @@ impl u8x16 {
   pub fn unpack_low(lhs: u8x16, rhs: u8x16) -> u8x16 {
     pick! {
         if #[cfg(target_feature = "sse2")] {
-            u8x16(unpack_low_i8_m128i(lhs.0, rhs.0))
+            Self(unpack_low_i8_m128i(lhs.0, rhs.0))
         } else if #[cfg(target_feature = "simd128")] {
-          u8x16(u8x16_shuffle::<0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23>(lhs.0, rhs.0))
+          Self(u8x16_shuffle::<0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23>(lhs.0, rhs.0))
         } else if #[cfg(all(target_feature = "neon", target_arch = "aarch64"))] {
             let lhs = unsafe { vget_low_u8(lhs.0) };
             let rhs = unsafe { vget_low_u8(rhs.0) };
 
             let zipped = unsafe { vzip_u8(lhs, rhs) };
-            u8x16(unsafe { vcombine_u8(zipped.0, zipped.1) })
+            Self(unsafe { vcombine_u8(zipped.0, zipped.1) })
         } else {
             u8x16::new([
                 lhs.as_array()[0], rhs.as_array()[0],
@@ -1412,15 +1358,15 @@ impl u8x16 {
   pub fn unpack_high(lhs: u8x16, rhs: u8x16) -> u8x16 {
     pick! {
         if #[cfg(target_feature = "sse2")] {
-            u8x16(unpack_high_i8_m128i(lhs.0, rhs.0))
+            Self(unpack_high_i8_m128i(lhs.0, rhs.0))
         } else if #[cfg(target_feature = "simd128")] {
-            u8x16(u8x16_shuffle::<8, 24, 9, 25, 10, 26, 11, 27, 12, 28, 13, 29, 14, 30, 15, 31>(lhs.0, rhs.0))
+            Self(u8x16_shuffle::<8, 24, 9, 25, 10, 26, 11, 27, 12, 28, 13, 29, 14, 30, 15, 31>(lhs.0, rhs.0))
         } else if #[cfg(all(target_feature = "neon", target_arch = "aarch64"))] {
             let lhs = unsafe { vget_high_u8(lhs.0) };
             let rhs = unsafe { vget_high_u8(rhs.0) };
 
             let zipped = unsafe { vzip_u8(lhs, rhs) };
-            u8x16(unsafe { vcombine_u8(zipped.0, zipped.1) })
+            Self(unsafe { vcombine_u8(zipped.0, zipped.1) })
         } else {
             u8x16::new([
                 lhs.as_array()[8], rhs.as_array()[8],
@@ -1443,13 +1389,13 @@ impl u8x16 {
   pub fn narrow_i16x8(lhs: i16x8, rhs: i16x8) -> Self {
     pick! {
         if #[cfg(target_feature = "sse2")] {
-            u8x16(pack_i16_to_u8_m128i(lhs.0, rhs.0))
+            Self(pack_i16_to_u8_m128i(lhs.0, rhs.0))
         } else if #[cfg(target_feature = "simd128")] {
-            u8x16(u8x16_narrow_i16x8(lhs.0, rhs.0))
+            Self(u8x16_narrow_i16x8(lhs.0, rhs.0))
         } else if #[cfg(all(target_feature = "neon", target_arch = "aarch64"))] {
             let lhs = unsafe { vqmovun_s16(lhs.0) };
             let rhs = unsafe { vqmovun_s16(rhs.0) };
-            u8x16(unsafe { vcombine_u8(lhs, rhs) })
+            Self(unsafe { vcombine_u8(lhs, rhs) })
         } else {
             fn clamp(a: i16) -> u8 {
                   if a < u8::MIN as i16 {

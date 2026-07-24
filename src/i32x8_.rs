@@ -1,32 +1,19 @@
 use super::*;
 
-use crate::{f32x8, i16x8, i32x4, i64x8, u16x8, u32x8};
+use crate::{f32x8, i16x8, i32x4, i64x8, simd::SimdBackend, u16x8, u32x8};
 
-pick! {
-  if #[cfg(target_feature="avx2")] {
-    /// A SIMD vector with eight elements of type [`i32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct i32x8(pub(crate) m256i);
-  } else {
-    /// A SIMD vector with eight elements of type [`i32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct i32x8(pub(crate) Inner);
+#[cfg(not(target_feature = "avx2"))]
+#[repr(C, align(32))]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Inner(pub i32x4, pub i32x4);
 
-    #[repr(C, align(32))]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub(crate) struct Inner(pub i32x4, pub i32x4);
+unsafe impl SimdBackend for i32x8 {
+  pick! {
+    if #[cfg(target_feature="avx2")] {
+      type Inner = m256i;
+    } else {
+      type Inner = Inner;
+    }
   }
 }
 
@@ -534,11 +521,11 @@ impl i32x8 {
   pub fn from_i16x8(v: i16x8) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        i32x8(convert_to_i32_m256i_from_i16_m128i(v.0))
+        Self(convert_to_i32_m256i_from_i16_m128i(v.0))
       } else if #[cfg(target_feature="sse2")] {
-        i32x8(Inner(
-          i32x4(shr_imm_i32_m128i::<16>( unpack_low_i16_m128i(v.0, v.0))),
-          i32x4(shr_imm_i32_m128i::<16>( unpack_high_i16_m128i(v.0, v.0))),
+        Self(Inner(
+          Simd(shr_imm_i32_m128i::<16>( unpack_low_i16_m128i(v.0, v.0))),
+          Simd(shr_imm_i32_m128i::<16>( unpack_high_i16_m128i(v.0, v.0))),
         ))
       } else {
         i32x8::new([
@@ -561,11 +548,11 @@ impl i32x8 {
   pub fn from_u16x8(v: u16x8) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        i32x8(convert_to_i32_m256i_from_u16_m128i(v.0))
+        Self(convert_to_i32_m256i_from_u16_m128i(v.0))
       } else if #[cfg(target_feature="sse2")] {
-        i32x8(Inner(
-          i32x4(shr_imm_u32_m128i::<16>( unpack_low_i16_m128i(v.0, v.0))),
-          i32x4(shr_imm_u32_m128i::<16>( unpack_high_i16_m128i(v.0, v.0))),
+        Self(Inner(
+          Simd(shr_imm_u32_m128i::<16>( unpack_low_i16_m128i(v.0, v.0))),
+          Simd(shr_imm_u32_m128i::<16>( unpack_high_i16_m128i(v.0, v.0))),
         ))
       } else {
         i32x8::new([

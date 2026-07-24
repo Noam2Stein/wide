@@ -1,83 +1,32 @@
+#[cfg(all(target_feature = "neon", target_arch = "aarch64"))]
+use core::arch::aarch64::*;
+#[cfg(target_feature = "simd128")]
+use core::arch::wasm32::*;
+
 use super::*;
 
-use crate::{i32x4, u32x4};
+use crate::{i32x4, simd::SimdBackend, u32x4};
 
-pick! {
-  if #[cfg(target_feature="sse")] {
-    /// A SIMD vector with four elements of type [`f32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq)]
-    pub struct f32x4(pub(crate) m128);
-  } else if #[cfg(target_feature="simd128")] {
-    use core::arch::wasm32::*;
+#[cfg(not(any(
+  target_feature = "sse",
+  target_feature = "simd128",
+  all(target_feature = "neon", target_arch = "aarch64"),
+)))]
+#[repr(C, align(16))]
+#[derive(Default, Clone, Copy, PartialEq)]
+pub(crate) struct Inner(pub [f32; 4]);
 
-    /// A SIMD vector with four elements of type [`f32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Clone, Copy)]
-    pub struct f32x4(pub(crate) v128);
-
-    impl Default for f32x4 {
-      fn default() -> Self {
-        Self::splat(0.0)
-      }
-    }
-
-    impl PartialEq for f32x4 {
-      fn eq(&self, other: &Self) -> bool {
-        u32x4_all_true(f32x4_eq(self.0, other.0))
-      }
-    }
-  } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
-    use core::arch::aarch64::*;
-
-    /// A SIMD vector with four elements of type [`f32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Copy, Clone)]
-    pub struct f32x4(pub(crate) float32x4_t);
-
-    impl Default for f32x4 {
-      #[inline]
-      fn default() -> Self {
-        unsafe { Self(vdupq_n_f32(0.0)) }
-      }
-    }
-
-    impl PartialEq for f32x4 {
-      #[inline]
-      fn eq(&self, other: &Self) -> bool {
-        unsafe { vminvq_u32(vceqq_f32(self.0, other.0))==u32::MAX }
-      }
-
-    }
+unsafe impl SimdBackend for f32x4 {
+  pick! {
+    if #[cfg(target_feature="sse")] {
+      type Inner = m128;
+    } else if #[cfg(target_feature="simd128")] {
+      type Inner = v128;
+    } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
+      type Inner = float32x4_t;
     } else {
-    /// A SIMD vector with four elements of type [`f32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq)]
-    pub struct f32x4(pub(crate) Inner);
-
-    #[repr(C, align(16))]
-    #[derive(Default, Clone, Copy, PartialEq)]
-    pub(crate) struct Inner(pub [f32; 4]);
+      type Inner = Inner;
+    }
   }
 }
 
@@ -987,7 +936,7 @@ impl_simd_float! {
         Self(round_m128::<{round_op!(Nearest)}>(self.0))
       } else if #[cfg(target_feature="sse2")] {
         let mi: m128i = convert_to_i32_m128i_from_m128(self.0);
-        let f: f32x4 = f32x4(convert_to_m128_from_i32_m128i(mi));
+        let f: f32x4 = Self(convert_to_m128_from_i32_m128i(mi));
         let i: i32x4 = cast(mi);
         let mask: f32x4 = cast(i.simd_eq(i32x4::from(0x80000000_u32 as i32)));
         mask.select(self, f)

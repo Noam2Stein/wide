@@ -1,92 +1,32 @@
+#[cfg(all(target_feature = "neon", target_arch = "aarch64"))]
+use core::arch::aarch64::*;
+#[cfg(target_feature = "simd128")]
+use core::arch::wasm32::*;
+
 use super::*;
 
-#[cfg(any(
-  all(target_feature = "sse4.1", not(target_feature = "avx2")),
-  all(target_feature = "neon", target_arch = "aarch64"),
+use crate::{f32x4, i64x4, simd::SimdBackend, u32x4};
+
+#[cfg(not(any(
+  target_feature = "sse2",
   target_feature = "simd128",
-))]
-use crate::i64x2;
-use crate::{f32x4, i64x4, u32x4};
+  all(target_feature = "neon", target_arch = "aarch64"),
+)))]
+#[repr(C, align(16))]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Inner(pub [i32; 4]);
 
-pick! {
-  if #[cfg(target_feature="sse2")] {
-    /// A SIMD vector with four elements of type [`i32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct i32x4(pub(crate) m128i);
-  } else if #[cfg(target_feature="simd128")] {
-    use core::arch::wasm32::*;
-
-    /// A SIMD vector with four elements of type [`i32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Clone, Copy)]
-    pub struct i32x4(pub(crate) v128);
-
-    impl Default for i32x4 {
-      fn default() -> Self {
-        Self::splat(0)
-      }
+unsafe impl SimdBackend for i32x4 {
+  pick! {
+    if #[cfg(target_feature="sse2")] {
+      type Inner = m128i;
+    } else if #[cfg(target_feature="simd128")] {
+      type Inner = v128;
+    } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
+      type Inner = int32x4_t;
+    } else {
+      type Inner = Inner;
     }
-
-    impl PartialEq for i32x4 {
-      fn eq(&self, other: &Self) -> bool {
-        u32x4_all_true(i32x4_eq(self.0, other.0))
-      }
-    }
-
-    impl Eq for i32x4 { }
-  } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
-    use core::arch::aarch64::*;
-
-    /// A SIMD vector with four elements of type [`i32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Copy, Clone)]
-    pub struct i32x4(pub(crate) int32x4_t);
-
-    impl Default for i32x4 {
-      #[inline]
-      fn default() -> Self {
-        Self::splat(0)
-      }
-    }
-
-    impl PartialEq for i32x4 {
-      #[inline]
-      fn eq(&self, other: &Self) -> bool {
-        unsafe { vminvq_u32(vceqq_s32(self.0, other.0))==u32::MAX }
-      }
-    }
-
-    impl Eq for i32x4 { }
-  } else {
-    /// A SIMD vector with four elements of type [`i32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct i32x4(pub(crate) Inner);
-
-    #[repr(C, align(16))]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub(crate) struct Inner(pub [i32; 4]);
   }
 }
 
@@ -588,20 +528,20 @@ impl_simd_int! {
               shr_imm_u64_m128i::<32>(self.0),
               shr_imm_u64_m128i::<32>(rhs.0));
 
-            i64x4(crate::i64x4_::Inner(
-              i64x2(unpack_low_i64_m128i(evenp, oddp)),
-              i64x2(unpack_high_i64_m128i(evenp, oddp)),
+            Simd(crate::i64x4_::Inner(
+              Simd(unpack_low_i64_m128i(evenp, oddp)),
+              Simd(unpack_high_i64_m128i(evenp, oddp)),
             ))
         } else if #[cfg(target_feature="simd128")] {
-            i64x4(crate::i64x4_::Inner(
-              i64x2(i64x2_extmul_low_i32x4(self.0, rhs.0)),
-              i64x2(i64x2_extmul_high_i32x4(self.0, rhs.0)),
+            Simd(crate::i64x4_::Inner(
+              Simd(i64x2_extmul_low_i32x4(self.0, rhs.0)),
+              Simd(i64x2_extmul_high_i32x4(self.0, rhs.0)),
             ))
         } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
           unsafe {
-            i64x4(crate::i64x4_::Inner(
-              i64x2(vmull_s32(vget_low_s32(self.0), vget_low_s32(rhs.0))),
-              i64x2(vmull_s32(vget_high_s32(self.0), vget_high_s32(rhs.0))),
+            Simd(crate::i64x4_::Inner(
+              Simd(vmull_s32(vget_low_s32(self.0), vget_low_s32(rhs.0))),
+              Simd(vmull_s32(vget_high_s32(self.0), vget_high_s32(rhs.0))),
             ))
           }
         } else {

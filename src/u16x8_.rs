@@ -1,86 +1,32 @@
+#[cfg(all(target_feature = "neon", target_arch = "aarch64"))]
+use core::arch::aarch64::*;
+#[cfg(target_feature = "simd128")]
+use core::arch::wasm32::*;
+
 use super::*;
 
-use crate::{i16x8, u8x16, u32x8};
+use crate::{i16x8, simd::SimdBackend, u8x16, u32x8};
 
-pick! {
-  if #[cfg(target_feature="sse2")] {
-    /// A SIMD vector with eight elements of type [`u16`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct u16x8(pub(crate) m128i);
-  } else if #[cfg(target_feature="simd128")] {
-    use core::arch::wasm32::*;
+#[cfg(not(any(
+  target_feature = "sse2",
+  target_feature = "simd128",
+  all(target_feature = "neon", target_arch = "aarch64"),
+)))]
+#[repr(C, align(16))]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Inner(pub [u16; 8]);
 
-    /// A SIMD vector with eight elements of type [`u16`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Clone, Copy)]
-    pub struct u16x8(pub(crate) v128);
-
-    impl Default for u16x8 {
-      fn default() -> Self {
-        Self::splat(0)
-      }
+unsafe impl SimdBackend for u16x8 {
+  pick! {
+    if #[cfg(target_feature="sse2")] {
+      type Inner = m128i;
+    } else if #[cfg(target_feature="simd128")] {
+      type Inner = v128;
+    } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
+      type Inner = uint16x8_t;
+    } else {
+      type Inner = Inner;
     }
-
-    impl PartialEq for u16x8 {
-      fn eq(&self, other: &Self) -> bool {
-        u16x8_all_true(u16x8_eq(self.0, other.0))
-      }
-    }
-
-    impl Eq for u16x8 { }
-  } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
-      use core::arch::aarch64::*;
-
-      /// A SIMD vector with eight elements of type [`u16`].
-      ///
-      /// See the [crate level documentation] for more information about SIMD
-      /// vectors.
-      ///
-      /// [crate level documentation]: crate
-      #[repr(transparent)]
-      #[derive(Copy, Clone)]
-      pub struct u16x8(pub(crate) uint16x8_t);
-
-      impl Default for u16x8 {
-        #[inline]
-        fn default() -> Self {
-          Self::splat(0)
-        }
-      }
-
-      impl PartialEq for u16x8 {
-        #[inline]
-        fn eq(&self, other: &Self) -> bool {
-          unsafe { vminvq_u16(vceqq_u16(self.0, other.0))==u16::MAX }
-        }
-      }
-
-      impl Eq for u16x8 { }
-  } else {
-    /// A SIMD vector with eight elements of type [`u16`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct u16x8(pub(crate) Inner);
-
-    #[repr(C, align(16))]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub(crate) struct Inner(pub [u16; 8]);
   }
 }
 
@@ -948,13 +894,13 @@ impl_simd_uint! {
         if #[cfg(target_feature="avx2")] {
           let a = convert_to_i32_m256i_from_u16_m128i(self.0);
           let b = convert_to_i32_m256i_from_u16_m128i(rhs.0);
-          u32x8(mul_i32_keep_low_m256i(a,b))
+          Simd(mul_i32_keep_low_m256i(a,b))
         } else if #[cfg(target_feature="sse2")] {
           let low = mul_i16_keep_low_m128i(self.0, rhs.0);
           let high = mul_u16_keep_high_m128i(self.0, rhs.0);
-          u32x8(crate::u32x8_::Inner(
-            u32x4(unpack_low_i16_m128i(low, high)),
-            u32x4(unpack_high_i16_m128i(low, high))
+          Simd(crate::u32x8_::Inner(
+            Simd(unpack_low_i16_m128i(low, high)),
+            Simd(unpack_high_i16_m128i(low, high))
           ))
         } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
           let lhs_low = unsafe { vget_low_u16(self.0) };
@@ -966,7 +912,7 @@ impl_simd_uint! {
           let low = unsafe { vmull_u16(lhs_low, rhs_low) };
           let high = unsafe { vmull_u16(lhs_high, rhs_high) };
 
-          u32x8(crate::u32x8_::Inner(u32x4(low), u32x4(high)))
+          Simd(crate::u32x8_::Inner(u32x4(low), u32x4(high)))
         } else {
           let a = self.as_array();
           let b = rhs.as_array();

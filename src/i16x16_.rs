@@ -1,32 +1,22 @@
 use super::*;
 
-use crate::{i8x16, i16x8, i32x8, i32x16, u8x16, u16x8, u16x16};
+use crate::{
+  Simd, i8x16, i16x8, i32x8, i32x16, simd::SimdBackend, u8x16, u16x8, u16x16,
+};
 
-pick! {
-  if #[cfg(target_feature="avx2")] {
-    /// A SIMD vector with 16 elements of type [`i16`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct i16x16(pub(crate) m256i);
-  } else {
-    /// A SIMD vector with 16 elements of type [`i16`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct i16x16(pub(crate) Inner);
+#[cfg(not(target_feature = "avx2"))]
+#[repr(C, align(32))]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Inner(pub i16x8, pub i16x8);
 
-    #[repr(C, align(32))]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub(crate) struct Inner(pub i16x8, pub i16x8);
+unsafe impl SimdBackend for i16x16 {
+  pick! {
+    if #[cfg(target_feature="avx2")] {
+      type Inner = m256i;
+    } else {
+      type Inner = Inner;
+
+    }
   }
 }
 
@@ -479,9 +469,9 @@ impl i16x16 {
           i16x8(convert_to_i16_m128i_from_lower8_i8_m128i(unpack_high_i64_m128i(v.0, v.0))),
         ))
       } else if #[cfg(target_feature="sse2")] {
-        i16x16(Inner(
-          i16x8(shr_imm_i16_m128i::<8>(unpack_low_i8_m128i(v.0, v.0))),
-          i16x8(shr_imm_i16_m128i::<8>( unpack_high_i8_m128i(v.0, v.0))),
+        Self(Inner(
+          Simd(shr_imm_i16_m128i::<8>(unpack_low_i8_m128i(v.0, v.0))),
+          Simd(shr_imm_i16_m128i::<8>( unpack_high_i8_m128i(v.0, v.0))),
         ))
       } else {
 
@@ -517,9 +507,9 @@ impl i16x16 {
   pub fn dot(self, rhs: Self) -> i32x8 {
     pick! {
       if #[cfg(target_feature="avx2")] {
-        i32x8(mul_i16_horizontal_add_m256i(self.0, rhs.0))
+        Simd(mul_i16_horizontal_add_m256i(self.0, rhs.0))
       } else {
-        i32x8(crate::i32x8_::Inner(self.0.0.dot(rhs.0.0), self.0.1.dot(rhs.0.1)))
+        Simd(crate::i32x8_::Inner(self.0.0.dot(rhs.0.0), self.0.1.dot(rhs.0.1)))
       }
     }
   }

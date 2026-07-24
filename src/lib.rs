@@ -289,89 +289,49 @@ macro_rules! polynomial_13 {
   }};
 }
 
-mod f32x16_;
-pub use f32x16_::*;
+macro_rules! define_supported_simd_type {
+  ($T:ident, $N:literal, $TxN:ident, $TxN_:ident) => {
+    #[doc = concat!("A SIMD vector with ", $N, " elements of type [`", stringify!($T),"`].")]
+    ///
+    /// See the [crate level documentation] for more information about SIMD
+    /// vectors.
+    ///
+    /// [crate level documentation]: crate
+    pub type $TxN = Simd<$T, $N>;
 
-mod f32x8_;
-pub use f32x8_::*;
+    impl SupportedSimd for $TxN {}
 
-mod f32x4_;
-pub use f32x4_::*;
-
-mod f64x8_;
-pub use f64x8_::*;
-
-mod f64x4_;
-pub use f64x4_::*;
-
-mod f64x2_;
-pub use f64x2_::*;
-
-mod i8x16_;
-pub use i8x16_::*;
-
-mod i16x16_;
-pub use i16x16_::*;
-
-mod i16x32_;
-pub use i16x32_::*;
-
-mod i8x32_;
-pub use i8x32_::*;
-
-mod i16x8_;
-pub use i16x8_::*;
-
-mod i32x4_;
-pub use i32x4_::*;
-
-mod i32x8_;
-pub use i32x8_::*;
-
-mod i32x16_;
-pub use i32x16_::*;
-
-mod i64x2_;
-pub use i64x2_::*;
-
-mod i64x4_;
-pub use i64x4_::*;
-
-mod i64x8_;
-pub use i64x8_::*;
-
-mod u8x16_;
-pub use u8x16_::*;
-
-mod u8x32_;
-pub use u8x32_::*;
-
-mod u16x8_;
-pub use u16x8_::*;
-
-mod u16x16_;
-pub use u16x16_::*;
-
-mod u16x32_;
-pub use u16x32_::*;
-
-mod u32x4_;
-pub use u32x4_::*;
-
-mod u32x8_;
-pub use u32x8_::*;
-
-mod u32x16_;
-pub use u32x16_::*;
-
-mod u64x2_;
-pub use u64x2_::*;
-
-mod u64x4_;
-pub use u64x4_::*;
-
-mod u64x8_;
-pub use u64x8_::*;
+    mod $TxN_;
+  };
+}
+define_supported_simd_type!(f32, 4, f32x4, f32x4_);
+define_supported_simd_type!(f32, 8, f32x8, f32x8_);
+define_supported_simd_type!(f32, 16, f32x16, f32x16_);
+define_supported_simd_type!(f64, 2, f64x2, f64x2_);
+define_supported_simd_type!(f64, 4, f64x4, f64x4_);
+define_supported_simd_type!(f64, 8, f64x8, f64x8_);
+define_supported_simd_type!(i8, 16, i8x16, i8x16_);
+define_supported_simd_type!(i8, 32, i8x32, i8x32_);
+define_supported_simd_type!(i16, 8, i16x8, i16x8_);
+define_supported_simd_type!(i16, 16, i16x16, i16x16_);
+define_supported_simd_type!(i16, 32, i16x32, i16x32_);
+define_supported_simd_type!(i32, 4, i32x4, i32x4_);
+define_supported_simd_type!(i32, 8, i32x8, i32x8_);
+define_supported_simd_type!(i32, 16, i32x16, i32x16_);
+define_supported_simd_type!(i64, 2, i64x2, i64x2_);
+define_supported_simd_type!(i64, 4, i64x4, i64x4_);
+define_supported_simd_type!(i64, 8, i64x8, i64x8_);
+define_supported_simd_type!(u8, 16, u8x16, u8x16_);
+define_supported_simd_type!(u8, 32, u8x32, u8x32_);
+define_supported_simd_type!(u16, 8, u16x8, u16x8_);
+define_supported_simd_type!(u16, 16, u16x16, u16x16_);
+define_supported_simd_type!(u16, 32, u16x32, u16x32_);
+define_supported_simd_type!(u32, 4, u32x4, u32x4_);
+define_supported_simd_type!(u32, 8, u32x8, u32x8_);
+define_supported_simd_type!(u32, 16, u32x16, u32x16_);
+define_supported_simd_type!(u64, 2, u64x2, u64x2_);
+define_supported_simd_type!(u64, 4, u64x4, u64x4_);
+define_supported_simd_type!(u64, 8, u64x8, u64x8_);
 
 #[allow(dead_code)]
 fn generic_bit_blend<T>(mask: T, y: T, n: T) -> T

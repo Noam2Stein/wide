@@ -1,89 +1,32 @@
+#[cfg(all(target_feature = "neon", target_arch = "aarch64"))]
+use core::arch::aarch64::*;
+#[cfg(target_feature = "simd128")]
+use core::arch::wasm32::*;
+
 use super::*;
 
-use crate::i64x2;
+use crate::{i64x2, simd::SimdBackend};
 
-pick! {
-  if #[cfg(target_feature="sse2")] {
-    /// A SIMD vector with two elements of type [`u64`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct u64x2(pub(crate) m128i);
-  } else if #[cfg(target_feature="simd128")] {
-    use core::arch::wasm32::*;
+#[cfg(not(any(
+  target_feature = "sse2",
+  target_feature = "simd128",
+  all(target_feature = "neon", target_arch = "aarch64"),
+)))]
+#[repr(C, align(16))]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Inner(pub [u64; 2]);
 
-    /// A SIMD vector with two elements of type [`u64`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Clone, Copy)]
-    pub struct u64x2(pub(crate) v128);
-
-    impl Default for u64x2 {
-      fn default() -> Self {
-        Self::splat(0)
-      }
+unsafe impl SimdBackend for u64x2 {
+  pick! {
+    if #[cfg(target_feature="sse2")] {
+      type Inner = m128i;
+    } else if #[cfg(target_feature="simd128")] {
+      type Inner = v128;
+    } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
+      type Inner = uint64x2_t;
+    } else {
+      type Inner = Inner;
     }
-
-    impl PartialEq for u64x2 {
-      fn eq(&self, other: &Self) -> bool {
-        u64x2_all_true(u64x2_eq(self.0, other.0))
-      }
-    }
-
-    impl Eq for u64x2 { }
-  } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
-    use core::arch::aarch64::*;
-
-    /// A SIMD vector with two elements of type [`u64`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Copy, Clone)]
-    pub struct u64x2(pub(crate) uint64x2_t);
-
-    impl Default for u64x2 {
-      #[inline]
-      fn default() -> Self {
-        unsafe { Self(vdupq_n_u64(0)) }
-      }
-    }
-
-    impl PartialEq for u64x2 {
-      #[inline]
-      fn eq(&self, other: &Self) -> bool {
-        unsafe {
-          vgetq_lane_u64(self.0,0) == vgetq_lane_u64(other.0,0) &&
-          vgetq_lane_u64(self.0,1) == vgetq_lane_u64(other.0,1)
-        }
-      }
-    }
-
-    impl Eq for u64x2 { }
-  } else {
-    /// A SIMD vector with two elements of type [`u64`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct u64x2(pub(crate) Inner);
-
-    #[repr(C, align(16))]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub(crate) struct Inner(pub [u64; 2]);
   }
 }
 

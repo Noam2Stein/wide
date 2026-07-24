@@ -2,33 +2,20 @@ use super::*;
 
 #[cfg(not(target_feature = "avx512f"))]
 use crate::f32x8;
-use crate::{i32x16, u32x16};
+use crate::{Simd, f32x16, i32x16, simd::SimdBackend, u32x16};
 
-pick! {
-  if #[cfg(target_feature="avx512f")] {
-    /// A SIMD vector with 16 elements of type [`f32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq)]
-    pub struct f32x16(pub(crate) m512);
-  } else {
-    /// A SIMD vector with 16 elements of type [`f32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq)]
-    pub struct f32x16(pub(crate) Inner);
+#[cfg(not(target_feature = "avx512f"))]
+#[repr(C, align(64))]
+#[derive(Default, Clone, Copy, PartialEq)]
+pub(crate) struct Inner(pub f32x8, pub f32x8);
 
-    #[repr(C, align(64))]
-    #[derive(Default, Clone, Copy, PartialEq)]
-    pub(crate) struct Inner(pub f32x8, pub f32x8);
+unsafe impl SimdBackend for f32x16 {
+  pick! {
+    if #[cfg(target_feature="avx512f")] {
+      type Inner = m512;
+    } else {
+      type Inner = Inner;
+    }
   }
 }
 
@@ -622,7 +609,7 @@ impl_simd_float! {
         let cast: i32x16 = cast(convert_to_i32_m512i_from_m512(non_nan.0));
         flip_to_max ^ cast
       } else {
-        i32x16(crate::i32x16_::Inner(self.0.0.round_int(), self.0.1.round_int()))
+        Simd(crate::i32x16_::Inner(self.0.0.round_int(), self.0.1.round_int()))
       }
     }
   }
@@ -633,7 +620,7 @@ impl_simd_float! {
       if #[cfg(target_feature="avx512f")] {
         cast(convert_to_i32_m512i_from_m512(self.0))
       } else {
-        i32x16(crate::i32x16_::Inner(self.0.0.fast_round_int(), self.0.1.fast_round_int()))
+        Simd(crate::i32x16_::Inner(self.0.0.fast_round_int(), self.0.1.fast_round_int()))
       }
     }
   }

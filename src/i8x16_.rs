@@ -1,86 +1,32 @@
+#[cfg(all(target_feature = "neon", target_arch = "aarch64"))]
+use core::arch::aarch64::*;
+#[cfg(target_feature = "simd128")]
+use core::arch::wasm32::*;
+
 use super::*;
 
-use crate::{i16x16, u8x16};
+use crate::{i16x16, simd::SimdBackend, u8x16};
 
-pick! {
-  if #[cfg(target_feature="sse2")] {
-    /// A SIMD vector with 16 elements of type [`i8`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct i8x16(pub(crate) m128i);
-  } else if #[cfg(target_feature="simd128")] {
-    use core::arch::wasm32::*;
+#[cfg(not(any(
+  target_feature = "sse2",
+  target_feature = "simd128",
+  all(target_feature = "neon", target_arch = "aarch64"),
+)))]
+#[repr(C, align(16))]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Inner(pub [i8; 16]);
 
-    /// A SIMD vector with 16 elements of type [`i8`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Clone, Copy)]
-    pub struct i8x16(pub(crate) v128);
-
-    impl Default for i8x16 {
-      fn default() -> Self {
-        Self::splat(0)
-      }
+unsafe impl SimdBackend for i8x16 {
+  pick! {
+    if #[cfg(target_feature="sse2")] {
+      type Inner = m128i;
+    } else if #[cfg(target_feature="simd128")] {
+      type Inner = v128;
+    } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
+      type Inner = int8x16_t;
+    } else {
+      type Inner = Inner;
     }
-
-    impl PartialEq for i8x16 {
-      fn eq(&self, other: &Self) -> bool {
-        u8x16_all_true(i8x16_eq(self.0, other.0))
-      }
-    }
-
-    impl Eq for i8x16 { }
-  } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
-    use core::arch::aarch64::*;
-
-    /// A SIMD vector with 16 elements of type [`i8`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Copy, Clone)]
-    pub struct i8x16(pub(crate) int8x16_t);
-
-    impl Default for i8x16 {
-      #[inline]
-      fn default() -> Self {
-        Self::splat(0)
-      }
-    }
-
-    impl PartialEq for i8x16 {
-      #[inline]
-      fn eq(&self, other: &Self) -> bool {
-        unsafe { vminvq_u8(vceqq_s8(self.0, other.0))==u8::MAX }
-      }
-    }
-
-    impl Eq for i8x16 { }
-  } else {
-    /// A SIMD vector with 16 elements of type [`i8`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct i8x16(pub(crate) Inner);
-
-    #[repr(C, align(16))]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub(crate) struct Inner(pub [i8; 16]);
   }
 }
 
@@ -1125,10 +1071,10 @@ impl i8x16 {
     pick! {
       if #[cfg(target_feature="avx2")] {
         let a = v.0.bitand(set_splat_i16_m256i(0xff));
-        i8x16(pack_i16_to_u8_m128i( extract_m128i_from_m256i::<0>(a), extract_m128i_from_m256i::<1>(a)))
+        Self(pack_i16_to_u8_m128i( extract_m128i_from_m256i::<0>(a), extract_m128i_from_m256i::<1>(a)))
       } else if #[cfg(target_feature="sse2")] {
         let mask = set_splat_i16_m128i(0xff);
-        i8x16(pack_i16_to_u8_m128i( v.0.0.0.bitand(mask), v.0.1.0.bitand(mask)))
+        Self(pack_i16_to_u8_m128i( v.0.0.0.bitand(mask), v.0.1.0.bitand(mask)))
       } else {
         // no super good intrinsics on other platforms... plain old codegen does a reasonable job
         i8x16::new([

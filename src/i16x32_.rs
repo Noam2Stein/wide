@@ -1,32 +1,19 @@
 use super::*;
 
-use crate::{i16x16, i32x16, u16x16, u16x32};
+use crate::{i16x16, i32x16, simd::SimdBackend, u16x16, u16x32};
 
-pick! {
-  if #[cfg(target_feature="avx512bw")] {
-    /// A SIMD vector with 32 elements of type [`i16`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct i16x32(pub(crate) m512i);
-  } else {
-    /// A SIMD vector with 32 elements of type [`i16`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct i16x32(pub(crate) Inner);
+#[cfg(not(target_feature = "avx512bw"))]
+#[repr(C, align(64))]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Inner(pub i16x16, pub i16x16);
 
-    #[repr(C, align(64))]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub(crate) struct Inner(pub i16x16, pub i16x16);
+unsafe impl SimdBackend for i16x32 {
+  pick! {
+    if #[cfg(target_feature="avx512bw")] {
+      type Inner = m512i;
+    } else {
+      type Inner = Inner;
+    }
   }
 }
 
@@ -486,9 +473,9 @@ impl i16x32 {
   pub fn dot(self, rhs: Self) -> i32x16 {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
-        i32x16(mul_i16_horizontal_add_m512i(self.0, rhs.0))
+        Simd(mul_i16_horizontal_add_m512i(self.0, rhs.0))
       } else {
-        i32x16(crate::i32x16_::Inner(self.0.0.dot(rhs.0.0), self.0.1.dot(rhs.0.1)))
+        Simd(crate::i32x16_::Inner(self.0.0.dot(rhs.0.0), self.0.1.dot(rhs.0.1)))
       }
     }
   }

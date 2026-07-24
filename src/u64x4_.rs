@@ -1,34 +1,21 @@
 use super::*;
 
-use crate::i64x4;
 #[cfg(not(target_feature = "avx2"))]
 use crate::u64x2;
+use crate::{i64x4, simd::SimdBackend};
 
-pick! {
-  if #[cfg(target_feature="avx2")] {
-    /// A SIMD vector with four elements of type [`u64`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct u64x4(pub(crate) m256i);
-  } else {
-    /// A SIMD vector with four elements of type [`u64`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub struct u64x4(pub(crate) Inner);
+#[cfg(not(target_feature = "avx2"))]
+#[repr(C, align(32))]
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Inner(pub u64x2, pub u64x2);
 
-    #[repr(C, align(32))]
-    #[derive(Default, Clone, Copy, PartialEq, Eq)]
-    pub(crate) struct Inner(pub u64x2, pub u64x2);
+unsafe impl SimdBackend for u64x4 {
+  pick! {
+    if #[cfg(target_feature="avx2")] {
+      type Inner = m256i;
+    } else {
+      type Inner = Inner;
+    }
   }
 }
 

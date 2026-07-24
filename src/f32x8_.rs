@@ -2,33 +2,20 @@ use super::*;
 
 #[cfg(not(target_feature = "avx"))]
 use crate::f32x4;
-use crate::{i32x8, u32x8};
+use crate::{f32x8, i32x8, simd::SimdBackend, u32x8};
 
-pick! {
-  if #[cfg(target_feature="avx")] {
-    /// A SIMD vector with eight elements of type [`f32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq)]
-    pub struct f32x8(pub(crate) m256);
-  } else {
-    /// A SIMD vector with eight elements of type [`f32`].
-    ///
-    /// See the [crate level documentation] for more information about SIMD
-    /// vectors.
-    ///
-    /// [crate level documentation]: crate
-    #[repr(transparent)]
-    #[derive(Default, Clone, Copy, PartialEq)]
-    pub struct f32x8(pub(crate) Inner);
+#[cfg(not(target_feature = "avx"))]
+#[repr(C, align(32))]
+#[derive(Default, Clone, Copy, PartialEq)]
+pub(crate) struct Inner(pub f32x4, pub f32x4);
 
-    #[repr(C, align(32))]
-    #[derive(Default, Clone, Copy, PartialEq)]
-    pub(crate) struct Inner(pub f32x4, pub f32x4);
+unsafe impl SimdBackend for f32x8 {
+  pick! {
+    if #[cfg(target_feature="avx")] {
+      type Inner = m256;
+    } else {
+      type Inner = Inner;
+    }
   }
 }
 
