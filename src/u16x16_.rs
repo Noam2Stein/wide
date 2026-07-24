@@ -15,20 +15,9 @@ unsafe impl SimdBackend for u16x16 {
       type Inner = Inner;
     }
   }
-}
-
-impl_simd! {
-  unsafe {
-    T = u16,
-    N = 16,
-    Simd = u16x16,
-    optional_type_x86_inner { X86Inner = __m256i },
-    optional_type_arm_inner {},
-    optional_type_wasm_inner {},
-  }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self(cmp_eq_mask_i16_m256i(self.0, rhs.0))
@@ -39,7 +28,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_eq(rhs)
@@ -50,13 +39,13 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     // no gt, so just reverse to get same answer
     Self::simd_gt(rhs, self)
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature = "avx2")] {
         let bias = m256i::from([0x8000u16; 16]);
@@ -70,7 +59,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_gt(rhs)
@@ -81,7 +70,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_lt(rhs)
@@ -92,7 +81,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self(bitor_m256i(
@@ -109,7 +98,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn select(self, if_true: Self, if_false: Self) -> Self {
+  fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self(blend_varying_i8_m256i(if_false.0, if_true.0, self.0))
@@ -123,24 +112,22 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fn to_bitmask(self) -> u32 {
     i16x16::to_bitmask(cast(self))
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     i16x16::any(cast(self))
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     i16x16::all(cast(self))
   }
 
-  ///
-  /// Currently this function is never accelerated.
   #[inline]
-  pub fn transpose(data: [u16x16; 16]) -> [u16x16; 16] {
+  fn transpose(data: [u16x16; 16]) -> [u16x16; 16] {
     cast(i16x16::transpose(cast(data)))
   }
 }

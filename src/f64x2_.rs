@@ -28,27 +28,9 @@ unsafe impl SimdBackend for f64x2 {
       type Inner = Inner;
     }
   }
-}
-
-macro_rules! const_f64_as_f64x2 {
-  ($i:ident, $f:expr) => {
-    #[allow(non_upper_case_globals)]
-    pub const $i: f64x2 = f64x2::new([$f; 2]);
-  };
-}
-
-impl_simd! {
-  unsafe {
-    T = f64,
-    N = 2,
-    Simd = f64x2,
-    optional_type_x86_inner { X86Inner = __m128d },
-    optional_type_arm_inner { ArmInner = float64x2_t },
-    optional_type_wasm_inner { WasmInner = v128 },
-  }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self(cmp_eq_mask_m128d(self.0, rhs.0))
@@ -66,7 +48,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self(cmp_neq_mask_m128d(self.0, rhs.0))
@@ -84,7 +66,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self(cmp_lt_mask_m128d(self.0, rhs.0))
@@ -102,7 +84,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx")] {
         Self(cmp_op_mask_m128d::<{cmp_op!(GreaterThanOrdered)}>(self.0, rhs.0))
@@ -122,7 +104,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self(cmp_le_mask_m128d(self.0, rhs.0))
@@ -140,7 +122,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self(cmp_ge_mask_m128d(self.0, rhs.0))
@@ -158,7 +140,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self(bitor_m128d(
@@ -176,7 +158,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn select(self, if_true: Self, if_false: Self) -> Self {
+  fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self(blend_varying_m128d(if_false.0, if_true.0, self.0))
@@ -191,7 +173,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fn to_bitmask(self) -> u32 {
     pick! {
       if #[cfg(target_feature="sse2")] {
         move_mask_m128d(self.0) as u32
@@ -212,7 +194,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="simd128")] {
         v128_any_true(self.0)
@@ -223,7 +205,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="simd128")] {
         u64x2_all_true(self.0)
@@ -234,10 +216,8 @@ impl_simd! {
     }
   }
 
-  ///
-  /// This function is accelerated on multiple target architectures.
   #[inline]
-  pub fn transpose(data: [f64x2; 2]) -> [f64x2; 2] {
+  fn transpose(data: [f64x2; 2]) -> [f64x2; 2] {
     pick! {
       if #[cfg(any(
         target_feature="sse2",
@@ -251,6 +231,13 @@ impl_simd! {
       }
     }
   }
+}
+
+macro_rules! const_f64_as_f64x2 {
+  ($i:ident, $f:expr) => {
+    #[allow(non_upper_case_globals)]
+    pub const $i: f64x2 = f64x2::new([$f; 2]);
+  };
 }
 
 impl_simd_float! {

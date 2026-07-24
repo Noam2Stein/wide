@@ -28,27 +28,9 @@ unsafe impl SimdBackend for f32x4 {
       type Inner = Inner;
     }
   }
-}
-
-macro_rules! const_f32_as_f32x4 {
-  ($i:ident, $f:expr) => {
-    #[allow(non_upper_case_globals)]
-    pub const $i: f32x4 = f32x4::new([$f; 4]);
-  };
-}
-
-impl_simd! {
-  unsafe {
-    T = f32,
-    N = 4,
-    Simd = f32x4,
-    optional_type_x86_inner { X86Inner = __m128 },
-    optional_type_arm_inner { ArmInner = float32x4_t },
-    optional_type_wasm_inner { WasmInner = v128 },
-  }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self(cmp_eq_mask_m128(self.0, rhs.0))
@@ -68,7 +50,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self(cmp_neq_mask_m128(self.0, rhs.0))
@@ -88,7 +70,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self(cmp_lt_mask_m128(self.0, rhs.0))
@@ -108,7 +90,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self(cmp_gt_mask_m128(self.0, rhs.0))
@@ -128,7 +110,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self(cmp_le_mask_m128(self.0, rhs.0))
@@ -148,7 +130,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self(cmp_ge_mask_m128(self.0, rhs.0))
@@ -168,7 +150,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self(bitor_m128(
@@ -186,7 +168,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn select(self, if_true: Self, if_false: Self) -> Self {
+  fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self(blend_varying_m128(if_false.0, if_true.0, self.0))
@@ -201,7 +183,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fn to_bitmask(self) -> u32 {
     pick! {
       if #[cfg(target_feature="sse")] {
         move_mask_m128(self.0) as u32
@@ -230,7 +212,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="simd128")] {
         v128_any_true(self.0)
@@ -241,7 +223,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="simd128")] {
         u32x4_all_true(self.0)
@@ -252,10 +234,8 @@ impl_simd! {
     }
   }
 
-  ///
-  /// Currently this function is only accelerated on `sse`.
   #[inline]
-  pub fn transpose(data: [f32x4; 4]) -> [f32x4; 4] {
+  fn transpose(data: [f32x4; 4]) -> [f32x4; 4] {
     pick! {
       if #[cfg(target_feature="sse")] {
         let mut e0 = data[0];
@@ -298,6 +278,13 @@ impl_simd! {
       }
     }
   }
+}
+
+macro_rules! const_f32_as_f32x4 {
+  ($i:ident, $f:expr) => {
+    #[allow(non_upper_case_globals)]
+    pub const $i: f32x4 = f32x4::new([$f; 4]);
+  };
 }
 
 impl_simd_float! {

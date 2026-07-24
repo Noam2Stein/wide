@@ -290,7 +290,18 @@ macro_rules! polynomial_13 {
 }
 
 macro_rules! define_supported_simd_type {
-  ($T:ident, $N:literal, $TxN:ident, $TxN_:ident) => {
+  (
+    $T:ident,
+    $N:literal,
+    $TxN:ident,
+    $TxN_:ident,
+    Bitmask = $Bitmask:ident,
+    optional_type_x86_inner { $(X86Inner = $X86Inner:ident)? },
+    optional_type_arm_inner { $(ArmInner = $ArmInner:ident)? },
+    optional_type_wasm_inner { $(WasmInner = $WasmInner:ident)? },
+  ) => {
+    mod $TxN_;
+
     #[doc = concat!("A SIMD vector with ", $N, " elements of type [`", stringify!($T),"`].")]
     ///
     /// See the [crate level documentation] for more information about SIMD
@@ -299,39 +310,382 @@ macro_rules! define_supported_simd_type {
     /// [crate level documentation]: crate
     pub type $TxN = Simd<$T, $N>;
 
-    impl SupportedSimd for $TxN {}
+    impl SupportedSimd for $TxN {
+      type Bitmask = $Bitmask;
+    }
 
-    mod $TxN_;
+    $(
+      #[cfg(target_arch = "x86")]
+      impl From<core::arch::x86::$X86Inner> for $TxN {
+        /// Converts a native intrinsics SIMD type to a high-level SIMD type.
+        #[inline]
+        fn from(value: core::arch::x86::$X86Inner) -> Self {
+          // SAFETY: Both types are expected to accept all bit-patterns and to
+          // only contain initialized memory.
+          unsafe { core::mem::transmute::<core::arch::x86::$X86Inner, $TxN>(value) }
+        }
+      }
+
+      #[cfg(target_arch = "x86")]
+      impl From<$TxN> for core::arch::x86::$X86Inner {
+        /// Converts a high-level SIMD type to a native intrinsics SIMD type.
+        #[inline]
+        fn from(value: $TxN) -> Self {
+          // SAFETY: Both types are expected to accept all bit-patterns and to
+          // only contain initialized memory.
+          unsafe { core::mem::transmute::<$TxN, core::arch::x86::$X86Inner>(value) }
+        }
+      }
+
+      #[cfg(target_arch = "x86_64")]
+      impl From<core::arch::x86_64::$X86Inner> for $TxN {
+        /// Converts a native intrinsics SIMD type to a high-level SIMD type.
+        #[inline]
+        fn from(value: core::arch::x86_64::$X86Inner) -> Self {
+          // SAFETY: Both types are expected to accept all bit-patterns and to
+          // only contain initialized memory.
+          unsafe { core::mem::transmute::<core::arch::x86_64::$X86Inner, $TxN>(value) }
+        }
+      }
+
+      #[cfg(target_arch = "x86_64")]
+      impl From<$TxN> for core::arch::x86_64::$X86Inner {
+        /// Converts a high-level SIMD type to a native intrinsics SIMD type.
+        #[inline]
+        fn from(value: $TxN) -> Self {
+          // SAFETY: Both types are expected to accept all bit-patterns and to
+          // only contain initialized memory.
+          unsafe { core::mem::transmute::<$TxN, core::arch::x86_64::$X86Inner>(value) }
+        }
+      }
+    )?
+    $(
+      #[cfg(target_arch = "aarch64")]
+      impl From<core::arch::aarch64::$ArmInner> for $TxN {
+        /// Converts a native intrinsics SIMD type to a high-level SIMD type.
+        #[inline]
+        fn from(value: core::arch::aarch64::$ArmInner) -> Self {
+          // SAFETY: Both types are expected to accept all bit-patterns and to
+          // only contain initialized memory.
+          unsafe { core::mem::transmute::<core::arch::aarch64::$ArmInner, $TxN>(value) }
+        }
+      }
+
+      #[cfg(target_arch = "aarch64")]
+      impl From<$TxN> for core::arch::aarch64::$ArmInner {
+        /// Converts a high-level SIMD type to a native intrinsics SIMD type.
+        #[inline]
+        fn from(value: $TxN) -> Self {
+          // SAFETY: Both types are expected to accept all bit-patterns and to
+          // only contain initialized memory.
+          unsafe { core::mem::transmute::<$TxN, core::arch::aarch64::$ArmInner>(value) }
+        }
+      }
+    )?
+    $(
+      #[cfg(target_arch = "wasm32")]
+      impl From<core::arch::wasm32::$WasmInner> for $TxN {
+        /// Converts a native intrinsics SIMD type to a high-level SIMD type.
+        #[inline]
+        fn from(value: core::arch::wasm32::$WasmInner) -> Self {
+          // SAFETY: Both types are expected to accept all bit-patterns and to
+          // only contain initialized memory.
+          unsafe { core::mem::transmute::<core::arch::wasm32::$WasmInner, $TxN>(value) }
+        }
+      }
+
+      #[cfg(target_arch = "wasm32")]
+      impl From<$TxN> for core::arch::wasm32::$WasmInner {
+        /// Converts a high-level SIMD type to a native intrinsics SIMD type.
+        #[inline]
+        fn from(value: $TxN) -> Self {
+          // SAFETY: Both types are expected to accept all bit-patterns and to
+          // only contain initialized memory.
+          unsafe { core::mem::transmute::<$TxN, core::arch::wasm32::$WasmInner>(value) }
+        }
+      }
+    )?
   };
 }
-define_supported_simd_type!(f32, 4, f32x4, f32x4_);
-define_supported_simd_type!(f32, 8, f32x8, f32x8_);
-define_supported_simd_type!(f32, 16, f32x16, f32x16_);
-define_supported_simd_type!(f64, 2, f64x2, f64x2_);
-define_supported_simd_type!(f64, 4, f64x4, f64x4_);
-define_supported_simd_type!(f64, 8, f64x8, f64x8_);
-define_supported_simd_type!(i8, 16, i8x16, i8x16_);
-define_supported_simd_type!(i8, 32, i8x32, i8x32_);
-define_supported_simd_type!(i16, 8, i16x8, i16x8_);
-define_supported_simd_type!(i16, 16, i16x16, i16x16_);
-define_supported_simd_type!(i16, 32, i16x32, i16x32_);
-define_supported_simd_type!(i32, 4, i32x4, i32x4_);
-define_supported_simd_type!(i32, 8, i32x8, i32x8_);
-define_supported_simd_type!(i32, 16, i32x16, i32x16_);
-define_supported_simd_type!(i64, 2, i64x2, i64x2_);
-define_supported_simd_type!(i64, 4, i64x4, i64x4_);
-define_supported_simd_type!(i64, 8, i64x8, i64x8_);
-define_supported_simd_type!(u8, 16, u8x16, u8x16_);
-define_supported_simd_type!(u8, 32, u8x32, u8x32_);
-define_supported_simd_type!(u16, 8, u16x8, u16x8_);
-define_supported_simd_type!(u16, 16, u16x16, u16x16_);
-define_supported_simd_type!(u16, 32, u16x32, u16x32_);
-define_supported_simd_type!(u32, 4, u32x4, u32x4_);
-define_supported_simd_type!(u32, 8, u32x8, u32x8_);
-define_supported_simd_type!(u32, 16, u32x16, u32x16_);
-define_supported_simd_type!(u64, 2, u64x2, u64x2_);
-define_supported_simd_type!(u64, 4, u64x4, u64x4_);
-define_supported_simd_type!(u64, 8, u64x8, u64x8_);
+define_supported_simd_type!(
+  f32,
+  4,
+  f32x4,
+  f32x4_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m128 },
+  optional_type_arm_inner { ArmInner = float32x4_t },
+  optional_type_wasm_inner { WasmInner = v128 },
+);
+define_supported_simd_type!(
+  f32,
+  8,
+  f32x8,
+  f32x8_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m256 },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  f32,
+  16,
+  f32x16,
+  f32x16_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m512 },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  f64,
+  2,
+  f64x2,
+  f64x2_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m128d },
+  optional_type_arm_inner { ArmInner = float64x2_t },
+  optional_type_wasm_inner { WasmInner = v128 },
+);
+define_supported_simd_type!(
+  f64,
+  4,
+  f64x4,
+  f64x4_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m256d },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  f64,
+  8,
+  f64x8,
+  f64x8_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m512d },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  i8,
+  16,
+  i8x16,
+  i8x16_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m128i },
+  optional_type_arm_inner { ArmInner = int8x16_t },
+  optional_type_wasm_inner { WasmInner = v128 },
+);
+define_supported_simd_type!(
+  i8,
+  32,
+  i8x32,
+  i8x32_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m256i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  i16,
+  8,
+  i16x8,
+  i16x8_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m128i },
+  optional_type_arm_inner { ArmInner = int16x8_t },
+  optional_type_wasm_inner { WasmInner = v128 },
+);
+define_supported_simd_type!(
+  i16,
+  16,
+  i16x16,
+  i16x16_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m256i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  i16,
+  32,
+  i16x32,
+  i16x32_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m512i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  i32,
+  4,
+  i32x4,
+  i32x4_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m128i },
+  optional_type_arm_inner { ArmInner = int32x4_t },
+  optional_type_wasm_inner { WasmInner = v128 },
+);
+define_supported_simd_type!(
+  i32,
+  8,
+  i32x8,
+  i32x8_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m256i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  i32,
+  16,
+  i32x16,
+  i32x16_,
+  Bitmask = u32,optional_type_x86_inner { X86Inner = __m512i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  i64,
+  2,
+  i64x2,
+  i64x2_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m128i },
+  optional_type_arm_inner { ArmInner = int64x2_t },
+  optional_type_wasm_inner { WasmInner = v128 },
+);
+define_supported_simd_type!(
+  i64,
+  4,
+  i64x4,
+  i64x4_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m256i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  i64,
+  8,
+  i64x8,
+  i64x8_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m512i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  u8,
+  16,
+  u8x16,
+  u8x16_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m128i },
+  optional_type_arm_inner { ArmInner = uint8x16_t },
+  optional_type_wasm_inner { WasmInner = v128 },
+);
+define_supported_simd_type!(
+  u8,
+  32,
+  u8x32,
+  u8x32_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m256i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  u16,
+  8,
+  u16x8,
+  u16x8_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m128i },
+  optional_type_arm_inner { ArmInner = uint16x8_t },
+  optional_type_wasm_inner { WasmInner = v128 },
+);
+define_supported_simd_type!(
+  u16,
+  16,
+  u16x16,
+  u16x16_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m256i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  u16,
+  32,
+  u16x32,
+  u16x32_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m512i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  u32,
+  4,
+  u32x4,
+  u32x4_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m128i },
+  optional_type_arm_inner { ArmInner = uint32x4_t },
+  optional_type_wasm_inner { WasmInner = v128 },
+);
+define_supported_simd_type!(
+  u32,
+  8,
+  u32x8,
+  u32x8_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m256i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  u32,
+  16,
+  u32x16,
+  u32x16_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m512i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  u64,
+  2,
+  u64x2,
+  u64x2_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m128i },
+  optional_type_arm_inner { ArmInner = uint64x2_t },
+  optional_type_wasm_inner { WasmInner = v128 },
+);
+define_supported_simd_type!(
+  u64,
+  4,
+  u64x4,
+  u64x4_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m256i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
+define_supported_simd_type!(
+  u64,
+  8,
+  u64x8,
+  u64x8_,
+  Bitmask = u32,
+  optional_type_x86_inner { X86Inner = __m512i },
+  optional_type_arm_inner {},
+  optional_type_wasm_inner {},
+);
 
 #[allow(dead_code)]
 fn generic_bit_blend<T>(mask: T, y: T, n: T) -> T

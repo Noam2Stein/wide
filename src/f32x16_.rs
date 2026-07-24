@@ -17,27 +17,9 @@ unsafe impl SimdBackend for f32x16 {
       type Inner = Inner;
     }
   }
-}
-
-macro_rules! const_f32_as_f32x16 {
-  ($i:ident, $f:expr) => {
-    #[allow(non_upper_case_globals)]
-    pub const $i: f32x16 = f32x16::new([$f; 16]);
-  };
-}
-
-impl_simd! {
-  unsafe {
-    T = f32,
-    N = 16,
-    Simd = f32x16,
-    optional_type_x86_inner { X86Inner = __m512 },
-    optional_type_arm_inner {},
-    optional_type_wasm_inner {},
-  }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(cmp_op_mask_m512::<{cmp_op!(EqualOrdered)}>(self.0, rhs.0))
@@ -48,7 +30,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(cmp_op_mask_m512::<{cmp_op!(NotEqualUnordered)}>(self.0, rhs.0))
@@ -59,7 +41,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(cmp_op_mask_m512::<{cmp_op!(LessThanOrdered)}>(self.0, rhs.0))
@@ -70,7 +52,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(cmp_op_mask_m512::<{cmp_op!(GreaterThanOrdered)}>(self.0, rhs.0))
@@ -81,7 +63,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(cmp_op_mask_m512::<{cmp_op!(LessEqualOrdered)}>(self.0, rhs.0))
@@ -92,7 +74,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(cmp_op_mask_m512::<{cmp_op!(GreaterEqualOrdered)}>(self.0, rhs.0))
@@ -103,7 +85,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(bitor_m512(
@@ -120,7 +102,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn select(self, if_true: Self, if_false: Self) -> Self {
+  fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(blend_varying_m512(if_false.0, if_true.0, movepi32_mask_m512(self.0)))
@@ -134,7 +116,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fn to_bitmask(self) -> u32 {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         movepi32_mask_m512(self.0) as u32
@@ -145,7 +127,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         movepi32_mask_m512(self.0) != 0
@@ -156,7 +138,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         movepi32_mask_m512(self.0) == !0_u16
@@ -166,10 +148,8 @@ impl_simd! {
     }
   }
 
-  ///
-  /// Currently this function is never accelerated.
   #[inline]
-  pub fn transpose(data: [f32x16; 16]) -> [f32x16; 16] {
+  fn transpose(data: [f32x16; 16]) -> [f32x16; 16] {
     // TODO: Add `_mm512_unpackhi_ps` to `safe_arch`, looks like it is missing,
     // then try adding an optimized `avx512f` implementation.
 
@@ -214,6 +194,13 @@ impl_simd! {
       transpose_column(&data, 15),
     ]
   }
+}
+
+macro_rules! const_f32_as_f32x16 {
+  ($i:ident, $f:expr) => {
+    #[allow(non_upper_case_globals)]
+    pub const $i: f32x16 = f32x16::new([$f; 16]);
+  };
 }
 
 impl_simd_float! {

@@ -28,20 +28,9 @@ unsafe impl SimdBackend for u64x2 {
       type Inner = Inner;
     }
   }
-}
-
-impl_simd! {
-  unsafe {
-    T = u64,
-    N = 2,
-    Simd = u64x2,
-    optional_type_x86_inner { X86Inner = __m128i },
-    optional_type_arm_inner { ArmInner = uint64x2_t },
-    optional_type_wasm_inner { WasmInner = v128 },
-  }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self(cmp_eq_mask_i64_m128i(self.0, rhs.0))
@@ -61,7 +50,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         !self.simd_eq(rhs)
@@ -81,13 +70,13 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     // lt is just gt the other way around
     rhs.simd_gt(self)
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.2")] {
         // no unsigned gt so inverting the high bit will get the correct result
@@ -108,7 +97,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         !self.simd_gt(rhs)
@@ -126,7 +115,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         !self.simd_lt(rhs)
@@ -144,7 +133,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self(bitor_m128i(
@@ -162,7 +151,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn select(self, if_true: Self, if_false: Self) -> Self {
+  fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self(blend_varying_i8_m128i(if_false.0, if_true.0, self.0))
@@ -177,24 +166,22 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fn to_bitmask(self) -> u32 {
     i64x2::to_bitmask(cast(self))
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     i64x2::any(cast(self))
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     i64x2::all(cast(self))
   }
 
-  ///
-  /// This function is accelerated on multiple target architectures.
   #[inline]
-  pub fn transpose(data: [u64x2; 2]) -> [u64x2; 2] {
+  fn transpose(data: [u64x2; 2]) -> [u64x2; 2] {
     cast(i64x2::transpose(cast(data)))
   }
 }

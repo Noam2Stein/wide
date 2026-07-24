@@ -15,20 +15,9 @@ unsafe impl SimdBackend for u32x8 {
       type Inner = Inner;
     }
   }
-}
-
-impl_simd! {
-  unsafe {
-    T = u32,
-    N = 8,
-    Simd = u32x8,
-    optional_type_x86_inner { X86Inner = __m256i },
-    optional_type_arm_inner {},
-    optional_type_wasm_inner {},
-  }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self(cmp_eq_mask_i32_m256i(self.0, rhs.0))
@@ -39,18 +28,18 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     !self.simd_eq(rhs)
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     // lt is just gt the other way around
     rhs.simd_gt(self)
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         // no unsigned gt than so inverting the high bit will get the correct result
@@ -63,17 +52,17 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     self.simd_eq(rhs) | self.simd_lt(rhs)
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     self.simd_eq(rhs) | self.simd_gt(rhs)
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self(bitor_m256i(
@@ -90,7 +79,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn select(self, if_true: Self, if_false: Self) -> Self {
+  fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self(blend_varying_i8_m256i(if_false.0, if_true.0, self.0))
@@ -104,12 +93,12 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fn to_bitmask(self) -> u32 {
     i32x8::to_bitmask(cast(self))
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx2")] {
         ((move_mask_i8_m256i(self.0) as u32) & 0b10001000100010001000100010001000) != 0
@@ -120,7 +109,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx2")] {
         ((move_mask_i8_m256i(self.0) as u32) & 0b10001000100010001000100010001000) == 0b10001000100010001000100010001000
@@ -130,10 +119,8 @@ impl_simd! {
     }
   }
 
-  ///
-  /// Currently this function is only accelerated on `avx2`.
   #[inline]
-  pub fn transpose(data: [u32x8; 8]) -> [u32x8; 8] {
+  fn transpose(data: [u32x8; 8]) -> [u32x8; 8] {
     cast(i32x8::transpose(cast(data)))
   }
 }

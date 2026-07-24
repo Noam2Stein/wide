@@ -15,20 +15,9 @@ unsafe impl SimdBackend for i64x8 {
       type Inner = Inner;
     }
   }
-}
-
-impl_simd! {
-  unsafe {
-    T = i64,
-    N = 8,
-    Simd = i64x8,
-    optional_type_x86_inner { X86Inner = __m512i },
-    optional_type_arm_inner {},
-    optional_type_wasm_inner {},
-  }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(cmp_op_mask_i64_m512i::<{cmp_int_op!(Eq)}>(self.0, rhs.0))
@@ -39,7 +28,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(cmp_op_mask_i64_m512i::<{cmp_int_op!(Ne)}>(self.0, rhs.0))
@@ -50,7 +39,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(cmp_op_mask_i64_m512i::<{cmp_int_op!(Lt)}>(self.0, rhs.0))
@@ -61,7 +50,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(cmp_op_mask_i64_m512i::<{cmp_int_op!(Nle)}>(self.0, rhs.0))
@@ -72,7 +61,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(cmp_op_mask_i64_m512i::<{cmp_int_op!(Le)}>(self.0, rhs.0))
@@ -83,7 +72,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(cmp_op_mask_i64_m512i::<{cmp_int_op!(Nlt)}>(self.0, rhs.0))
@@ -94,7 +83,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(bitor_m512i(
@@ -111,7 +100,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn select(self, if_true: Self, if_false: Self) -> Self {
+  fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self(blend_varying_i8_m512i(if_false.0,if_true.0,movepi8_mask_m512i(self.0)))
@@ -127,7 +116,7 @@ impl_simd! {
   /// returns the bit mask for each high bit set in the vector with the lowest
   /// lane being the lowest bit
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fn to_bitmask(self) -> u32 {
     pick! {
       if #[cfg(target_feature="avx512dq")] {
         // use f64 move_mask since it is the same size as i64
@@ -140,7 +129,7 @@ impl_simd! {
 
   /// true if any high bits are set for any value in the vector
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         movepi64_mask_m512d(cast(self.0)) != 0
@@ -153,7 +142,7 @@ impl_simd! {
 
   /// true if all high bits are set for every value in the vector
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         movepi64_mask_m512d(cast(self.0)) == 0b11111111
@@ -164,10 +153,8 @@ impl_simd! {
     }
   }
 
-  ///
-  /// Currently this function is never accelerated.
   #[inline]
-  pub fn transpose(data: [i64x8; 8]) -> [i64x8; 8] {
+  fn transpose(data: [i64x8; 8]) -> [i64x8; 8] {
     // Can this be optimized?
 
     #[inline(always)]

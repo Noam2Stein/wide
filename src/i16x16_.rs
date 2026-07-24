@@ -18,20 +18,9 @@ unsafe impl SimdBackend for i16x16 {
 
     }
   }
-}
-
-impl_simd! {
-  unsafe {
-    T = i16,
-    N = 16,
-    Simd = i16x16,
-    optional_type_x86_inner { X86Inner = __m256i },
-    optional_type_arm_inner {},
-    optional_type_wasm_inner {},
-  }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self(cmp_eq_mask_i16_m256i(self.0, rhs.0))
@@ -42,7 +31,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_eq(rhs)
@@ -53,7 +42,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self(!cmp_gt_mask_i16_m256i(self.0, rhs.0) ^ cmp_eq_mask_i16_m256i(self.0,rhs.0))
@@ -64,7 +53,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self(cmp_gt_mask_i16_m256i(self.0, rhs.0))
@@ -75,7 +64,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_gt(rhs)
@@ -86,7 +75,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_lt(rhs)
@@ -97,7 +86,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self(bitor_m256i(
@@ -114,7 +103,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn select(self, if_true: Self, if_false: Self) -> Self {
+  fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self(blend_varying_i8_m256i(if_false.0, if_true.0, self.0))
@@ -128,7 +117,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fn to_bitmask(self) -> u32 {
     pick! {
       if #[cfg(target_feature="sse2")] {
           let [a,b] = cast::<_,[m128i;2]>(self);
@@ -140,7 +129,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx2")] {
         ((move_mask_i8_m256i(self.0) as u32) & 0b10101010101010101010101010101010) != 0
@@ -151,7 +140,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx2")] {
         ((move_mask_i8_m256i(self.0) as u32) & 0b10101010101010101010101010101010) == 0b10101010101010101010101010101010
@@ -164,7 +153,7 @@ impl_simd! {
   ///
   /// Currently this function is never accelerated.
   #[inline]
-  pub fn transpose(data: [i16x16; 16]) -> [i16x16; 16] {
+  fn transpose(data: [i16x16; 16]) -> [i16x16; 16] {
     // Can this be optimized?
 
     #[inline(always)]

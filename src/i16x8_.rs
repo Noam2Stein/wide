@@ -28,20 +28,9 @@ unsafe impl SimdBackend for i16x8 {
       type Inner = Inner;
     }
   }
-}
-
-impl_simd! {
-  unsafe {
-    T = i16,
-    N = 8,
-    Simd = i16x8,
-    optional_type_x86_inner { X86Inner = __m128i },
-    optional_type_arm_inner { ArmInner = int16x8_t },
-    optional_type_wasm_inner { WasmInner = v128 },
-  }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self(cmp_eq_mask_i16_m128i(self.0, rhs.0))
@@ -65,7 +54,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         !self.simd_eq(rhs)
@@ -89,7 +78,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self(cmp_lt_mask_i16_m128i(self.0, rhs.0))
@@ -113,7 +102,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self(cmp_gt_mask_i16_m128i(self.0, rhs.0))
@@ -137,7 +126,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         !self.simd_gt(rhs)
@@ -161,7 +150,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         !self.simd_lt(rhs)
@@ -185,7 +174,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self(bitor_m128i(
@@ -203,7 +192,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn select(self, if_true: Self, if_false: Self) -> Self {
+  fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self(blend_varying_i8_m128i(if_false.0, if_true.0, self.0))
@@ -218,7 +207,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fn to_bitmask(self) -> u32 {
     pick! {
       if #[cfg(target_feature="sse2")] {
         (move_mask_i8_m128i( pack_i16_to_i8_m128i(self.0,self.0)) as u32) & 0xff
@@ -251,7 +240,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="sse2")] {
         (move_mask_i8_m128i(self.0) & 0b1010101010101010) != 0
@@ -269,7 +258,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="sse2")] {
         (move_mask_i8_m128i(self.0) & 0b1010101010101010) == 0b1010101010101010
@@ -286,10 +275,8 @@ impl_simd! {
     }
   }
 
-  ///
-  /// This function is accelerated on multiple target architectures.
   #[inline]
-  pub fn transpose(data: [i16x8; 8]) -> [i16x8; 8] {
+  fn transpose(data: [i16x8; 8]) -> [i16x8; 8] {
     pick! {
       if #[cfg(target_feature="sse2")] {
         let a1 = unpack_low_i16_m128i(data[0].0, data[1].0);

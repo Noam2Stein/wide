@@ -15,27 +15,9 @@ unsafe impl SimdBackend for f64x4 {
       type Inner = Inner;
     }
   }
-}
-
-macro_rules! const_f64_as_f64x4 {
-  ($i:ident, $f:expr) => {
-    #[allow(non_upper_case_globals)]
-    pub const $i: f64x4 = f64x4::new([$f; 4]);
-  };
-}
-
-impl_simd! {
-  unsafe {
-    T = f64,
-    N = 4,
-    Simd = f64x4,
-    optional_type_x86_inner { X86Inner = __m256d },
-    optional_type_arm_inner {},
-    optional_type_wasm_inner {},
-  }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx")]{
         Self(cmp_op_mask_m256d::<{cmp_op!(EqualOrdered)}>(self.0, rhs.0))
@@ -46,7 +28,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx")]{
         Self(cmp_op_mask_m256d::<{cmp_op!(NotEqualUnordered)}>(self.0, rhs.0))
@@ -57,7 +39,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx")]{
         Self(cmp_op_mask_m256d::<{cmp_op!(LessThanOrdered)}>(self.0, rhs.0))
@@ -68,7 +50,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx")]{
         Self(cmp_op_mask_m256d::<{cmp_op!( GreaterThanOrdered)}>(self.0, rhs.0))
@@ -79,7 +61,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx")]{
         Self(cmp_op_mask_m256d::<{cmp_op!(LessEqualOrdered)}>(self.0, rhs.0))
@@ -90,7 +72,7 @@ impl_simd! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx")]{
         Self(cmp_op_mask_m256d::<{cmp_op!(GreaterEqualOrdered)}>(self.0, rhs.0))
@@ -101,7 +83,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx")] {
         Self(bitor_m256d(
@@ -118,7 +100,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn select(self, if_true: Self, if_false: Self) -> Self {
+  fn select(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx")] {
         Self(blend_varying_m256d(if_false.0, if_true.0, self.0))
@@ -132,7 +114,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fn to_bitmask(self) -> u32 {
     pick! {
       if #[cfg(target_feature="avx")] {
         move_mask_m256d(self.0) as u32
@@ -143,7 +125,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx")] {
         move_mask_m256d(self.0) != 0
@@ -154,7 +136,7 @@ impl_simd! {
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx")] {
         move_mask_m256d(self.0) == 0b1111
@@ -164,10 +146,8 @@ impl_simd! {
     }
   }
 
-  ///
-  /// Currently this function is only accelerated on `avx`.
   #[inline]
-  pub fn transpose(data: [f64x4; 4]) -> [f64x4; 4] {
+  fn transpose(data: [f64x4; 4]) -> [f64x4; 4] {
     pick! {
       if #[cfg(target_feature="avx")] {
         // Can this be optimized?
@@ -201,6 +181,13 @@ impl_simd! {
       }
     }
   }
+}
+
+macro_rules! const_f64_as_f64x4 {
+  ($i:ident, $f:expr) => {
+    #[allow(non_upper_case_globals)]
+    pub const $i: f64x4 = f64x4::new([$f; 4]);
+  };
 }
 
 impl_simd_float! {
