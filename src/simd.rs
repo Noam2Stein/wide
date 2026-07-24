@@ -37,6 +37,40 @@ pub(crate) unsafe trait SimdBackend {
   type Inner: Copy;
 }
 
+impl<T: PartialEq, const N: usize> PartialEq for Simd<T, N>
+where
+  Self: SupportedSimd,
+{
+  #[inline]
+  fn eq(&self, other: &Self) -> bool {
+    // This is a temporary implementation. We will replace it once `simd_eq` is
+    // available.
+
+    let self_array =
+      unsafe { core::mem::transmute::<&Simd<T, N>, &[T; N]>(self) };
+    let other_array =
+      unsafe { core::mem::transmute::<&Simd<T, N>, &[T; N]>(other) };
+    self_array == other_array
+  }
+}
+
+impl<T: Eq, const N: usize> Eq for Simd<T, N> where Self: SupportedSimd {}
+
+impl<T: Default, const N: usize> Default for Simd<T, N>
+where
+  Self: SupportedSimd,
+{
+  #[inline]
+  fn default() -> Self {
+    // This works because coincidentally, all supported `T` types have a default
+    // value of "all bits zero".
+
+    // SAFETY: All SIMD types are expected to satisfy the requirements of
+    // `bytemuck::Pod`.
+    unsafe { core::mem::zeroed::<Simd<T, N>>() }
+  }
+}
+
 macro_rules! impl_simd {
   (
     // SAFETY: The contents of this macro assume that:
