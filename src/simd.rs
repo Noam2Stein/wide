@@ -104,24 +104,17 @@ impl_formatting_trait!(core::fmt::Display);
 impl_formatting_trait!(core::fmt::LowerExp);
 impl_formatting_trait!(core::fmt::UpperExp);
 
-impl<T: PartialEq, const N: usize> PartialEq for Simd<T, N>
+impl<T: Copy + PartialEq, const N: usize> PartialEq for Simd<T, N>
 where
   Self: SupportedSimd,
 {
   #[inline]
   fn eq(&self, other: &Self) -> bool {
-    // This is a temporary implementation. We will replace it once `simd_eq` is
-    // available.
-
-    let self_array =
-      unsafe { core::mem::transmute::<&Simd<T, N>, &[T; N]>(self) };
-    let other_array =
-      unsafe { core::mem::transmute::<&Simd<T, N>, &[T; N]>(other) };
-    self_array == other_array
+    self.simd_eq(*other).all()
   }
 }
 
-impl<T: Eq, const N: usize> Eq for Simd<T, N> where Self: SupportedSimd {}
+impl<T: Copy + Eq, const N: usize> Eq for Simd<T, N> where Self: SupportedSimd {}
 
 impl<T: Default, const N: usize> Default for Simd<T, N>
 where
