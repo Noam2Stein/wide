@@ -127,13 +127,13 @@ use bytemuck::*;
 pub use bytemuck;
 
 #[macro_use]
-mod simd;
+mod macros_simd;
 #[macro_use]
-mod simd_float;
+mod macros_simd_float;
 #[macro_use]
-mod simd_int;
+mod macros_simd_int;
 #[macro_use]
-mod simd_uint;
+mod macros_simd_uint;
 
 macro_rules! pick {
   ($(if #[cfg($($test:meta),*)] {
