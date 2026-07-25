@@ -126,8 +126,14 @@ use bytemuck::*;
 // Re-export so that users don't need to add a bytemuck dependency of their own
 pub use bytemuck;
 
-pub use crate::simd::{Simd, SimdElement, SupportedSimd};
+pub use crate::{
+  primitive_traits::{
+    PrimitiveFloat, PrimitiveInteger, PrimitiveSigned, PrimitiveUnsigned,
+  },
+  simd::{Simd, SimdElement, SupportedSimd},
+};
 
+mod primitive_traits;
 mod simd;
 
 #[macro_use]
