@@ -126,6 +126,10 @@ use bytemuck::*;
 // Re-export so that users don't need to add a bytemuck dependency of their own
 pub use bytemuck;
 
+pub use crate::simd::{Simd, SimdElement, SupportedSimd};
+
+mod simd;
+
 #[macro_use]
 mod macros_simd;
 #[macro_use]
