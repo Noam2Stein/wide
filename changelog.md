@@ -1,11 +1,11 @@
 # `wide` Changelog
 
-## Unreleased
+## 1.6.0
 
-* SEMI-BREAKING: `i64xN` functions `to_bitmask`, `any`, `all` and `none` no
-  longer guarantee that the sign-bit is used to decide whether an element is
-  considered "true" or "false".
-
+* **Potential Change:** `i64xN` functions `to_bitmask`, `any`, `all` and `none`
+  no longer guarantee that the sign-bit is used to decide whether an element is
+  considered "true" or "false". This is being counted as a "bug" in the docs for
+  previously being too specific.
 * Added cast functions `cast_unsigned`, `cast_signed`, `to_bits`, `from_bits`.
 * Added `u8x32`/`i8x32` `swizzle` and `swizzle_relaxed`: a full-width 32-entry
   byte table lookup (`vpermb` on AVX-512-VBMI, `vqtbl2` on NEON, emulated on
@@ -18,12 +18,9 @@
 * Added conversions between `wide` types and native intrinsics SIMD types.
 * Added `reduce_mul` for integers.
 * Added integer functions `reduce_mul` and `mul_keep_low_high`.
-
 * Added overflowing arithmetic for integers.
 * Added float function `round_ties_even`.
-
 * Fixed bugs in the fallback paths of `any`, `all`, `none` and `fast_clamp`.
-
 * Added support for shifting SIMD vectors by values of `isize` and `usize` and
   SIMD vectors of "opposite-signedness".
 * Deprecated `blend` and replaced it with `select` and `bitselect`.
