@@ -1,10 +1,13 @@
 # `wide` Changelog
 
-## Unreleased
+## 1.6.1
 
-- Reverted a compile time optimization that triggered a compiler bug. See
+* Reverted a compile time optimization that triggered a compiler bug. See
   [this issue](https://github.com/Lokathor/wide/issues/303) for more
   information.
+* Fixed code path errors that resulted when `avx512f` was enabled without
+  `avx512dq`, which is a valid potential build. CI checks have been added for
+  this combination to prevent recurrence.
 
 ## 1.6.0
 
