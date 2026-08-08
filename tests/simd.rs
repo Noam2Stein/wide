@@ -1,6 +1,7 @@
 use core::ops::{BitOr, Neg, Not};
 use std::{convert::identity, iter::once};
 
+use bytemuck::checked::cast;
 use wide::{
   AlignTo, f32x4, f32x8, f32x16, f64x2, f64x4, f64x8, i8x16, i8x32, i16x8,
   i16x16, i16x32, i32x4, i32x8, i32x16, i64x2, i64x4, i64x8, u8x16, u8x32,
@@ -2324,6 +2325,86 @@ fn test_reduce_mul() {
     {
       let expected = value.into_iter().fold(1, T::wrapping_mul);
       let actual = Simd::new(value).reduce_mul();
+
+      assert_eq!(actual, expected);
+    }
+  });
+}
+
+#[test]
+fn test_swizzle_dyn() {
+  for_simd_types!(|T, N| {
+    // The values themselves do not matter here, as long as each lane is
+    // different
+    let simd = Simd::new(std::array::from_fn(|i| (i * 3 + 4) as T));
+
+    for idxs in random_iter::<[Unsigned; N]>().map(|idxs| {
+      // We need both in bounds and out of bounds indices, so wrap indices half
+      // of the time
+      idxs.map(|idx| if idx & 0b1000 != 0 { idx % N as Unsigned } else { idx })
+    }) {
+      let expected_zeroing = Simd::new(std::array::from_fn(|i| {
+        simd.as_array().get(idxs[i] as usize).copied().unwrap_or_default()
+      }));
+      let expected_wrapping = Simd::new(std::array::from_fn(|i| {
+        simd.as_array()[idxs[i] as usize % N]
+      }));
+
+      let idxs = SimdUnsigned::new(idxs);
+      let actual = simd.swizzle_dyn(idxs);
+
+      if size_of::<T>() == 1 && N == 16 {
+        // `i/u8x16` make the most guarantees
+
+        let high_bit_set =
+          cast::<SimdSigned, Simd>(idxs.cast_signed().is_negative());
+
+        assert!(
+          high_bit_set
+            .select(
+              actual.simd_eq(expected_zeroing),
+              actual.simd_eq(expected_zeroing)
+                | actual.simd_eq(expected_wrapping)
+            )
+            .all()
+        );
+      } else if size_of::<T>() == 1 {
+        // `i/u8x32` also make additional guarantees
+
+        assert!(
+          (actual.simd_eq(expected_zeroing)
+            | actual.simd_eq(expected_wrapping))
+          .all()
+        );
+      } else {
+        // We have to do this manually since `BITS` is unstable for floats
+        const T_BITS: usize = size_of::<T>() * 8;
+
+        let overflow =
+          cast::<SimdUnsigned, Simd>(idxs.simd_ge(T_BITS as Unsigned));
+
+        assert!((actual.simd_eq(expected_zeroing) | overflow).all());
+      }
+    }
+  });
+}
+
+#[test]
+fn test_zeroing_swizzle_dyn() {
+  for_simd_types!(|T, N| {
+    // The values themselves do not matter here, as long as each lane is
+    // different
+    let simd = Simd::new(std::array::from_fn(|i| (i * 3 + 4) as T));
+
+    for idxs in random_iter::<[Unsigned; N]>().map(|idxs| {
+      // We need both in bounds and out of bounds indices, so wrap indices half
+      // of the time
+      idxs.map(|idx| if idx & 0b1000 != 0 { idx % N as Unsigned } else { idx })
+    }) {
+      let expected = Simd::new(std::array::from_fn(|i| {
+        simd.as_array().get(idxs[i] as usize).copied().unwrap_or_default()
+      }));
+      let actual = simd.zeroing_swizzle_dyn(SimdUnsigned::new(idxs));
 
       assert_eq!(actual, expected);
     }
