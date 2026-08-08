@@ -145,6 +145,16 @@ impl_simd! {
     }
   }
 
+  #[inline]
+  pub fn swizzle_dyn(self, idxs: u32x8) -> Self {
+    todo!()
+  }
+
+  #[inline]
+  pub fn zeroing_swizzle_dyn(self, idxs: u32x8) -> Self {
+    todo!()
+  }
+
   ///
   /// Currently this function is only accelerated on `avx2`.
   #[inline]

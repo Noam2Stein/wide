@@ -166,6 +166,16 @@ impl_simd! {
     i64x8::all(cast(self))
   }
 
+  #[inline]
+  pub fn swizzle_dyn(self, idxs: u64x8) -> Self {
+    todo!()
+  }
+
+  #[inline]
+  pub fn zeroing_swizzle_dyn(self, idxs: u64x8) -> Self {
+    todo!()
+  }
+
   ///
   /// Currently this function is never accelerated.
   #[inline]

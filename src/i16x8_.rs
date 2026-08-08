@@ -336,6 +336,16 @@ impl_simd! {
     }
   }
 
+  #[inline]
+  pub fn swizzle_dyn(self, idxs: u16x8) -> Self {
+    todo!()
+  }
+
+  #[inline]
+  pub fn zeroing_swizzle_dyn(self, idxs: u16x8) -> Self {
+    todo!()
+  }
+
   ///
   /// This function is accelerated on multiple target architectures.
   #[inline]

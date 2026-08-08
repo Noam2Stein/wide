@@ -350,6 +350,16 @@ impl_simd! {
     i8x16::all(cast(self))
   }
 
+  #[inline]
+  pub fn swizzle_dyn(self, idxs: u8x16) -> Self {
+    todo!()
+  }
+
+  #[inline]
+  pub fn zeroing_swizzle_dyn(self, idxs: u8x16) -> Self {
+    todo!()
+  }
+
   ///
   /// Currently this function is never accelerated.
   #[inline]
