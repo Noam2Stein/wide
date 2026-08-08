@@ -744,8 +744,7 @@ macro_rules! impl_simd_float {
       #[inline]
       #[must_use]
       pub fn copysign(self, sign: Self) -> Self {
-        let magnitude_mask = Self::from($T::from_bits($UnsignedT::MAX >> 1));
-        (self & magnitude_mask) | (sign & Self::from(-0.0))
+        Self::splat(-0.0).bitselect(sign, self)
       }
 
       /// Flips the sign of `self` based on the sign of `sign`.
