@@ -732,9 +732,7 @@ macro_rules! impl_simd_float {
       #[inline]
       #[must_use]
       pub fn signum(self) -> Self {
-        let result = Self::ONE | self & -Self::ZERO;
-
-        self.is_nan().select(self, result)
+        Self::ONE | self & -Self::ZERO | self.is_nan()
       }
 
       /// Returns numbers composed of the magnitudes of `self` and the signs of

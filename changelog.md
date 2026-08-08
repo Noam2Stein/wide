@@ -5,6 +5,7 @@
 * Fixed the `signum` documentation: the docs previously misstated the grammar
   and the set of inputs that map to `1.0`/`-1.0`. The behavior itself was
   already correct and matches [`f32::signum`].
+* Optimized float `signum`. This changes the bit-patterns of returned NaNs.
 
 ## 1.6.1
 
