@@ -5,6 +5,9 @@
 * Fixed the `signum` documentation: the docs previously misstated the grammar
   and the set of inputs that map to `1.0`/`-1.0`. The behavior itself was
   already correct and matches [`f32::signum`].
+* Added dynamic swizzling functions `swizzle_dyn` and `zeroing_swizzle_dyn` for
+  all types, and deprecated the old 8-bit element functions `swizzle` and
+  `swizzle_relaxed`.
 
 ## 1.6.1
 
