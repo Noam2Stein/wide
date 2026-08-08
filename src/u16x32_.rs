@@ -168,12 +168,59 @@ impl_simd! {
 
   #[inline]
   pub fn swizzle_dyn(self, idxs: u16x32) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature="avx512bw"))] {
+        #[cfg(target_arch = "x86")]
+        use core::arch::x86::_mm512_permutexvar_epi16;
+        #[cfg(target_arch = "x86_64")]
+        use core::arch::x86_64::_mm512_permutexvar_epi16;
+        // TODO(safe_arch): Add `_mm512_permutexvar_epi16`.
+        Self { avx512: m512i(unsafe { _mm512_permutexvar_epi16(idxs.avx512.0, self.avx512.0) }) }
+      } else if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
+        // vqtbl2 zeroes out-of-range anyway; identical to strict.
+        use core::arch::aarch64::{uint8x16x4_t, vreinterpretq_u16_u8, vreinterpretq_u8_u16, vqtbl4q_u8};
+        unsafe {
+          // This trick duplicates the lowest byte index of each 16-bit element
+          // across each 2 bytes.
+          let splatted_indices = idxs * const { u16x32::splat((2 << 8) + 2) };
+
+          // Apply an offset to higher bytes of each element to target their
+          // correct bytes instead of their lowest byte.
+          #[cfg(target_endian = "little")]
+          let byte_indices = splatted_indices + const { u16x32::splat(1 << 8) };
+          #[cfg(target_endian = "big")]
+          let byte_indices = splatted_indices + u16x32::ONE;
+
+          let table = uint8x16x4_t(
+            vreinterpretq_u8_u16(self.a.a.neon),
+            vreinterpretq_u8_u16(self.a.b.neon),
+            vreinterpretq_u8_u16(self.b.a.neon),
+            vreinterpretq_u8_u16(self.b.b.neon),
+          );
+          cast([
+            u16x8 { neon: vreinterpretq_u16_u8(vqtbl4q_u8(table, vreinterpretq_u8_u16(byte_indices.a.a.neon))) },
+            u16x8 { neon: vreinterpretq_u16_u8(vqtbl4q_u8(table, vreinterpretq_u8_u16(byte_indices.a.b.neon))) },
+            u16x8 { neon: vreinterpretq_u16_u8(vqtbl4q_u8(table, vreinterpretq_u8_u16(byte_indices.b.a.neon))) },
+            u16x8 { neon: vreinterpretq_u16_u8(vqtbl4q_u8(table, vreinterpretq_u8_u16(byte_indices.b.b.neon))) },
+          ])
+        }
+      } else {
+        let sixteen = u16x16::splat(16);
+        let [self_a, self_b] = cast::<u16x32, [u16x16; 2]>(self);
+        let [idxs_a, idxs_b] = cast::<u16x32, [u16x16; 2]>(idxs);
+        // Use zeroing swizzle to ignore overflowing subtraction.
+        cast([
+          self_a.zeroing_swizzle_dyn(idxs_a) | self_b.zeroing_swizzle_dyn(idxs_a - sixteen),
+          self_a.zeroing_swizzle_dyn(idxs_b) | self_b.zeroing_swizzle_dyn(idxs_b - sixteen),
+        ])
+      }
+    }
   }
 
   #[inline]
   pub fn zeroing_swizzle_dyn(self, idxs: u16x32) -> Self {
-    todo!()
+    // All implementations do not have the masking behavior we want
+    self.swizzle_dyn(idxs) & idxs.simd_lt(32)
   }
 
   ///

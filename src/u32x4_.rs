@@ -266,12 +266,61 @@ impl_simd! {
 
   #[inline]
   pub fn swizzle_dyn(self, idxs: u32x4) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(any(
+        target_feature = "sse2",
+        all(target_arch = "aarch64", target_feature = "neon"),
+        target_feature = "simd128",
+      ))] {
+        // This trick duplicates the lowest byte index of each 32-bit element
+        // across each 4 bytes.
+        let splatted_indices = idxs * const { u32x4::splat((4 << 24) + (4 << 16) + (4 << 8) + 4) };
+
+        // Apply an offset to higher bytes of each element to target their
+        // correct bytes instead of their lowest byte.
+        #[cfg(target_endian = "little")]
+        let byte_indices = splatted_indices + const {
+          u32x4::splat((1 << 8) + (2 << 16) + (3 << 24))
+        };
+        #[cfg(target_endian = "big")]
+        let byte_indices = splatted_indices + const { u32x4::splat((1 << 16) + (2 << 8) + 3) };
+
+        let self_bytes = cast::<u32x4, u8x16>(self);
+        let byte_indices = cast::<u32x4, u8x16>(byte_indices);
+
+        cast::<u8x16, u32x4>(self_bytes.swizzle_dyn(byte_indices))
+      } else {
+        let self_array = self.to_array();
+        let idxs_array = idxs.to_array();
+
+        let mut result = [0; 4];
+        for i in 0..4 {
+          let idx = idxs_array[i] as usize;
+          if idx < 4 {
+            result[i] = self_array[idx];
+          }
+        }
+
+        Self::new(result)
+      }
+    }
   }
 
   #[inline]
   pub fn zeroing_swizzle_dyn(self, idxs: u32x4) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(any(
+        target_feature = "sse2",
+        all(target_arch = "aarch64", target_feature = "neon"),
+        target_feature = "simd128",
+      ))] {
+        // All implementations except for the fallback do not have the masking
+        // behavior we want
+        self.swizzle_dyn(idxs) & idxs.simd_lt(4)
+      } else {
+        self.swizzle_dyn(idxs)
+      }
+    }
   }
 
   ///

@@ -281,12 +281,67 @@ impl_simd! {
 
   #[inline]
   pub fn swizzle_dyn(self, idxs: u16x8) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "avx512bw", target_feature = "avx512vl"))] {
+        #[cfg(target_arch = "x86")]
+        use core::arch::x86::_mm_permutexvar_epi16;
+        #[cfg(target_arch = "x86_64")]
+        use core::arch::x86_64::_mm_permutexvar_epi16;
+
+        // TODO(safe_arch): Add `_mm_permutexvar_epi16`
+        Self { sse: unsafe { m128i(_mm_permutexvar_epi16(idxs.sse.0, self.sse.0)) } }
+      } else if #[cfg(any(
+        target_feature = "sse2",
+        all(target_arch = "aarch64", target_feature = "neon"),
+        target_feature = "simd128",
+      ))] {
+        // This trick duplicates the lowest byte index of each 16-bit element
+        // across each 2 bytes.
+        let splatted_indices = idxs * const { u16x8::splat((2 << 8) + 2) };
+
+        // Apply an offset to higher bytes of each element to target their
+        // correct bytes instead of their lowest byte.
+        #[cfg(target_endian = "little")]
+        let byte_indices = splatted_indices + const { u16x8::splat(1 << 8) };
+        #[cfg(target_endian = "big")]
+        let byte_indices = splatted_indices + u16x8::ONE;
+
+        let self_bytes = cast::<u16x8, u8x16>(self);
+        let byte_indices = cast::<u16x8, u8x16>(byte_indices);
+
+        cast::<u8x16, u16x8>(self_bytes.swizzle_dyn(byte_indices))
+      } else {
+        let self_array = self.to_array();
+        let idxs_array = idxs.to_array();
+
+        let mut result = [0; 8];
+        for i in 0..8 {
+          let idx = idxs_array[i] as usize;
+          if idx < 8 {
+            result[i] = self_array[idx];
+          }
+        }
+
+        Self::new(result)
+      }
+    }
   }
 
   #[inline]
   pub fn zeroing_swizzle_dyn(self, idxs: u16x8) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(any(
+        target_feature = "sse2",
+        all(target_arch = "aarch64", target_feature = "neon"),
+        target_feature = "simd128",
+      ))] {
+        // All implementations except for the fallback do not have the masking
+        // behavior we want
+        self.swizzle_dyn(idxs) & idxs.simd_lt(8)
+      } else {
+        self.swizzle_dyn(idxs)
+      }
+    }
   }
 
   ///

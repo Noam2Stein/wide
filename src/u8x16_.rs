@@ -356,12 +356,56 @@ impl_simd! {
   /// returned or indices wrap around, non-deterministically.
   #[inline]
   pub fn swizzle_dyn(self, idxs: u8x16) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(target_feature="ssse3")] {
+        Self { sse: shuffle_av_i8z_all_m128i(self.sse, idxs.sse) }
+      } else if #[cfg(target_feature="relaxed-simd")] {
+        Self { simd: u8x16_relaxed_swizzle(self.simd, idxs.simd) }
+      } else if #[cfg(target_feature="simd128")] {
+        Self { simd: u8x16_swizzle(self.simd, idxs.simd) }
+      } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
+        unsafe { Self { neon: vqtbl1q_u8(self.neon, idxs.neon) } }
+      } else {
+        let self_array = self.to_array();
+        let idxs_array = idxs.to_array();
+
+        let mut result = [0; 16];
+        for i in 0..16 {
+          let idx = idxs_array[i] as usize;
+          if idx < 16 {
+            result[i] = self_array[idx];
+          }
+        }
+
+        Self::new(result)
+      }
+    }
   }
 
   #[inline]
   pub fn zeroing_swizzle_dyn(self, idxs: u8x16) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(target_feature="ssse3")] {
+        Self { sse: shuffle_av_i8z_all_m128i(self.sse, add_saturating_u8_m128i(idxs.sse, set_splat_i8_m128i(0x70))) }
+      } else if #[cfg(target_feature="simd128")] {
+        Self { simd: i8x16_swizzle(self.simd, idxs.simd) }
+      } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
+        unsafe { Self { neon: vqtbl1q_u8(self.neon, idxs.neon) } }
+      } else {
+        let self_array = self.to_array();
+        let idxs_array = idxs.to_array();
+
+        let mut result = [0; 16];
+        for i in 0..16 {
+          let idx = idxs_array[i] as usize;
+          if idx < 16 {
+            result[i] = self_array[idx];
+          }
+        }
+
+        Self::new(result)
+      }
+    }
   }
 
   ///

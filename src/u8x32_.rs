@@ -177,12 +177,91 @@ impl_simd! {
   /// zero is returned or indices wrap around, non-deterministically.
   #[inline]
   pub fn swizzle_dyn(self, idxs: u8x32) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature="avx512vbmi", target_feature="avx512vl"))] {
+        #[cfg(target_arch = "x86")]
+        use core::arch::x86::_mm256_permutexvar_epi8;
+        #[cfg(target_arch = "x86_64")]
+        use core::arch::x86_64::_mm256_permutexvar_epi8;
+        // TODO(safe_arch): Add `_mm256_permutexvar_epi8`.
+        Self { avx: m256i(unsafe { _mm256_permutexvar_epi8(idxs.avx.0, self.avx.0) }) }
+      } else if #[cfg(target_feature="avx2")] {
+        // Same broadcast+blend as strict, but skip the 0x60 zeroing fold.
+        let tbl_lo = shuffle_abi_i128z_all_m256i::<0x00>(self.avx, self.avx);
+        let tbl_hi = shuffle_abi_i128z_all_m256i::<0x11>(self.avx, self.avx);
+        let res_lo = shuffle_av_i8z_half_m256i(tbl_lo, idxs.avx);
+        let res_hi = shuffle_av_i8z_half_m256i(tbl_hi, idxs.avx);
+        let sel = shl_imm_u16_m256i::<3>(idxs.avx);
+        Self { avx: blend_varying_i8_m256i(res_lo, res_hi, sel) }
+      } else if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
+        // vqtbl2 zeroes out-of-range anyway; identical to strict.
+        use core::arch::aarch64::{uint8x16x2_t, vqtbl2q_u8};
+        unsafe {
+          let table = uint8x16x2_t(self.a.neon, self.b.neon);
+          Self {
+            a: u8x16 { neon: vqtbl2q_u8(table, idxs.a.neon) },
+            b: u8x16 { neon: vqtbl2q_u8(table, idxs.b.neon) },
+          }
+        }
+      } else {
+        // Strict fallback is a valid relaxed implementation (it zeroes OOR).
+        let sixteen = u8x16::splat(16);
+        Self {
+          a: self.a.zeroing_swizzle_dyn(idxs.a) | self.b.zeroing_swizzle_dyn(idxs.a - sixteen),
+          b: self.a.zeroing_swizzle_dyn(idxs.b) | self.b.zeroing_swizzle_dyn(idxs.b - sixteen),
+        }
+      }
+    }
   }
 
   #[inline]
   pub fn zeroing_swizzle_dyn(self, idxs: u8x32) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature="avx512vbmi", target_feature="avx512vl"))] {
+        #[cfg(target_arch = "x86")]
+        use core::arch::x86::_mm256_permutexvar_epi8;
+        #[cfg(target_arch = "x86_64")]
+        use core::arch::x86_64::_mm256_permutexvar_epi8;
+        // vpermb takes the index mod 32 and never zeroes, so zero the
+        // out-of-range lanes ourselves: (idxs & 0xE0) == 0  <=>  idxs < 32.
+        // TODO(safe_arch): Add `_mm256_permutexvar_epi8`.
+        let permuted = m256i(unsafe { _mm256_permutexvar_epi8(idxs.avx.0, self.avx.0) });
+        let hi_bits = bitand_m256i(idxs.avx, set_splat_i8_m256i(0xE0_u8 as i8));
+        let in_range = cmp_eq_mask_i8_m256i(hi_bits, zeroed_m256i());
+        Self { avx: bitand_m256i(permuted, in_range) }
+      } else if #[cfg(target_feature="avx2")] {
+        // Broadcast each 16-byte table half into both 128-bit lanes, pshufb
+        // each by the index, blend by index bit 4. Fold the >=32 zeroing into
+        // pshufb with an unsigned saturating add of 0x60 (0x60 + 32 = 0x80).
+        let idx = add_saturating_u8_m256i(idxs.avx, set_splat_i8_m256i(0x60));
+        let tbl_lo = shuffle_abi_i128z_all_m256i::<0x00>(self.avx, self.avx);
+        let tbl_hi = shuffle_abi_i128z_all_m256i::<0x11>(self.avx, self.avx);
+        let res_lo = shuffle_av_i8z_half_m256i(tbl_lo, idx);
+        let res_hi = shuffle_av_i8z_half_m256i(tbl_hi, idx);
+        // move index bit 4 into the sign bit (bit 7) for blendv.
+        let sel = shl_imm_u16_m256i::<3>(idxs.avx);
+        Self { avx: blend_varying_i8_m256i(res_lo, res_hi, sel) }
+      } else if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
+        use core::arch::aarch64::{uint8x16x2_t, vqtbl2q_u8};
+        unsafe {
+          let table = uint8x16x2_t(self.a.neon, self.b.neon);
+          Self {
+            a: u8x16 { neon: vqtbl2q_u8(table, idxs.a.neon) },
+            b: u8x16 { neon: vqtbl2q_u8(table, idxs.b.neon) },
+          }
+        }
+      } else {
+        // Generic {a,b}: each output half pulls from either table half.
+        // a.swizzle / b.swizzle are STRICT (zero index >= 16), and their
+        // nonzero domains are disjoint, so a bitwise OR selects correctly and
+        // out-of-range (>=32) falls out as 0 with no extra mask.
+        let sixteen = u8x16::splat(16);
+        Self {
+          a: self.a.zeroing_swizzle_dyn(idxs.a) | self.b.zeroing_swizzle_dyn(idxs.a - sixteen),
+          b: self.a.zeroing_swizzle_dyn(idxs.b) | self.b.zeroing_swizzle_dyn(idxs.b - sixteen),
+        }
+      }
+    }
   }
 
   ///

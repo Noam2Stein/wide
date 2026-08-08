@@ -246,12 +246,43 @@ impl_simd! {
 
   #[inline]
   pub fn swizzle_dyn(self, idxs: u64x2) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(target_feature="sse2")] {
+        let e0 = Self { sse: shuffle_ai_f32_all_m128i::<0b01_00_01_00>(self.sse) };
+        let e1 = Self { sse: shuffle_ai_f32_all_m128i::<0b11_10_11_10>(self.sse) };
+
+        // We can assume that each index is either `0` or `1`, and negating that
+        // always gives us either all bits zero or all bits one.
+        (-idxs).select(e1, e0)
+      } else if #[cfg(target_feature="simd128")] {
+        let e0 = Self { simd: u64x2_shuffle::<0, 0>(self.simd, self.simd) };
+        let e1 = Self { simd: u64x2_shuffle::<1, 1>(self.simd, self.simd) };
+
+        // We can assume that each index is either `0` or `1`, and negating that
+        // always gives us either all bits zero or all bits one.
+        (-idxs).select(e1, e0)
+      } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
+        let e0 = unsafe { Self { neon: vdupq_n_u64(vget_lane_u64::<0>(vget_low_u64(self.neon))) } };
+        let e1 = unsafe { Self { neon: vdupq_n_u64(vget_lane_u64::<0>(vget_high_u64(self.neon))) } };
+
+        // We can assume that each index is either `0` or `1`, and negating that
+        // always gives us either all bits zero or all bits one.
+        (-idxs).select(e1, e0)
+      } else {
+        let e0 = Self::splat(self.as_array()[0]);
+        let e1 = Self::splat(self.as_array()[1]);
+
+        // We can assume that each index is either `0` or `1`, and negating that
+        // always gives us either all bits zero or all bits one.
+        (-idxs).select(e1, e0)
+      }
+    }
   }
 
   #[inline]
   pub fn zeroing_swizzle_dyn(self, idxs: u64x2) -> Self {
-    todo!()
+    // Since all implementations use the `select` trick, we always need to mask
+    self.swizzle_dyn(idxs) & idxs.simd_lt(2)
   }
 
   ///

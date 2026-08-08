@@ -301,12 +301,16 @@ impl_simd! {
 
   #[inline]
   pub fn swizzle_dyn(self, idxs: u32x4) -> Self {
-    todo!()
+    // There are no float-specific intrinsics for this, so reuse integer
+    // implementation
+    Self::from_bits(self.to_bits().swizzle_dyn(idxs))
   }
 
   #[inline]
   pub fn zeroing_swizzle_dyn(self, idxs: u32x4) -> Self {
-    todo!()
+    // There are no float-specific intrinsics for this, so reuse integer
+    // implementation
+    Self::from_bits(self.to_bits().zeroing_swizzle_dyn(idxs))
   }
 
   ///

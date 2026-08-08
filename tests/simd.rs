@@ -2406,7 +2406,7 @@ fn test_zeroing_swizzle_dyn() {
       }));
       let actual = simd.zeroing_swizzle_dyn(SimdUnsigned::new(idxs));
 
-      assert_eq!(actual, expected);
+      assert_eq!(actual, expected, "\n  simd: {simd:?}\n  idxs: {idxs:?}");
     }
   });
 }
