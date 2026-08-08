@@ -27,6 +27,8 @@ macro_rules! impl_simd {
     $fn_to_bitmask:item
     $fn_any:item
     $fn_all:item
+    $fn_swizzle_dyn:item
+    $fn_zeroing_swizzle_dyn:item
     $fn_transpose:item
   ) => {
     impl From<[$T; $N]> for $Simd {
@@ -512,6 +514,24 @@ macro_rules! impl_simd {
       pub fn none(self) -> bool {
         !self.any()
       }
+
+      /// Returns a SIMD vector where each element is indexed from `self` based
+      /// on the runtime indices in `idxs`.
+      ///
+      /// Returns `[self[idxs[0]], self[idxs[1]], ...]`.
+      ///
+      /// If an index is greater than the number of elements, the result is
+      /// unspecified.
+      #[must_use]
+      $fn_swizzle_dyn
+
+      /// Returns a SIMD vector where each element is indexed from `self` based
+      /// on the runtime indices in `idxs`, returning zero if an index is
+      /// greater than the number of elements.
+      ///
+      /// Returns `[self[idxs[0]], self[idxs[1]], ...]`.
+      #[must_use]
+      $fn_zeroing_swizzle_dyn
 
       /// Transposes an array of SIMD vectors interpreted as a square matrix.
       #[must_use]
