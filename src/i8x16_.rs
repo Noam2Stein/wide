@@ -396,6 +396,10 @@ impl_simd! {
     }
   }
 
+  ///
+  /// For [`i8x16`] specifically it is guaranteed that for overflows, if the high
+  /// bit of the index is set, zero is returned. Otherwise, either zero is
+  /// returned or indices wrap around, non-deterministically.
   #[inline]
   pub fn swizzle_dyn(self, idxs: u8x16) -> Self {
     todo!()

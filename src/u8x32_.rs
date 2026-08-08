@@ -172,6 +172,9 @@ impl_simd! {
     i8x32::all(cast(self))
   }
 
+  ///
+  /// For [`u8x32`] specifically it is guaranteed that for overflows, either
+  /// zero is returned or indices wrap around, non-deterministically.
   #[inline]
   pub fn swizzle_dyn(self, idxs: u8x32) -> Self {
     todo!()
