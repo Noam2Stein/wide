@@ -315,12 +315,12 @@ impl_simd! {
 
   #[inline]
   pub fn swizzle_dyn(self, idxs: u32x4) -> Self {
-    todo!()
+    self.cast_unsigned().swizzle_dyn(idxs).cast_signed()
   }
 
   #[inline]
   pub fn zeroing_swizzle_dyn(self, idxs: u32x4) -> Self {
-    todo!()
+    self.cast_unsigned().zeroing_swizzle_dyn(idxs).cast_signed()
   }
 
   ///

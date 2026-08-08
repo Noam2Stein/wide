@@ -402,12 +402,12 @@ impl_simd! {
   /// returned or indices wrap around, non-deterministically.
   #[inline]
   pub fn swizzle_dyn(self, idxs: u8x16) -> Self {
-    todo!()
+    self.cast_unsigned().swizzle_dyn(idxs).cast_signed()
   }
 
   #[inline]
   pub fn zeroing_swizzle_dyn(self, idxs: u8x16) -> Self {
-    todo!()
+    self.cast_unsigned().zeroing_swizzle_dyn(idxs).cast_signed()
   }
 
   ///
