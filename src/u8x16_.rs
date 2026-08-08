@@ -1502,9 +1502,16 @@ impl u8x16 {
   /// * Index values in the range `[0, 15]` select the i-th element of `self`.
   /// * Index values that are out of range will cause that output lane to be
   ///   `0`.
+  ///
+  /// This function has been replaced by [`zeroing_swizzle_dyn`], which has the
+  /// same semantics and guarantees.
+  ///
+  /// [`zeroing_swizzle_dyn`]: Self::zeroing_swizzle_dyn
   #[inline]
-  pub fn swizzle(self, rhs: i8x16) -> i8x16 {
-    cast(i8x16::swizzle(cast(self), rhs))
+  #[must_use]
+  #[deprecated(since = "1.7.0", note = "replaced by `zeroing_swizzle_dyn`")]
+  pub fn swizzle(self, idxs: Self) -> Self {
+    self.zeroing_swizzle_dyn(idxs)
   }
 
   /// Works like [`swizzle`](Self::swizzle) with the following additional
@@ -1515,8 +1522,15 @@ impl u8x16 {
   ///   negative), then the corresponding output lane is guaranteed to be zero.
   /// * Otherwise the output lane is either `0` or `self[rhs[i] % 16]`,
   ///   depending on the implementation.
+  ///
+  /// This function has been replaced by [`swizzle_dyn`], which has the same
+  /// semantics and guarantees.
+  ///
+  /// [`swizzle_dyn`]: Self::swizzle_dyn
   #[inline]
-  pub fn swizzle_relaxed(self, rhs: u8x16) -> u8x16 {
-    cast(i8x16::swizzle_relaxed(cast(self), cast(rhs)))
+  #[must_use]
+  #[deprecated(since = "1.7.0", note = "replaced by `swizzle_dyn`")]
+  pub fn swizzle_relaxed(self, idxs: Self) -> Self {
+    self.swizzle_dyn(idxs)
   }
 }

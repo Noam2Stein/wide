@@ -514,8 +514,9 @@ impl u8x32 {
   /// two halves of the vector, and the indexes each refer to the
   /// corresponding half.
   #[inline]
-  pub fn swizzle_half(self, rhs: i8x32) -> i8x32 {
-    cast(i8x32::swizzle_half(cast(self), cast(rhs)))
+  #[must_use]
+  pub fn swizzle_half(self, idxs: Self) -> Self {
+    cast(i8x32::swizzle_half(cast(self), cast(idxs)))
   }
 
   /// Indices in the range `[0, 15]` will select the i-th element of `self`. If
@@ -528,21 +529,36 @@ impl u8x32 {
   /// halves of the vector, and the indexes each refer to their corresponding
   /// half.
   #[inline]
-  pub fn swizzle_half_relaxed(self, rhs: u8x32) -> u8x32 {
-    cast(i8x32::swizzle_half_relaxed(cast(self), cast(rhs)))
+  #[must_use]
+  pub fn swizzle_half_relaxed(self, idxs: Self) -> Self {
+    cast(i8x32::swizzle_half_relaxed(cast(self), cast(idxs)))
   }
 
   /// Full 32-entry byte table lookup. An index in `[0, 31]` selects
   /// `self[index]`; any index `>= 32` yields `0`.
+  ///
+  /// This function has been replaced by [`zeroing_swizzle_dyn`], which has the
+  /// same semantics and guarantees.
+  ///
+  /// [`zeroing_swizzle_dyn`]: Self::zeroing_swizzle_dyn
   #[inline]
-  pub fn swizzle(self, rhs: u8x32) -> u8x32 {
-    cast(i8x32::swizzle(cast(self), cast(rhs)))
+  #[must_use]
+  #[deprecated(since = "1.7.0", note = "replaced by `zeroing_swizzle_dyn`")]
+  pub fn swizzle(self, idxs: Self) -> Self {
+    self.zeroing_swizzle_dyn(idxs)
   }
 
   /// Like [`swizzle`](Self::swizzle), but out-of-range indices yield an
   /// implementation-defined result (`0` or `self[index % 32]`).
+  ///
+  /// This function has been replaced by [`swizzle_dyn`], which has the same
+  /// semantics and guarantees.
+  ///
+  /// [`swizzle_dyn`]: Self::swizzle_dyn
   #[inline]
-  pub fn swizzle_relaxed(self, rhs: u8x32) -> u8x32 {
-    cast(i8x32::swizzle_relaxed(cast(self), cast(rhs)))
+  #[must_use]
+  #[deprecated(since = "1.7.0", note = "replaced by `swizzle_dyn`")]
+  pub fn swizzle_relaxed(self, idxs: Self) -> Self {
+    self.swizzle_dyn(idxs)
   }
 }
