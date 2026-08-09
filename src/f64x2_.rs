@@ -286,38 +286,16 @@ impl_simd! {
 
   #[inline]
   pub fn swizzle_dyn(self, idxs: u64x2) -> Self {
-    pick! {
-      if #[cfg(target_feature="sse2")] {
-        Self::from_bits(self.to_bits().swizzle_dyn(idxs))
-      } else if #[cfg(target_feature="simd128")] {
-        let e0 = Self { simd: i64x2_shuffle::<0, 0>(self.simd, self.simd) };
-        let e1 = Self { simd: i64x2_shuffle::<1, 1>(self.simd, self.simd) };
-
-        // We can assume that each index is either `0` or `1`, and negating that
-        // always gives us either all bits zero or all bits one.
-        Self::from_bits(-idxs).select(e1, e0)
-      } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
-        let e0 = unsafe { Self { neon: vdupq_n_f64(vget_lane_f64::<0>(vget_low_f64(self.neon))) } };
-        let e1 = unsafe { Self { neon: vdupq_n_f64(vget_lane_f64::<0>(vget_high_f64(self.neon))) } };
-
-        // We can assume that each index is either `0` or `1`, and negating that
-        // always gives us either all bits zero or all bits one.
-        Self::from_bits(-idxs).select(e1, e0)
-      } else {
-        let e0 = Self::splat(self.as_array()[0]);
-        let e1 = Self::splat(self.as_array()[1]);
-
-        // We can assume that each index is either `0` or `1`, and negating that
-        // always gives us either all bits zero or all bits one.
-        Self::from_bits(-idxs).select(e1, e0)
-      }
-    }
+    // Reusing integer intrinsics for floats is unlikely to affect performance
+    // here
+    Self::from_bits(self.to_bits().swizzle_dyn(idxs))
   }
 
   #[inline]
   pub fn zeroing_swizzle_dyn(self, idxs: u64x2) -> Self {
-    // Since all implementations use the `select` trick, we always need to mask
-    self.swizzle_dyn(idxs) & Self::from_bits(idxs.simd_lt(2))
+    // Reusing integer intrinsics for floats is unlikely to affect performance
+    // here
+    Self::from_bits(self.to_bits().zeroing_swizzle_dyn(idxs))
   }
 
   ///

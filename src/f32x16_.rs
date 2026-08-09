@@ -193,35 +193,16 @@ impl_simd! {
 
   #[inline]
   pub fn swizzle_dyn(self, idxs: u32x16) -> Self {
-    pick! {
-      if #[cfg(all(target_feature="avx512f"))] {
-        #[cfg(target_arch = "x86")]
-        use core::arch::x86::_mm512_permutexvar_ps;
-        #[cfg(target_arch = "x86_64")]
-        use core::arch::x86_64::_mm512_permutexvar_ps;
-        // TODO(safe_arch): Add `_mm512_permutexvar_ps`.
-        Self { avx512: m512(unsafe { _mm512_permutexvar_ps(idxs.avx512.0, self.avx512.0) }) }
-      } else if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
-        // Except for avx512, there are no float-specific intrinsics for this,
-        // so reuse integer implementation
-        Self::from_bits(self.to_bits().swizzle_dyn(idxs))
-      } else {
-        let eight = u32x8::splat(8);
-        let [self_a, self_b] = cast::<f32x16, [f32x8; 2]>(self);
-        let [idxs_a, idxs_b] = cast::<u32x16, [u32x8; 2]>(idxs);
-        // Use zeroing swizzle to ignore overflowing subtraction.
-        cast([
-          self_a.zeroing_swizzle_dyn(idxs_a) | self_b.zeroing_swizzle_dyn(idxs_a - eight),
-          self_a.zeroing_swizzle_dyn(idxs_b) | self_b.zeroing_swizzle_dyn(idxs_b - eight),
-        ])
-      }
-    }
+    // Reusing integer intrinsics for floats is unlikely to affect performance
+    // here
+    Self::from_bits(self.to_bits().swizzle_dyn(idxs))
   }
 
   #[inline]
   pub fn zeroing_swizzle_dyn(self, idxs: u32x16) -> Self {
-    // All implementations do not have the masking behavior we want
-    self.swizzle_dyn(idxs) & Self::from_bits(idxs.simd_lt(16))
+    // Reusing integer intrinsics for floats is unlikely to affect performance
+    // here
+    Self::from_bits(self.to_bits().zeroing_swizzle_dyn(idxs))
   }
 
   ///
