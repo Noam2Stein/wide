@@ -273,8 +273,17 @@ impl_simd! {
         target_feature = "simd128",
       ))] {
         // This trick duplicates the lowest byte index of each 32-bit element
-        // across each 4 bytes.
+        // across each 4 bytes. x86 native multiplication requires sse4.1, so
+        // without it its better to use shifts and adds.
+        #[cfg(any(target_feature = "sse4.1", not(target_feature = "sse2")))]
         let splatted_indices = idxs * const { u32x4::splat((4 << 24) + (4 << 16) + (4 << 8) + 4) };
+        #[cfg(all(not(target_feature = "sse4.1"), target_feature = "sse2"))]
+        let splatted_indices = {
+          let mut splatted_indices = idxs << 2;
+          splatted_indices += splatted_indices << 8;
+          splatted_indices += splatted_indices << 16;
+          splatted_indices
+        };
 
         // Apply an offset to higher bytes of each element to target their
         // correct bytes instead of their lowest byte.

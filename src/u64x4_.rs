@@ -176,11 +176,21 @@ impl_simd! {
         target_feature = "simd128",
       ))] {
         // This trick duplicates the lowest byte index of each 64-bit element
-        // across each 8 bytes.
+        // across each 8 bytes. Only wasm supports native multiplication, so
+        // without it its better to use shifts and adds.
+        #[cfg(target_feature = "simd128")]
         let splatted_indices = idxs * const {
           u64x4::splat(
             (8 << 56) + (8 << 48) + (8 << 40) + (8 << 32) + (8 << 24) + (8 << 16) + (8 << 8) + 8,
           )
+        };
+        #[cfg(not(target_feature = "simd128"))]
+        let splatted_indices = {
+          let mut splatted_indices = idxs << 3;
+          splatted_indices += splatted_indices << 8;
+          splatted_indices += splatted_indices << 16;
+          splatted_indices += splatted_indices << 32;
+          splatted_indices
         };
 
         // Apply an offset to higher bytes of each element to target their
