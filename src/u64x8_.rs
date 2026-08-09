@@ -186,8 +186,15 @@ impl_simd! {
 
   #[inline]
   pub fn zeroing_swizzle_dyn(self, idxs: u64x8) -> Self {
-    // All implementations do not have the masking behavior we want
-    self.swizzle_dyn(idxs) & idxs.simd_lt(8)
+    pick! {
+      if #[cfg(target_feature = "avx512f")] {
+        // The avx512 implementation does not have the masking behavior we want
+        self.swizzle_dyn(idxs) & idxs.simd_lt(8)
+      } else {
+        // The fallback automatically handles overflows
+        self.swizzle_dyn(idxs)
+      }
+    }
   }
 
   ///
