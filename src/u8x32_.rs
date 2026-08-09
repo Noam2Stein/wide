@@ -179,12 +179,7 @@ impl_simd! {
   pub fn swizzle_dyn(self, idxs: u8x32) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512vbmi", target_feature="avx512vl"))] {
-        #[cfg(target_arch = "x86")]
-        use core::arch::x86::_mm256_permutexvar_epi8;
-        #[cfg(target_arch = "x86_64")]
-        use core::arch::x86_64::_mm256_permutexvar_epi8;
-        // TODO(safe_arch): Add `_mm256_permutexvar_epi8`.
-        Self { avx: m256i(unsafe { _mm256_permutexvar_epi8(idxs.avx.0, self.avx.0) }) }
+        Self { avx: permute_i8_m256i(idxs.avx, self.avx) }
       } else if #[cfg(target_feature="avx2")] {
         // Same broadcast+blend as strict, but skip the 0x60 zeroing fold.
         let tbl_lo = shuffle_abi_i128z_all_m256i::<0x00>(self.avx, self.avx);
@@ -218,14 +213,9 @@ impl_simd! {
   pub fn zeroing_swizzle_dyn(self, idxs: u8x32) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512vbmi", target_feature="avx512vl"))] {
-        #[cfg(target_arch = "x86")]
-        use core::arch::x86::_mm256_permutexvar_epi8;
-        #[cfg(target_arch = "x86_64")]
-        use core::arch::x86_64::_mm256_permutexvar_epi8;
         // vpermb takes the index mod 32 and never zeroes, so zero the
         // out-of-range lanes ourselves: (idxs & 0xE0) == 0  <=>  idxs < 32.
-        // TODO(safe_arch): Add `_mm256_permutexvar_epi8`.
-        let permuted = m256i(unsafe { _mm256_permutexvar_epi8(idxs.avx.0, self.avx.0) });
+        let permuted = permute_i8_m256i(idxs.avx, self.avx);
         let hi_bits = bitand_m256i(idxs.avx, set_splat_i8_m256i(0xE0_u8 as i8));
         let in_range = cmp_eq_mask_i8_m256i(hi_bits, zeroed_m256i());
         Self { avx: bitand_m256i(permuted, in_range) }

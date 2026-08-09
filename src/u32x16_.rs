@@ -170,12 +170,7 @@ impl_simd! {
   pub fn swizzle_dyn(self, idxs: u32x16) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f"))] {
-        #[cfg(target_arch = "x86")]
-        use core::arch::x86::_mm512_permutexvar_epi32;
-        #[cfg(target_arch = "x86_64")]
-        use core::arch::x86_64::_mm512_permutexvar_epi32;
-        // TODO(safe_arch): Add `_mm512_permutexvar_epi32`.
-        Self { avx512: m512i(unsafe { _mm512_permutexvar_epi32(idxs.avx512.0, self.avx512.0) }) }
+        Self { avx512: permute_i32_m512i(idxs.avx512, self.avx512) }
       } else if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // vqtbl2 zeroes out-of-range anyway; identical to strict.
         use core::arch::aarch64::{uint8x16x4_t, vreinterpretq_u32_u8, vreinterpretq_u8_u32, vqtbl4q_u8};

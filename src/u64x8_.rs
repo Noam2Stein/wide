@@ -170,12 +170,7 @@ impl_simd! {
   pub fn swizzle_dyn(self, idxs: u64x8) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f"))] {
-        #[cfg(target_arch = "x86")]
-        use core::arch::x86::_mm512_permutexvar_epi64;
-        #[cfg(target_arch = "x86_64")]
-        use core::arch::x86_64::_mm512_permutexvar_epi64;
-        // TODO(safe_arch): Add `_mm512_permutexvar_epi64`.
-        Self { avx512: m512i(unsafe { _mm512_permutexvar_epi64(idxs.avx512.0, self.avx512.0) }) }
+        Self { avx512: permute_i64_m512i(idxs.avx512, self.avx512) }
       } else {
         let four = u64x4::splat(4);
         let [self_a, self_b] = cast::<u64x8, [u64x4; 2]>(self);
