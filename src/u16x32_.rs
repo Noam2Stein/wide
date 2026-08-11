@@ -169,32 +169,118 @@ impl_simd! {
 
   #[inline]
   pub fn shuffle(self, indices: u16x32) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "avx512bw"))] {
+        #[cfg(target_arch = "x86")]
+        use core::arch::x86::_mm512_permutexvar_epi16;
+        #[cfg(target_arch = "x86_64")]
+        use core::arch::x86_64::_mm512_permutexvar_epi16;
+        // TODO(safe_arch): Add `_mm512_permutexvar_epi16`
+        Self { avx512: unsafe { m512i(_mm512_permutexvar_epi16(indices.avx512.0, self.avx512.0)) } }
+      } else {
+        let self_halfs = cast::<u16x32, [u16x16; 2]>(self);
+        let [indices_a, indices_b] = cast::<u16x32, [u16x16; 2]>(indices);
+
+        cast([self_halfs.shuffle(indices_a), self_halfs.shuffle(indices_b)])
+      }
+    }
   }
 
   #[inline]
   pub fn zeroing_shuffle(self, indices: u16x32) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "avx512bw"))] {
+        self.shuffle(indices) & indices.simd_lt(32)
+      } else {
+        let self_halfs = cast::<u16x32, [u16x16; 2]>(self);
+        let [indices_a, indices_b] = cast::<u16x32, [u16x16; 2]>(indices);
+
+        cast([self_halfs.zeroing_shuffle(indices_a), self_halfs.zeroing_shuffle(indices_b)])
+      }
+    }
   }
 
   #[inline]
   pub fn wrapping_shuffle(self, indices: u16x32) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "avx512bw"))] {
+        // `avx512` shuffle intrinsics are wrapping
+        self.shuffle(indices)
+      } else {
+        let self_halfs = cast::<u16x32, [u16x16; 2]>(self);
+        let [indices_a, indices_b] = cast::<u16x32, [u16x16; 2]>(indices);
+
+        cast([self_halfs.wrapping_shuffle(indices_a), self_halfs.wrapping_shuffle(indices_b)])
+      }
+    }
   }
 
   #[inline]
   fn shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    // TODO: When `u8x64` is added, this implementation can be improved. `u8x64`
+    // should have an implementation similar to `u8x32`, and this type should
+    // have an implementation similar to `u16x32` (with `to_byte_indices` and
+    // reusing 8-bit shuffles). Note that this also requires modifying the
+    // implementation of `zeroing_shuffle` below.
+
+    if const { INPUTS == 0 } {
+      u16x32::ZERO
+    } else if const { INPUTS == 1 } {
+      self[0].shuffle(indices)
+    } else if const { INPUTS == 2 } {
+      pick! {
+        if #[cfg(all(target_feature = "avx512bw"))] {
+          #[cfg(target_arch = "x86")]
+          use core::arch::x86::_mm512_permutex2var_epi16;
+          #[cfg(target_arch = "x86_64")]
+          use core::arch::x86_64::_mm512_permutex2var_epi16;
+          // TODO(safe_arch): add `_mm512_permutex2var_epi16`.
+          u16x32 {
+            avx512: unsafe {
+              m512i(_mm512_permutex2var_epi16(self[0].avx512.0, indices.avx512.0, self[1].avx512.0))
+            },
+          }
+        } else {
+          self[0].zeroing_shuffle(indices) | self[0].zeroing_shuffle(indices - 32)
+        }
+      }
+    } else {
+      (0..INPUTS).map(|input| self[input].zeroing_shuffle(indices - input as u16 * 32))
+        .reduce(BitOr::bitor)
+        .unwrap()
+    }
   }
 
   #[inline]
   fn zeroing_shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    if const { INPUTS == 0 } {
+      u16x32::ZERO
+    } else if const { INPUTS == 1 } {
+      self[0].zeroing_shuffle(indices)
+    } else if const {
+      INPUTS == 2 && cfg!(all(target_feature = "avx512bw"))
+    } {
+      self.shuffle(indices) & indices.simd_lt(const { 32 * INPUTS as u16 })
+    } else {
+      // Until `u8x64` is added, `shuffle` is already zeroing
+      self.shuffle(indices)
+    }
   }
 
   #[inline]
   fn wrapping_shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    if const { INPUTS == 0 } {
+      panic!("attempt to call `wrapping_shuffle` with empty array")
+    } else if const { INPUTS == 1 } {
+      self[0].wrapping_shuffle(indices)
+    } else if const {
+      INPUTS == 2 && cfg!(all(target_feature = "avx512bw", target_feature = "avx512vl"))
+    } {
+      // `avx512` shuffle intrinsics are wrapping
+      self.shuffle(indices)
+    } else {
+      self.shuffle(indices & const { 32 * INPUTS as u16 - 1 })
+    }
   }
 
   ///

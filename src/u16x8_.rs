@@ -282,32 +282,156 @@ impl_simd! {
 
   #[inline]
   pub fn shuffle(self, indices: u16x8) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "avx512bw", target_feature = "avx512vl"))] {
+        #[cfg(target_arch = "x86")]
+        use core::arch::x86::_mm_permutexvar_epi16;
+        #[cfg(target_arch = "x86_64")]
+        use core::arch::x86_64::_mm_permutexvar_epi16;
+        // TODO(safe_arch): Add `_mm_permutexvar_epi16`
+        Self { sse: unsafe { m128i(_mm_permutexvar_epi16(indices.sse.0, self.sse.0)) } }
+      } else if #[cfg(any(
+        target_feature = "ssse3",
+        all(target_arch = "aarch64", target_feature = "neon"),
+        target_feature = "simd128",
+      ))] {
+        let self_bytes = cast::<u16x8, u8x16>(self);
+        let byte_indices = indices.to_byte_indices();
+
+        cast::<u8x16, u16x8>(self_bytes.shuffle(byte_indices))
+      } else {
+        let self_array = self.to_array();
+        let indices_array = indices.to_array();
+
+        let mut result = [0; 8];
+        for i in 0..8 {
+          let index = indices_array[i] as usize;
+          if index < 8 {
+            result[i] = self_array[index];
+          }
+        }
+
+        Self::new(result)
+      }
+    }
   }
 
   #[inline]
   pub fn zeroing_shuffle(self, indices: u16x8) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(any(
+        target_feature = "ssse3",
+        all(target_arch = "aarch64", target_feature = "neon"),
+        target_feature = "simd128",
+      ))] {
+        // Even if the `u8x16::shuffle` implementation is zeroing, our 16-bit to
+        // 8-bit can trigger an overflow causing incorrect behavior
+        self.shuffle(indices) & indices.simd_lt(8)
+      } else {
+        // The fallback branch of `shuffle` already has the behavior we want
+        self.shuffle(indices)
+      }
+    }
   }
 
   #[inline]
   pub fn wrapping_shuffle(self, indices: u16x8) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature = "avx512bw", target_feature = "avx512vl"))] {
+        // `avx512` shuffle intrinsics are wrapping
+        self.shuffle(indices)
+      } else if #[cfg(any(
+        target_feature = "ssse3",
+        all(target_arch = "aarch64", target_feature = "neon"),
+        target_feature = "simd128",
+      ))] {
+        self.shuffle(indices & 7)
+      } else {
+        let self_array = self.to_array();
+        let indices_array = indices.to_array();
+
+        let mut result = [0; 8];
+        for i in 0..8 {
+          let index = indices_array[i] as usize;
+          result[i] = self_array[index & 7];
+        }
+
+        Self::new(result)
+      }
+    }
   }
 
   #[inline]
   fn shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    if const { INPUTS == 0 } {
+      u16x8::ZERO
+    } else if const { INPUTS == 1 } {
+      self[0].shuffle(indices)
+    } else if const { INPUTS == 2 } {
+      pick! {
+        if #[cfg(all(target_feature = "avx512bw", target_feature = "avx512vl"))] {
+          #[cfg(target_arch = "x86")]
+          use core::arch::x86::_mm_permutex2var_epi16;
+          #[cfg(target_arch = "x86_64")]
+          use core::arch::x86_64::_mm_permutex2var_epi16;
+          // TODO(safe_arch): add `_mm_permutex2var_epi16`.
+          u16x8 {
+            sse: unsafe {
+              m128i(_mm_permutex2var_epi16(self[0].sse.0, indices.sse.0, self[1].sse.0))
+            },
+          }
+        } else {
+          // SAFETY: Both types have the same size and satisfy the requirements
+          // of `Pod`. This cannot be done with `cast` because const generic
+          // arrays do not implement `Pod`.
+          let self_bytes = unsafe {
+            core::mem::transmute_copy::<[u16x8; INPUTS], [u8x16; INPUTS]>(&self)
+          };
+
+          let byte_indices = indices.to_byte_indices();
+
+          cast::<u8x16, u16x8>(self_bytes.shuffle(byte_indices))
+        }
+      }
+    } else {
+      // SAFETY: Both types have the same size and satisfy the requirements
+      // of `Pod`. This cannot be done with `cast` because const generic
+      // arrays do not implement `Pod`.
+      let self_bytes = unsafe {
+        core::mem::transmute_copy::<[u16x8; INPUTS], [u8x16; INPUTS]>(&self)
+      };
+
+      let byte_indices = indices.to_byte_indices();
+
+      cast::<u8x16, u16x8>(self_bytes.shuffle(byte_indices))
+    }
   }
 
   #[inline]
   fn zeroing_shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    if const { INPUTS == 0 } {
+      u16x8::ZERO
+    } else if const { INPUTS == 1 } {
+      self[0].zeroing_shuffle(indices)
+    } else {
+      self.shuffle(indices) & indices.simd_lt(const { 8 * INPUTS as u16 })
+    }
   }
 
   #[inline]
   fn wrapping_shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    if const { INPUTS == 0 } {
+      panic!("attempt to call `wrapping_shuffle` with empty array")
+    } else if const { INPUTS == 1 } {
+      self[0].wrapping_shuffle(indices)
+    } else if const {
+      INPUTS == 2 && cfg!(all(target_feature = "avx512bw", target_feature = "avx512vl"))
+    } {
+      // `avx512` shuffle intrinsics are wrapping
+      self.shuffle(indices)
+    } else {
+      self.shuffle(indices & const { 8 * INPUTS as u16 - 1 })
+    }
   }
 
   ///
@@ -1189,5 +1313,27 @@ impl u16x8 {
   #[deprecated(since = "1.6.0", note = "renamed to `widening_mul`")]
   pub fn mul_widen(self, rhs: Self) -> u32x8 {
     self.widening_mul(rhs)
+  }
+
+  /// A helper for shuffle functions that turns indices of 16-bit lanes into
+  /// byte indices that can be used with 8-bit shuffle intrinsics.
+  ///
+  /// This turns each 16-bit lane `i` into two 8-bit lanes `[2*i, 2*i + 1]`.
+  ///
+  /// This assumes `self` has already been reduced to the table's lane count,
+  /// which may be at most 128 lanes so that `2 * i` still fits in a byte.
+  #[allow(dead_code)]
+  #[inline]
+  fn to_byte_indices(self) -> u8x16 {
+    // The byte offset of the lane, broadcast to every byte of the lane.
+    let base = self.unbounded_shl_scalar(1);
+    let base = base | base.unbounded_shl_scalar(8);
+
+    // Then the offset of each byte within its lane. These bits are free because
+    // every byte of `base` is a multiple of two. `from_ne_bytes` keeps this
+    // correct on big endian, where the bytes of a lane are the other way around.
+    const WITHIN_LANE: u16x8 = u16x8::splat(u16::from_ne_bytes([0, 1]));
+
+    cast::<u16x8, u8x16>(base | WITHIN_LANE)
   }
 }

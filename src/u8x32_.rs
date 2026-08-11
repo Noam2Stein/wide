@@ -180,17 +180,71 @@ impl_simd! {
   /// values).
   #[inline]
   pub fn shuffle(self, indices: u8x32) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature="avx512vbmi", target_feature="avx512vl"))] {
+        Self { avx: permute_i8_m256i(indices.avx, self.avx) }
+      } else if #[cfg(target_feature="avx2")] {
+        // Same broadcast+blend as strict, but skip the 0x60 zeroing fold.
+        let tbl_lo = shuffle_abi_i128z_all_m256i::<0x00>(self.avx, self.avx);
+        let tbl_hi = shuffle_abi_i128z_all_m256i::<0x11>(self.avx, self.avx);
+        let res_lo = shuffle_av_i8z_half_m256i(tbl_lo, indices.avx);
+        let res_hi = shuffle_av_i8z_half_m256i(tbl_hi, indices.avx);
+        let sel = shl_imm_u16_m256i::<3>(indices.avx);
+        Self { avx: blend_varying_i8_m256i(res_lo, res_hi, sel) }
+      } else {
+        Self {
+          a: [self.a, self.b].shuffle(indices.a),
+          b: [self.a, self.b].shuffle(indices.b),
+        }
+      }
+    }
   }
 
   #[inline]
   pub fn zeroing_shuffle(self, indices: u8x32) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature="avx512vbmi", target_feature="avx512vl"))] {
+        // vpermb takes the index mod 32 and never zeroes, so zero the
+        // out-of-range lanes ourselves: (rhs & 0xE0) == 0  <=>  rhs < 32.
+        let permuted = permute_i8_m256i(indices.avx, self.avx);
+        let hi_bits = bitand_m256i(indices.avx, set_splat_i8_m256i(0xE0_u8 as i8));
+        let in_range = cmp_eq_mask_i8_m256i(hi_bits, zeroed_m256i());
+        Self { avx: bitand_m256i(permuted, in_range) }
+      } else if #[cfg(target_feature="avx2")] {
+        // Broadcast each 16-byte table half into both 128-bit lanes, pshufb
+        // each by the index, blend by index bit 4. Fold the >=32 zeroing into
+        // pshufb with an unsigned saturating add of 0x60 (0x60 + 32 = 0x80).
+        let idx = add_saturating_u8_m256i(indices.avx, set_splat_i8_m256i(0x60));
+        let tbl_lo = shuffle_abi_i128z_all_m256i::<0x00>(self.avx, self.avx);
+        let tbl_hi = shuffle_abi_i128z_all_m256i::<0x11>(self.avx, self.avx);
+        let res_lo = shuffle_av_i8z_half_m256i(tbl_lo, idx);
+        let res_hi = shuffle_av_i8z_half_m256i(tbl_hi, idx);
+        // move index bit 4 into the sign bit (bit 7) for blendv.
+        let sel = shl_imm_u16_m256i::<3>(indices.avx);
+        Self { avx: blend_varying_i8_m256i(res_lo, res_hi, sel) }
+      } else {
+        Self {
+          a: [self.a, self.b].zeroing_shuffle(indices.a),
+          b: [self.a, self.b].zeroing_shuffle(indices.b),
+        }
+      }
+    }
   }
 
   #[inline]
   pub fn wrapping_shuffle(self, indices: u8x32) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(all(target_feature="avx512vbmi", target_feature="avx512vl"))] {
+        Self { avx: permute_i8_m256i(indices.avx, self.avx) }
+      } else if #[cfg(target_feature="avx2")] {
+        self.shuffle(indices & 31)
+      } else {
+        Self {
+          a: [self.a, self.b].wrapping_shuffle(indices.a),
+          b: [self.a, self.b].wrapping_shuffle(indices.b),
+        }
+      }
+    }
   }
 
   /// Returns a SIMD vector whose elements are selected from multiple input
@@ -221,17 +275,106 @@ impl_simd! {
   /// ```
   #[inline]
   fn shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    if const { INPUTS == 0 } {
+      u8x32::ZERO
+    } else if const { INPUTS == 1 } {
+      self[0].shuffle(indices)
+    } else if const { INPUTS == 2 } {
+      pick! {
+        if #[cfg(all(target_feature = "avx512vbmi", target_feature = "avx512vl"))] {
+          #[cfg(target_arch = "x86")]
+          use core::arch::x86::_mm256_permutex2var_epi8;
+          #[cfg(target_arch = "x86_64")]
+          use core::arch::x86_64::_mm256_permutex2var_epi8;
+          // TODO(safe_arch): add `_mm256_permutex2var_epi8`.
+          u8x32 {
+            avx: unsafe {
+              m256i(_mm256_permutex2var_epi8(self[0].avx.0, indices.avx.0, self[1].avx.0))
+            },
+          }
+        } else if #[cfg(target_feature="avx2")] {
+          self[0].zeroing_shuffle(indices) | self[1].zeroing_shuffle(indices - 16)
+        } else {
+          u8x32 {
+            a: [self[0].a, self[0].b, self[1].a, self[1].b].shuffle(indices.a),
+            b: [self[0].a, self[0].b, self[1].a, self[1].b].shuffle(indices.b),
+          }
+        }
+      }
+    } else if const { INPUTS == 3 } {
+      pick! {
+        if #[cfg(target_feature="avx2")] {
+          [self[0], self[1]].zeroing_shuffle(indices) | self[2].zeroing_shuffle(indices - 64)
+        } else {
+          u8x32 {
+            a: [self[0].a, self[0].b, self[1].a, self[1].b, self[2].a, self[2].b].shuffle(indices.a),
+            b: [self[0].a, self[0].b, self[1].a, self[1].b, self[2].a, self[2].b].shuffle(indices.b),
+          }
+        }
+      }
+    } else if const { INPUTS == 4 } {
+      pick! {
+        if #[cfg(target_feature="avx2")] {
+          [self[0], self[1]].zeroing_shuffle(indices)
+            | [self[2], self[3]].zeroing_shuffle(indices - 64)
+        } else {
+          u8x32 {
+            a: [self[0].a, self[0].b, self[1].a, self[1].b, self[2].a, self[2].b, self[3].a, self[3].b]
+              .shuffle(indices.a),
+            b: [self[0].a, self[0].b, self[1].a, self[1].b, self[2].a, self[2].b, self[3].a, self[3].b]
+              .shuffle(indices.b),
+          }
+        }
+      }
+    } else {
+      let (chunks, remainder) = self.as_chunks::<2>();
+      let mut result = u8x32::ZERO;
+      let mut indices = indices;
+
+      for chunk in chunks {
+        result |= chunk.zeroing_shuffle(indices);
+        indices -= 64;
+      }
+
+      match *remainder {
+        [] => {}
+        [r0] => result |= r0.zeroing_shuffle(indices),
+        [_, _, ..] => unreachable!(),
+      }
+
+      result
+    }
   }
 
   #[inline]
   fn zeroing_shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    if const { INPUTS == 0 } {
+      u8x32::ZERO
+    } else if const { INPUTS == 1 } {
+      self[0].zeroing_shuffle(indices)
+    } else if const {
+      INPUTS == 2 && cfg!(all(target_feature = "avx512vbmi", target_feature = "avx512vl"))
+    } {
+      self.shuffle(indices) & indices.simd_lt(64)
+    } else {
+      self.shuffle(indices)
+    }
   }
 
   #[inline]
   fn wrapping_shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    if const { INPUTS == 0 } {
+      panic!("attempt to call `wrapping_shuffle` with empty array")
+    } else if const { INPUTS == 1 } {
+      self[0].wrapping_shuffle(indices)
+    } else if const {
+      INPUTS == 2 && cfg!(all(target_feature = "avx512vbmi", target_feature = "avx512vl"))
+    } {
+      // `avx512` shuffle intrinsics are wrapping
+      self.shuffle(indices)
+    } else {
+      self.shuffle(indices & const { 32 * INPUTS as u8 - 1 })
+    }
   }
 
   ///

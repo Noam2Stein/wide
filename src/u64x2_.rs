@@ -247,32 +247,122 @@ impl_simd! {
 
   #[inline]
   pub fn shuffle(self, indices: u64x2) -> Self {
-    todo!()
+    pick! {
+      if #[cfg(target_feature = "sse2")] {
+        let e0 = Self { sse: shuffle_ai_f32_all_m128i::<0b01_00_01_00>(self.sse) };
+        let e1 = Self { sse: shuffle_ai_f32_all_m128i::<0b11_10_11_10>(self.sse) };
+
+        // We can assume that each index is either `0` or `1`, and negating that
+        // always gives us either all bits zero or all bits one.
+        (-indices).select(e1, e0)
+      } else if #[cfg(target_feature = "simd128")] {
+        let e0 = Self { simd: u64x2_shuffle::<0, 0>(self.simd, self.simd) };
+        let e1 = Self { simd: u64x2_shuffle::<1, 1>(self.simd, self.simd) };
+
+        // We can assume that each index is either `0` or `1`, and negating that
+        // always gives us either all bits zero or all bits one.
+        (-indices).select(e1, e0)
+      } else if #[cfg(all(target_feature = "neon", target_arch = "aarch64"))]{
+        let e0 = unsafe { Self { neon: vdupq_n_u64(vget_lane_u64::<0>(vget_low_u64(self.neon))) } };
+        let e1 = unsafe { Self { neon: vdupq_n_u64(vget_lane_u64::<0>(vget_high_u64(self.neon))) } };
+
+        // We can assume that each index is either `0` or `1`, and negating that
+        // always gives us either all bits zero or all bits one.
+        (-indices).select(e1, e0)
+      } else {
+        let e0 = Self::splat(self.as_array()[0]);
+        let e1 = Self::splat(self.as_array()[1]);
+
+        // We can assume that each index is either `0` or `1`, and negating that
+        // always gives us either all bits zero or all bits one.
+        (-indices).select(e1, e0)
+      }
+    }
   }
 
   #[inline]
   pub fn zeroing_shuffle(self, indices: u64x2) -> Self {
-    todo!()
+    // Since all implementations use the `select` trick, we always need to mask
+    self.shuffle(indices) & indices.simd_lt(2)
   }
 
   #[inline]
   pub fn wrapping_shuffle(self, indices: u64x2) -> Self {
-    todo!()
+    // Since all implementations use the `select` trick, we always need to mask
+    self.shuffle(indices & 1)
   }
 
   #[inline]
   fn shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    if const { INPUTS == 0 } {
+      u64x2::ZERO
+    } else if const { INPUTS == 1 } {
+      self[0].shuffle(indices)
+    } else if const { INPUTS == 2 } {
+      pick! {
+        if #[cfg(all(target_feature = "avx512f", target_feature = "avx512vl"))] {
+          #[cfg(target_arch = "x86")]
+          use core::arch::x86::_mm_permutex2var_epi64;
+          #[cfg(target_arch = "x86_64")]
+          use core::arch::x86_64::_mm_permutex2var_epi64;
+          // TODO(safe_arch): add `_mm_permutex2var_epi64`.
+          u32x4 {
+            sse: unsafe {
+              m128i(_mm_permutex2var_epi64(self[0].sse.0, indices.sse.0, self[1].sse.0))
+            },
+          }
+        } else {
+          // SAFETY: Both types have the same size and satisfy the requirements
+          // of `Pod`. This cannot be done with `cast` because const generic
+          // arrays do not implement `Pod`.
+          let self_bytes = unsafe {
+            core::mem::transmute_copy::<[u64x2; INPUTS], [u8x16; INPUTS]>(&self)
+          };
+
+          let byte_indices = indices.to_byte_indices();
+
+          cast::<u8x16, u64x2>(self_bytes.shuffle(byte_indices))
+        }
+      }
+    } else {
+      // SAFETY: Both types have the same size and satisfy the requirements
+      // of `Pod`. This cannot be done with `cast` because const generic
+      // arrays do not implement `Pod`.
+      let self_bytes = unsafe {
+        core::mem::transmute_copy::<[u64x2; INPUTS], [u8x16; INPUTS]>(&self)
+      };
+
+      let byte_indices = indices.to_byte_indices();
+
+      cast::<u8x16, u64x2>(self_bytes.shuffle(byte_indices))
+    }
   }
 
   #[inline]
   fn zeroing_shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    if const { INPUTS == 0 } {
+      u64x2::ZERO
+    } else if const { INPUTS == 1 } {
+      self[0].zeroing_shuffle(indices)
+    } else {
+      self.shuffle(indices) & indices.simd_lt(const { 2 * INPUTS as u64 })
+    }
   }
 
   #[inline]
   fn wrapping_shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    if const { INPUTS == 0 } {
+      panic!("attempt to call `wrapping_shuffle` with empty array")
+    } else if const { INPUTS == 1 } {
+      self[0].wrapping_shuffle(indices)
+    } else if const {
+      INPUTS == 2 && cfg!(all(target_feature = "avx512f", target_feature = "avx512vl"))
+    } {
+      // `avx512` shuffle intrinsics are wrapping
+      self.shuffle(indices)
+    } else {
+      self.shuffle(indices & const { 2 * INPUTS as u64 -1 })
+    }
   }
 
   ///
@@ -745,5 +835,35 @@ impl_simd_uint! {
       ((arr1[0] as u128 * arr2[0] as u128) >> 64) as u64,
       ((arr1[1] as u128 * arr2[1] as u128) >> 64) as u64,
     ])
+  }
+}
+
+/// The following functionality exists only for [`u64x2`], or only for
+/// particular types inconsistently.
+impl u64x2 {
+  /// A helper for shuffle functions that turns indices of 64-bit lanes into
+  /// byte indices that can be used with 8-bit shuffle intrinsics.
+  ///
+  /// This turns each 64-bit lane `i` into eight 8-bit lanes
+  /// `[8*i, 8*i + 1, 8*i + 2, 8*i + 3, ...]`.
+  ///
+  /// This assumes `self` has already been reduced to the table's lane count,
+  /// which may be at most 32 lanes so that `8 * i` still fits in a byte.
+  #[allow(dead_code)]
+  #[inline]
+  fn to_byte_indices(self) -> u8x16 {
+    // The byte offset of the lane, broadcast to every byte of the lane.
+    let base = self.unbounded_shl_scalar(3);
+    let base = base | base.unbounded_shl_scalar(8);
+    let base = base | base.unbounded_shl_scalar(16);
+    let base = base | base.unbounded_shl_scalar(32);
+
+    // Then the offset of each byte within its lane. These bits are free because
+    // every byte of `base` is a multiple of eight. `from_ne_bytes` keeps this
+    // correct on big endian, where the bytes of a lane are the other way around.
+    const WITHIN_LANE: u64x2 =
+      u64x2::splat(u64::from_ne_bytes([0, 1, 2, 3, 4, 5, 6, 7]));
+
+    cast::<u64x2, u8x16>(base | WITHIN_LANE)
   }
 }
