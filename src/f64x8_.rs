@@ -194,32 +194,47 @@ impl_simd! {
 
   #[inline]
   pub fn shuffle(self, indices: u64x8) -> Self {
-    todo!()
+    Self::from_bits(self.to_bits().shuffle(indices))
   }
 
   #[inline]
   pub fn zeroing_shuffle(self, indices: u64x8) -> Self {
-    todo!()
+    Self::from_bits(self.to_bits().zeroing_shuffle(indices))
   }
 
   #[inline]
   pub fn wrapping_shuffle(self, indices: u64x8) -> Self {
-    todo!()
+    Self::from_bits(self.to_bits().wrapping_shuffle(indices))
   }
 
   #[inline]
   fn shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    // SAFETY: Both types have the same size and satisfy the requirements of
+    // `Pod`. This cannot be done with `cast` because const generic arrays do
+    // not implement `Pod`.
+    cast(unsafe {
+      core::mem::transmute_copy::<[f64x8; INPUTS], [u64x8; INPUTS]>(&self).shuffle(indices)
+    })
   }
 
   #[inline]
   fn zeroing_shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    // SAFETY: Both types have the same size and satisfy the requirements of
+    // `Pod`. This cannot be done with `cast` because const generic arrays do
+    // not implement `Pod`.
+    cast(unsafe {
+      core::mem::transmute_copy::<[f64x8; INPUTS], [u64x8; INPUTS]>(&self).zeroing_shuffle(indices)
+    })
   }
 
   #[inline]
   fn wrapping_shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    // SAFETY: Both types have the same size and satisfy the requirements of
+    // `Pod`. This cannot be done with `cast` because const generic arrays do
+    // not implement `Pod`.
+    cast(unsafe {
+      core::mem::transmute_copy::<[f64x8; INPUTS], [u64x8; INPUTS]>(&self).wrapping_shuffle(indices)
+    })
   }
 
   ///

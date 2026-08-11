@@ -183,17 +183,17 @@ impl_simd! {
   /// values).
   #[inline]
   pub fn shuffle(self, indices: u8x32) -> Self {
-    todo!()
+    self.cast_unsigned().shuffle(indices).cast_signed()
   }
 
   #[inline]
   pub fn zeroing_shuffle(self, indices: u8x32) -> Self {
-    todo!()
+    self.cast_unsigned().zeroing_shuffle(indices).cast_signed()
   }
 
   #[inline]
   pub fn wrapping_shuffle(self, indices: u8x32) -> Self {
-    todo!()
+    self.cast_unsigned().wrapping_shuffle(indices).cast_signed()
   }
 
   /// Returns a SIMD vector whose elements are selected from multiple input
@@ -224,17 +224,32 @@ impl_simd! {
   /// ```
   #[inline]
   fn shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    // SAFETY: Both types have the same size and satisfy the requirements of
+    // `Pod`. This cannot be done with `cast` because const generic arrays do
+    // not implement `Pod`.
+    cast(unsafe {
+      core::mem::transmute_copy::<[i8x32; INPUTS], [u8x32; INPUTS]>(&self).shuffle(indices)
+    })
   }
 
   #[inline]
   fn zeroing_shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    // SAFETY: Both types have the same size and satisfy the requirements of
+    // `Pod`. This cannot be done with `cast` because const generic arrays do
+    // not implement `Pod`.
+    cast(unsafe {
+      core::mem::transmute_copy::<[i8x32; INPUTS], [u8x32; INPUTS]>(&self).zeroing_shuffle(indices)
+    })
   }
 
   #[inline]
   fn wrapping_shuffle(self, indices: Self::Indices) -> Self::Output {
-    todo!()
+    // SAFETY: Both types have the same size and satisfy the requirements of
+    // `Pod`. This cannot be done with `cast` because const generic arrays do
+    // not implement `Pod`.
+    cast(unsafe {
+      core::mem::transmute_copy::<[i8x32; INPUTS], [u8x32; INPUTS]>(&self).wrapping_shuffle(indices)
+    })
   }
 
   ///
