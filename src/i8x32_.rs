@@ -547,8 +547,8 @@ impl i8x32 {
         Self { avx: shuffle_av_i8z_half_m256i(self.avx, add_saturating_u8_m256i(rhs.avx, set_splat_i8_m256i(0x70))) }
       } else {
           Self {
-            a : self.a.swizzle(rhs.a),
-            b : self.b.swizzle(rhs.b),
+            a : self.a.zeroing_shuffle(rhs.a.cast_unsigned()),
+            b : self.b.zeroing_shuffle(rhs.b.cast_unsigned()),
           }
       }
     }
@@ -570,8 +570,8 @@ impl i8x32 {
         Self { avx: shuffle_av_i8z_half_m256i(self.avx, rhs.avx) }
       } else {
         Self {
-          a : self.a.swizzle_relaxed(rhs.a),
-          b : self.b.swizzle_relaxed(rhs.b),
+          a : self.a.shuffle(rhs.a.cast_unsigned()),
+          b : self.b.shuffle(rhs.b.cast_unsigned()),
         }
       }
     }
@@ -584,7 +584,12 @@ impl i8x32 {
   ///
   /// Unlike [`swizzle_half`](Self::swizzle_half), indices address the entire
   /// 32-byte vector, not just their own 16-byte half.
+  ///
+  /// This function has been deprecated and replaced with [`zeroing_shuffle`].
+  ///
+  /// [`zeroing_shuffle`]: Self::zeroing_shuffle
   #[inline]
+  #[deprecated(since = "1.7.0", note = "replaced with `zeroing_shuffle`")]
   pub fn swizzle(self, rhs: i8x32) -> i8x32 {
     pick! {
       if #[cfg(all(target_feature="avx512vbmi", target_feature="avx512vl"))] {
@@ -627,8 +632,10 @@ impl i8x32 {
         // out-of-range (>=32) falls out as 0 with no extra mask.
         let sixteen = i8x16::splat(16);
         Self {
-          a: self.a.swizzle(rhs.a) | self.b.swizzle(rhs.a - sixteen),
-          b: self.a.swizzle(rhs.b) | self.b.swizzle(rhs.b - sixteen),
+          a: self.a.zeroing_shuffle(rhs.a.cast_unsigned())
+            | self.b.zeroing_shuffle((rhs.a - sixteen).cast_unsigned()),
+          b: self.a.zeroing_shuffle(rhs.b.cast_unsigned())
+            | self.b.zeroing_shuffle((rhs.b - sixteen).cast_unsigned()),
         }
       }
     }
@@ -637,7 +644,12 @@ impl i8x32 {
   /// Like [`swizzle`](Self::swizzle), but out-of-range indices (unsigned
   /// `>= 32`) yield an implementation-defined result (`0` or `self[index % 32]`).
   /// Prefer this when you know all indices are in range; it can be cheaper.
+  ///
+  /// This function has been deprecated and replaced with [`shuffle`].
+  ///
+  /// [`shuffle`]: Self::shuffle
   #[inline]
+  #[deprecated(since = "1.7.0", note = "replaced with `shuffle`")]
   pub fn swizzle_relaxed(self, rhs: i8x32) -> i8x32 {
     pick! {
       if #[cfg(all(target_feature="avx512vbmi", target_feature="avx512vl"))] {
@@ -669,8 +681,10 @@ impl i8x32 {
         // Strict fallback is a valid relaxed implementation (it zeroes OOR).
         let sixteen = i8x16::splat(16);
         Self {
-          a: self.a.swizzle(rhs.a) | self.b.swizzle(rhs.a - sixteen),
-          b: self.a.swizzle(rhs.b) | self.b.swizzle(rhs.b - sixteen),
+          a: self.a.zeroing_shuffle(rhs.a.cast_unsigned())
+            | self.b.zeroing_shuffle((rhs.a - sixteen).cast_unsigned()),
+          b: self.a.zeroing_shuffle(rhs.b.cast_unsigned())
+            | self.b.zeroing_shuffle((rhs.b - sixteen).cast_unsigned()),
         }
       }
     }

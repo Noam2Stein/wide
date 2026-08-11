@@ -1238,7 +1238,12 @@ impl i8x16 {
   /// * Index values in the range `[0, 15]` select the i-th element of `self`.
   /// * Index values that are out of range will cause that output lane to be
   ///   `0`.
+  ///
+  /// This function has been deprecated and replaced with [`zeroing_shuffle`].
+  ///
+  /// [`zeroing_shuffle`]: Self::zeroing_shuffle
   #[inline]
+  #[deprecated(since = "1.7.0", note = "replaced with `zeroing_shuffle`")]
   pub fn swizzle(self, rhs: i8x16) -> i8x16 {
     pick! {
       if #[cfg(target_feature="ssse3")] {
@@ -1272,7 +1277,12 @@ impl i8x16 {
   ///   negative), then the corresponding output lane is guaranteed to be zero.
   /// * Otherwise the output lane is either `0` or `self[rhs[i] % 16]`,
   ///   depending on the implementation.
+  ///
+  /// This function has been deprecated and replaced with [`shuffle`].
+  ///
+  /// [`shuffle`]: Self::shuffle
   #[inline]
+  #[deprecated(since = "1.7.0", note = "replaced with `shuffle`")]
   pub fn swizzle_relaxed(self, rhs: i8x16) -> i8x16 {
     pick! {
       if #[cfg(target_feature="ssse3")] {

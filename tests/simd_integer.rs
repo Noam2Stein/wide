@@ -1131,6 +1131,7 @@ fn test_round_float() {
 }
 
 #[test]
+#[expect(deprecated)]
 fn test_swizzle() {
   // `swizzle` is inconsistently missing from types.
 
@@ -1155,6 +1156,7 @@ fn test_swizzle() {
 }
 
 #[test]
+#[expect(deprecated)]
 fn test_swizzle_relaxed() {
   // `swizzle_relaxed` is inconsistently missing from types.
 
@@ -1209,6 +1211,7 @@ fn ref_swizzle32(table: [i8; 32], idx: [i8; 32]) -> [i8; 32] {
 }
 
 #[test]
+#[expect(deprecated)]
 fn test_i8x32_swizzle() {
   let table_arr: [i8; 32] = core::array::from_fn(|i| (i as i8) + 1); // 1..=32
   let table = i8x32::new(table_arr);
@@ -1232,6 +1235,7 @@ fn test_i8x32_swizzle() {
 }
 
 #[test]
+#[expect(deprecated)]
 fn test_i8x32_swizzle_relaxed() {
   let table_arr: [i8; 32] = core::array::from_fn(|i| (i as i8) + 1);
   let table = i8x32::new(table_arr);
@@ -1248,6 +1252,7 @@ fn test_i8x32_swizzle_relaxed() {
 }
 
 #[test]
+#[expect(deprecated)]
 fn test_u8x32_swizzle() {
   let table_arr: [u8; 32] = core::array::from_fn(|i| (i as u8) + 1); // 1..=32
   let table = u8x32::new(table_arr);
