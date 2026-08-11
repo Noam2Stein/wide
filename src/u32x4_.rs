@@ -83,6 +83,7 @@ impl_simd! {
     T = u32,
     N = 4,
     Simd = u32x4,
+    SimdUint = u32x4,
     optional_type_x86_inner { X86Inner = __m128i },
     optional_type_arm_inner { ArmInner = uint32x4_t },
     optional_type_wasm_inner { WasmInner = v128 },
@@ -262,6 +263,36 @@ impl_simd! {
         (v[0] & v[1] & 0x8000000080000000) == 0x8000000080000000
       }
     }
+  }
+
+  #[inline]
+  pub fn shuffle(self, indices: u32x4) -> Self {
+    todo!()
+  }
+
+  #[inline]
+  pub fn zeroing_shuffle(self, indices: u32x4) -> Self {
+    todo!()
+  }
+
+  #[inline]
+  pub fn wrapping_shuffle(self, indices: u32x4) -> Self {
+    todo!()
+  }
+
+  #[inline]
+  fn shuffle(self, indices: Self::Indices) -> Self::Output {
+    todo!()
+  }
+
+  #[inline]
+  fn zeroing_shuffle(self, indices: Self::Indices) -> Self::Output {
+    todo!()
+  }
+
+  #[inline]
+  fn wrapping_shuffle(self, indices: Self::Indices) -> Self::Output {
+    todo!()
   }
 
   ///

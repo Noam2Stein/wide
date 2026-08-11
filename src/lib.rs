@@ -59,6 +59,32 @@
 //! assert_eq!(result, f32x4::new([5.0, 3.0, 3.0, 5.0]));
 //! ```
 //!
+//! # Shuffling
+//!
+//! Shuffling creates a new SIMD vector by selecting elements from one or more
+//! input vectors according to a set of indices.
+//!
+//! Single-input shuffling is performed using the [`shuffle`] method and its
+//! variants. Multi-input shuffling is performed by placing the input vectors in
+//! an array and calling the corresponding methods from [`ShuffleExt`].
+//!
+//! Currently, `wide` only supports runtime-index based shuffling:
+//!
+//! ```
+//! use wide::{f32x4, ShuffleExt, u32x4};
+//!
+//! let simd_a = f32x4::new(1.0, 2.0, 3.0, 4.0);
+//! let simd_b = f32x4::new(101.0, 102.0, 103.0, 104.0);
+//!
+//! let reverse = simd_a.shuffle(u32x4::new(3, 2, 1, 0));
+//!
+//! // Here, indices `0..4` map to `simd_a`, and indices `4..8` map to `simd_b`
+//! let from_two_vectors = [simd_a, simd_b].shuffle(u32x4::new(2, 3, 4, 5));
+//!
+//! assert_eq!(reverse, f32x4::new(4.0, 3.0, 2.0, 1.0));
+//! assert_eq!(from_two_vectors, f32x4::new(3.0, 4.0, 101.0, 102.0));
+//! ```
+//!
 //! # NaN bit patterns
 //!
 //! Operations on SIMD vectors of floats do not make any guarantees about the
@@ -104,6 +130,7 @@
 //!     SIMD `sqrt` isn't available.
 //!
 //! [`select`]: f32x4::select
+//! [`shuffle`]: f32x4::shuffle
 //! [`Wrapping<T>`]: core::num::Wrapping
 
 // Note(Lokathor): Due to standard library magic, the std-only methods for f32
@@ -560,6 +587,106 @@ fn test_software_sqrt() {
   assert_eq!(software_sqrt(16.0), 4.0);
   assert_eq!(software_sqrt(25.0), 5.0);
   assert_eq!(software_sqrt(5000.0 * 5000.0), 5000.0);
+}
+
+/// An extension trait implemented for arrays of SIMD vectors, which provides
+/// shuffling from multiple input vectors.
+///
+/// # Example
+///
+/// ```
+/// use wide::{f32x4, ShuffleExt, u32x4};
+///
+/// let simd_a = f32x4::new(1.0, 2.0, 3.0, 4.0);
+/// let simd_b = f32x4::new(101.0, 102.0, 103.0, 104.0);
+///
+/// // Here, indices `0..4` map to `simd_a`, and indices `4..8` map to `simd_b`
+/// let from_two_vectors = [simd_a, simd_b].shuffle(u32x4::new(2, 3, 4, 5));
+///
+/// assert_eq!(from_two_vectors, f32x4::new(3.0, 4.0, 101.0, 102.0));
+/// ```
+pub trait ShuffleExt {
+  /// The type representing indices.
+  ///
+  /// This is always a SIMD vector of the unsigned integer with the same size as
+  /// `T` and the same number of elements.
+  type Indices;
+
+  /// The type returned by shuffle functions.
+  ///
+  /// This is always the type of SIMD vector contained in the array.
+  type Output;
+
+  /// Returns a SIMD vector whose elements are selected from multiple input
+  /// vectors using the corresponding runtime `indices`.
+  ///
+  /// If `N` is the number of elements in each vector, indices in the range
+  /// `0..N` select values from `self[0]`, indices in the range `N..N * 2`
+  /// select values from `self[1]`, etc.
+  ///
+  /// If an index is out of bounds (greater than or equal to `N * INPUTS`), the
+  /// corresponding result element is unspecified.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// # use wide::{i32x4, ShuffleExt, u32x4};
+  /// #
+  /// let a = i32x4::new(1, 2, 3, 4);
+  /// let b = i32x4::new(-1, -2, -3, -4);
+  /// let indices = u32x4::new(0, 5, 2, 6);
+  ///
+  /// assert_eq!([a, b].shuffle(indices), i32x4::new(1, -2, 3, -3));
+  /// ```
+  #[must_use]
+  fn shuffle(self, indices: Self::Indices) -> Self::Output;
+
+  /// Returns a SIMD vector whose elements are selected from multiple input
+  /// vectors using the corresponding runtime `indices`.
+  ///
+  /// If `N` is the number of elements in each vector, indices in the range
+  /// `0..N` select values from `self[0]`, indices in the range `N..N * 2`
+  /// select values from `self[1]`, etc.
+  ///
+  /// If an index is out of bounds (greater than or equal to `N * INPUTS`), the
+  /// corresponding result element is the number zero.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// # use wide::{i32x4, ShuffleExt, u32x4};
+  /// #
+  /// let a = i32x4::new(1, 2, 3, 4);
+  /// let b = i32x4::new(-1, -2, -3, -4);
+  /// let indices = u32x4::new(0, 5, 2, 100);
+  ///
+  /// assert_eq!([a, b].zeroing_shuffle(indices), i32x4::new(1, -2, 3, 0));
+  /// ```
+  #[must_use]
+  fn zeroing_shuffle(self, indices: Self::Indices) -> Self::Output;
+
+  /// Returns a SIMD vector whose elements are selected from multiple input
+  /// vectors using the corresponding runtime `indices`.
+  ///
+  /// If `N` is the number of elements in each vector, indices in the range
+  /// `0..N` select values from `self[0]`, indices in the range `N..N * 2`
+  /// select values from `self[1]`, etc.
+  ///
+  /// Indices are wrapped by `N * INPUTS`.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// # use wide::{i32x4, ShuffleExt, u32x4};
+  /// #
+  /// let a = i32x4::new(1, 2, 3, 4);
+  /// let b = i32x4::new(-1, -2, -3, -4);
+  /// let indices = u32x4::new(0, 5, 8, 9);
+  ///
+  /// assert_eq!([a, b].wrapping_shuffle(indices), i32x4::new(1, -2, 1, 2));
+  /// ```
+  #[must_use]
+  fn wrapping_shuffle(self, indices: Self::Indices) -> Self::Output;
 }
 
 /// A deprecated trait for the [`simd_eq`] function.

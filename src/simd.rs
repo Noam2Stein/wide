@@ -11,6 +11,7 @@ macro_rules! impl_simd {
       T = $T:ident,
       N = $N:literal,
       Simd = $Simd:ident,
+      SimdUint = $SimdUint:ident,
       optional_type_x86_inner { $(X86Inner = $X86Inner:ident)? },
       optional_type_arm_inner { $(ArmInner = $ArmInner:ident)? },
       optional_type_wasm_inner { $(WasmInner = $WasmInner:ident)? },
@@ -27,6 +28,12 @@ macro_rules! impl_simd {
     $fn_to_bitmask:item
     $fn_any:item
     $fn_all:item
+    $fn_shuffle:item
+    $fn_zeroing_shuffle:item
+    $fn_wrapping_shuffle:item
+    $fn_array_shuffle:item
+    $fn_array_zeroing_shuffle:item
+    $fn_array_wrapping_shuffle:item
     $fn_transpose:item
   ) => {
     impl From<[$T; $N]> for $Simd {
@@ -204,6 +211,17 @@ macro_rules! impl_simd {
     impl_formatting_trait!(core::fmt::Display);
     impl_formatting_trait!(core::fmt::LowerExp);
     impl_formatting_trait!(core::fmt::UpperExp);
+
+    impl<const INPUTS: usize> ShuffleExt for [$Simd; INPUTS] {
+      type Indices = $SimdUint;
+      type Output = $Simd;
+
+      $fn_array_shuffle
+
+      $fn_array_zeroing_shuffle
+
+      $fn_array_wrapping_shuffle
+    }
 
     #[expect(deprecated)]
     impl CmpEq for $Simd {
@@ -512,6 +530,39 @@ macro_rules! impl_simd {
       pub fn none(self) -> bool {
         !self.any()
       }
+
+      /// Returns a SIMD vector whose elements are selected from `self` using
+      /// the corresponding runtime `indices`.
+      ///
+      /// If an index is out of bounds, the corresponding result element is
+      /// unspecified.
+      ///
+      /// Equivalent to
+      /// `[self[indices[0]], self[indices[1]], ..., self[[indices[N - 1]]]]`.
+      #[must_use]
+      $fn_shuffle
+
+      /// Returns a SIMD vector whose elements are selected from `self` using
+      /// the corresponding runtime `indices`.
+      ///
+      /// If an index is out of bounds, the corresponding result element is
+      /// the number zero.
+      ///
+      /// Equivalent to
+      /// `[self[indices[0]], self[indices[1]], ..., self[[indices[N - 1]]]]`
+      /// with a zero fallback.
+      #[must_use]
+      $fn_zeroing_shuffle
+
+      /// Returns a SIMD vector whose elements are selected from `self` using
+      /// the corresponding runtime `indices`.
+      ///
+      /// Indices are wrapped by the number of elements in `self`.
+      ///
+      /// Equivalent to
+      /// `[self[indices[0] % N], self[indices[1] % N], ..., self[[indices[N - 1] % N]]]`.
+      #[must_use]
+      $fn_wrapping_shuffle
 
       /// Transposes an array of SIMD vectors interpreted as a square matrix.
       #[must_use]
