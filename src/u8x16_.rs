@@ -351,6 +351,11 @@ impl_simd! {
     i8x16::all(cast(self))
   }
 
+  ///
+  /// For [`u8x16`] specifically, additional guarantees are made about out of
+  /// bounds indices: If the high bit of an index is set, zero is returned.
+  /// Otherwise, either zero is returned or the index wraps around,
+  /// non-deterministically.
   #[inline]
   pub fn shuffle(self, indices: u8x16) -> Self {
     todo!()
@@ -366,6 +371,32 @@ impl_simd! {
     todo!()
   }
 
+  /// Returns a SIMD vector whose elements are selected from multiple input
+  /// vectors using the corresponding runtime `indices`.
+  ///
+  /// If `N` is the number of elements in each vector, indices in the range
+  /// `0..N` select values from `self[0]`, indices in the range `N..N * 2`
+  /// select values from `self[1]`, etc.
+  ///
+  /// If an index is out of bounds (greater than or equal to `N * INPUTS`), the
+  /// corresponding result element is unspecified.
+  ///
+  /// For [`u8x16`] specifically, additional guarantees are made about out of
+  /// bounds indices: Either zero is returned or the index wraps around,
+  /// non-deterministically (unlike other types, which can return arbitrary
+  /// values).
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// # use wide::{i32x4, ShuffleExt, u32x4};
+  /// #
+  /// let a = i32x4::new(1, 2, 3, 4);
+  /// let b = i32x4::new(-1, -2, -3, -4);
+  /// let indices = u32x4::new(0, 5, 2, 6);
+  ///
+  /// assert_eq!([a, b].shuffle(indices), i32x4::new(1, -2, 3, -3));
+  /// ```
   #[inline]
   fn shuffle(self, indices: Self::Indices) -> Self::Output {
     todo!()
