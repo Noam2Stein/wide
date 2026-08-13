@@ -22,6 +22,8 @@ macro_rules! impl_simd_float {
       IntSimd = $IntSimd:ident,
       UintT = $UintT:ident,
       UintSimd = $UintSimd:ident,
+      shuffle_consts_parameters { $($INDEX_N:ident),* $(,)? },
+      ShuffleNExt = $ShuffleNExt:ident,
       optional_type_x86_inner { $(X86Inner = $X86Inner:ident)? },
       optional_type_arm_inner { $(ArmInner = $ArmInner:ident)? },
       optional_type_wasm_inner { $(WasmInner = $WasmInner:ident)? },
@@ -106,6 +108,7 @@ macro_rules! impl_simd_float {
         N = $N,
         Simd = $Simd,
         UintSimd = $UintSimd,
+        ShuffleNExt = $ShuffleNExt,
         optional_type_x86_inner { $(X86Inner = $X86Inner)? },
         optional_type_arm_inner { $(ArmInner = $ArmInner)? },
         optional_type_wasm_inner { $(WasmInner = $WasmInner)? },
@@ -155,6 +158,11 @@ macro_rules! impl_simd_float {
       }
 
       #[inline]
+      pub fn shuffle_consts<$(const $INDEX_N: usize),*>(self) -> Self {
+        Self::from_bits(self.to_bits().shuffle_consts::<$($INDEX_N),*>())
+      }
+
+      #[inline]
       pub fn shuffle_zeroing(self, indices: $UintSimd) -> Self {
         Self::from_bits(self.to_bits().shuffle_zeroing(indices))
       }
@@ -167,6 +175,11 @@ macro_rules! impl_simd_float {
       #[inline]
       fn shuffle(self: [$Simd; 2], indices: $UintSimd) -> $Simd {
         cast(cast::<[$Simd; 2], [$UintSimd; 2]>(self).shuffle(indices))
+      }
+
+      #[inline]
+      fn shuffle_consts<$(const $INDEX_N: usize),*>(self: [$Simd; 2]) -> $Simd {
+        cast(cast::<[$Simd; 2], [$UintSimd; 2]>(self).shuffle_consts::<$($INDEX_N),*>())
       }
 
       #[inline]
@@ -185,6 +198,11 @@ macro_rules! impl_simd_float {
       }
 
       #[inline]
+      fn shuffle_consts<$(const $INDEX_N: usize),*>(self: [$Simd; 3]) -> $Simd {
+        cast(cast::<[$Simd; 3], [$UintSimd; 3]>(self).shuffle_consts::<$($INDEX_N),*>())
+      }
+
+      #[inline]
       fn shuffle_zeroing(self: [$Simd; 3], indices: $UintSimd) -> $Simd {
         cast(cast::<[$Simd; 3], [$UintSimd; 3]>(self).shuffle_zeroing(indices))
       }
@@ -197,6 +215,11 @@ macro_rules! impl_simd_float {
       #[inline]
       fn shuffle(self: [$Simd; 4], indices: $UintSimd) -> $Simd {
         cast(cast::<[$Simd; 4], [$UintSimd; 4]>(self).shuffle(indices))
+      }
+
+      #[inline]
+      fn shuffle_consts<$(const $INDEX_N: usize),*>(self: [$Simd; 4]) -> $Simd {
+        cast(cast::<[$Simd; 4], [$UintSimd; 4]>(self).shuffle_consts::<$($INDEX_N),*>())
       }
 
       #[inline]
