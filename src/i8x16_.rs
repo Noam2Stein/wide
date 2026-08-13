@@ -417,60 +417,49 @@ impl_simd! {
     self.cast_unsigned().wrapping_shuffle(indices).cast_signed()
   }
 
-  /// Returns a SIMD vector whose elements are selected from multiple input
-  /// vectors using the corresponding runtime `indices`.
-  ///
-  /// If `N` is the number of elements in each vector, indices in the range
-  /// `0..N` select values from `self[0]`, indices in the range `N..N * 2`
-  /// select values from `self[1]`, etc.
-  ///
-  /// If an index is out of bounds (greater than or equal to `N * INPUTS`), the
-  /// corresponding result element is unspecified.
-  ///
-  /// For [`i8x16`] specifically, additional guarantees are made about out of
-  /// bounds indices: Either zero is returned or the index wraps around,
-  /// non-deterministically (unlike other types, which can return arbitrary
-  /// values).
-  ///
-  /// # Example
-  ///
-  /// ```
-  /// # use wide::{i32x4, ShuffleExt, u32x4};
-  /// #
-  /// let a = i32x4::new(1, 2, 3, 4);
-  /// let b = i32x4::new(-1, -2, -3, -4);
-  /// let indices = u32x4::new(0, 5, 2, 6);
-  ///
-  /// assert_eq!([a, b].shuffle(indices), i32x4::new(1, -2, 3, -3));
-  /// ```
   #[inline]
-  fn shuffle(self, indices: Self::Indices) -> Self::Output {
-    // SAFETY: Both types have the same size and satisfy the requirements of
-    // `Pod`. This cannot be done with `cast` because const generic arrays do
-    // not implement `Pod`.
-    cast(unsafe {
-      core::mem::transmute_copy::<[i8x16; INPUTS], [u8x16; INPUTS]>(&self).shuffle(indices)
-    })
+  fn shuffle(self: [i8x16; 2], indices: u8x16) -> i8x16 {
+    cast(cast::<[i8x16; 2], [u8x16; 2]>(self).shuffle(indices))
   }
 
   #[inline]
-  fn zeroing_shuffle(self, indices: Self::Indices) -> Self::Output {
-    // SAFETY: Both types have the same size and satisfy the requirements of
-    // `Pod`. This cannot be done with `cast` because const generic arrays do
-    // not implement `Pod`.
-    cast(unsafe {
-      core::mem::transmute_copy::<[i8x16; INPUTS], [u8x16; INPUTS]>(&self).zeroing_shuffle(indices)
-    })
+  fn zeroing_shuffle(self: [i8x16; 2], indices: u8x16) -> i8x16 {
+    cast(cast::<[i8x16; 2], [u8x16; 2]>(self).zeroing_shuffle(indices))
   }
 
   #[inline]
-  fn wrapping_shuffle(self, indices: Self::Indices) -> Self::Output {
-    // SAFETY: Both types have the same size and satisfy the requirements of
-    // `Pod`. This cannot be done with `cast` because const generic arrays do
-    // not implement `Pod`.
-    cast(unsafe {
-      core::mem::transmute_copy::<[i8x16; INPUTS], [u8x16; INPUTS]>(&self).wrapping_shuffle(indices)
-    })
+  fn wrapping_shuffle(self: [i8x16; 2], indices: u8x16) -> i8x16 {
+    cast(cast::<[i8x16; 2], [u8x16; 2]>(self).wrapping_shuffle(indices))
+  }
+
+  #[inline]
+  fn shuffle(self: [i8x16; 3], indices: u8x16) -> i8x16 {
+    cast(cast::<[i8x16; 3], [u8x16; 3]>(self).shuffle(indices))
+  }
+
+  #[inline]
+  fn zeroing_shuffle(self: [i8x16; 3], indices: u8x16) -> i8x16 {
+    cast(cast::<[i8x16; 3], [u8x16; 3]>(self).zeroing_shuffle(indices))
+  }
+
+  #[inline]
+  fn wrapping_shuffle(self: [i8x16; 3], indices: u8x16) -> i8x16 {
+    cast(cast::<[i8x16; 3], [u8x16]>(self).wrapping_shuffle(indices))
+  }
+
+  #[inline]
+  fn shuffle(self: [i8x16; 4], indices: u8x16) -> i8x16 {
+    cast(cast::<[i8x16; 4], [u8x16; 4]>(self).shuffle(indices))
+  }
+
+  #[inline]
+  fn zeroing_shuffle(self: [i8x16; 4], indices: u8x16) -> i8x16 {
+    cast(cast::<[i8x16; 4], [u8x16; 4]>(self).zeroing_shuffle(indices))
+  }
+
+  #[inline]
+  fn wrapping_shuffle(self: [i8x16; 4], indices: u8x16) -> i8x16 {
+    cast(cast::<[i8x16; 4], [u8x16; 4]>(self).wrapping_shuffle(indices))
   }
 
   ///

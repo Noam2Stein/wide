@@ -208,33 +208,48 @@ impl_simd! {
   }
 
   #[inline]
-  fn shuffle(self, indices: Self::Indices) -> Self::Output {
-    // SAFETY: Both types have the same size and satisfy the requirements of
-    // `Pod`. This cannot be done with `cast` because const generic arrays do
-    // not implement `Pod`.
-    cast(unsafe {
-      core::mem::transmute_copy::<[f32x8; INPUTS], [u32x8; INPUTS]>(&self).shuffle(indices)
-    })
+  fn shuffle(self: [f32x8; 2], indices: u32x8) -> f32x8 {
+    cast(cast::<[f32x8; 2], [u32x8; 2]>(self).shuffle(indices))
   }
 
   #[inline]
-  fn zeroing_shuffle(self, indices: Self::Indices) -> Self::Output {
-    // SAFETY: Both types have the same size and satisfy the requirements of
-    // `Pod`. This cannot be done with `cast` because const generic arrays do
-    // not implement `Pod`.
-    cast(unsafe {
-      core::mem::transmute_copy::<[f32x8; INPUTS], [u32x8; INPUTS]>(&self).zeroing_shuffle(indices)
-    })
+  fn zeroing_shuffle(self: [f32x8; 2], indices: u32x8) -> f32x8 {
+    cast(cast::<[f32x8; 2], [u32x8; 2]>(self).zeroing_shuffle(indices))
   }
 
   #[inline]
-  fn wrapping_shuffle(self, indices: Self::Indices) -> Self::Output {
-    // SAFETY: Both types have the same size and satisfy the requirements of
-    // `Pod`. This cannot be done with `cast` because const generic arrays do
-    // not implement `Pod`.
-    cast(unsafe {
-      core::mem::transmute_copy::<[f32x8; INPUTS], [u32x8; INPUTS]>(&self).wrapping_shuffle(indices)
-    })
+  fn wrapping_shuffle(self: [f32x8; 2], indices: u32x8) -> f32x8 {
+    cast(cast::<[f32x8; 2], [u32x8; 2]>(self).wrapping_shuffle(indices))
+  }
+
+  #[inline]
+  fn shuffle(self: [f32x8; 3], indices: u32x8) -> f32x8 {
+    cast(cast::<[f32x8; 3], [u32x8; 3]>(self).shuffle(indices))
+  }
+
+  #[inline]
+  fn zeroing_shuffle(self: [f32x8; 3], indices: u32x8) -> f32x8 {
+    cast(cast::<[f32x8; 3], [u32x8; 3]>(self).zeroing_shuffle(indices))
+  }
+
+  #[inline]
+  fn wrapping_shuffle(self: [f32x8; 3], indices: u32x8) -> f32x8 {
+    cast(cast::<[f32x8; 3], [u32x8; 3]>(self).wrapping_shuffle(indices))
+  }
+
+  #[inline]
+  fn shuffle(self: [f32x8; 4], indices: u32x8) -> f32x8 {
+    cast(cast::<[f32x8; 4], [u32x8; 4]>(self).shuffle(indices))
+  }
+
+  #[inline]
+  fn zeroing_shuffle(self: [f32x8; 4], indices: u32x8) -> f32x8 {
+    cast(cast::<[f32x8; 4], [u32x8; 4]>(self).zeroing_shuffle(indices))
+  }
+
+  #[inline]
+  fn wrapping_shuffle(self: [f32x8; 4], indices: u32x8) -> f32x8 {
+    cast(cast::<[f32x8; 4], [u32x8; 4]>(self).wrapping_shuffle(indices))
   }
 
   ///

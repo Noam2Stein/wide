@@ -31,9 +31,15 @@ macro_rules! impl_simd {
     $fn_shuffle:item
     $fn_zeroing_shuffle:item
     $fn_wrapping_shuffle:item
-    $fn_array_shuffle:item
-    $fn_array_zeroing_shuffle:item
-    $fn_array_wrapping_shuffle:item
+    $fn_shuffle_2:item
+    $fn_zeroing_shuffle_2:item
+    $fn_wrapping_shuffle_2:item
+    $fn_shuffle_3:item
+    $fn_zeroing_shuffle_3:item
+    $fn_wrapping_shuffle_3:item
+    $fn_shuffle_4:item
+    $fn_zeroing_shuffle_4:item
+    $fn_wrapping_shuffle_4:item
     $fn_transpose:item
   ) => {
     impl From<[$T; $N]> for $Simd {
@@ -212,15 +218,57 @@ macro_rules! impl_simd {
     impl_formatting_trait!(core::fmt::LowerExp);
     impl_formatting_trait!(core::fmt::UpperExp);
 
-    impl<const INPUTS: usize> ShuffleExt for [$Simd; INPUTS] {
+    impl ShuffleExt for [$Simd; 1] {
       type Indices = $SimdUint;
       type Output = $Simd;
 
-      $fn_array_shuffle
+      #[inline]
+      fn shuffle(self, indices: $SimdUint) -> $Simd {
+        self[0].shuffle(indices)
+      }
 
-      $fn_array_zeroing_shuffle
+      #[inline]
+      fn zeroing_shuffle(self, indices: $SimdUint) -> $Simd {
+        self[0].zeroing_shuffle(indices)
+      }
 
-      $fn_array_wrapping_shuffle
+      #[inline]
+      fn wrapping_shuffle(self, indices: $SimdUint) -> $Simd {
+        self[0].wrapping_shuffle(indices)
+      }
+    }
+
+    impl ShuffleExt for [$Simd; 2] {
+      type Indices = $SimdUint;
+      type Output = $Simd;
+
+      $fn_shuffle_2
+
+      $fn_zeroing_shuffle_2
+
+      $fn_wrapping_shuffle_2
+    }
+
+    impl ShuffleExt for [$Simd; 3] {
+      type Indices = $SimdUint;
+      type Output = $Simd;
+
+      $fn_shuffle_3
+
+      $fn_zeroing_shuffle_3
+
+      $fn_wrapping_shuffle_3
+    }
+
+    impl ShuffleExt for [$Simd; 4] {
+      type Indices = $SimdUint;
+      type Output = $Simd;
+
+      $fn_shuffle_4
+
+      $fn_zeroing_shuffle_4
+
+      $fn_wrapping_shuffle_4
     }
 
     #[expect(deprecated)]
