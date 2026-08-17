@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* Added runtime-index shuffle functions. Previous functions `swizzle` and
+  `swizzle_relaxed` have been deprecated. See
+  [this issue](https://github.com/lokathor/wide/pull/317) for more information.
 * Added accelerated `u8x32` shift implementations. The vector-count variants
   use `avx512bw`/`avx512vl` (`vpsllvw`/`vpsrlvw`) and the scalar-count `shr`
   variants use `avx2`, with the scalar-count `shl` variants left to
