@@ -906,4 +906,125 @@ impl u64x2 {
 
     cast::<u64x2, u8x16>(base | WITHIN_LANE)
   }
+
+  /// Returns `[self[0], b[0]]`, taking the low element of the 128-bit lane.
+  #[inline]
+  #[must_use]
+  pub fn unpack_lo(self, b: Self) -> Self {
+    pick! {
+      if #[cfg(target_feature="sse2")] {
+        Self { sse: unpack_low_i64_m128i(self.sse, b.sse) }
+      } else if #[cfg(target_feature="simd128")] {
+        Self { simd: i64x2_shuffle::<0, 2>(self.simd, b.simd) }
+      } else if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
+        Self { neon: unsafe { vzip1q_u64(self.neon, b.neon) } }
+      } else {
+        Self::new([self.as_array()[0], b.as_array()[0]])
+      }
+    }
+  }
+
+  /// Returns `[self[1], b[1]]`, taking the high element of the 128-bit lane.
+  #[inline]
+  #[must_use]
+  pub fn unpack_hi(self, b: Self) -> Self {
+    pick! {
+      if #[cfg(target_feature="sse2")] {
+        Self { sse: unpack_high_i64_m128i(self.sse, b.sse) }
+      } else if #[cfg(target_feature="simd128")] {
+        Self { simd: i64x2_shuffle::<1, 3>(self.simd, b.simd) }
+      } else if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
+        Self { neon: unsafe { vzip2q_u64(self.neon, b.neon) } }
+      } else {
+        Self::new([self.as_array()[1], b.as_array()[1]])
+      }
+    }
+  }
+
+  /// The exact per-lane product of `a` and `b` masked to `W` bits.
+  ///
+  /// Only exact for `W <= 32`, where the product still fits a lane, and
+  /// callers guard on that. It is instantiated for wider `W` too, since the
+  /// guard is a runtime `if` on a const, so it cannot assert the bound itself.
+  #[inline]
+  #[must_use]
+  fn mul_masked<const W: u32>(a: Self, b: Self) -> Self {
+    pick! {
+      if #[cfg(target_feature="sse2")] {
+        // `pmuludq` reads the low 32 bits of a lane anyway, so at `W == 32` the
+        // operand masks are already implied and can be dropped. A scalar
+        // multiply has no such truncation, so the other arm always masks.
+        let (a, b) = if W == 32 {
+          (a, b)
+        } else {
+          let mask = Self::splat(add_mul_operand_mask_u64::<W>());
+          (a & mask, b & mask)
+        };
+
+        Self { sse: mul_widen_u32_odd_m128i(a.sse, b.sse) }
+      } else {
+        let mask = add_mul_operand_mask_u64::<W>();
+        let a = a.to_array();
+        let b = b.to_array();
+        Self::new(core::array::from_fn(|i| (a[i] & mask) * (b[i] & mask)))
+      }
+    }
+  }
+
+  /// `self + ((a * b) mod 2^W)`, reading only the low `W` bits of each lane of
+  /// `a` and `b`. `W` must be in `1..=64`.
+  #[inline]
+  #[must_use]
+  pub fn add_mul_lo<const W: u32>(self, a: Self, b: Self) -> Self {
+    pick! {
+      if #[cfg(all(target_feature="avx512ifma", target_feature="avx512vl"))] {
+        // IFMA is fixed at 52 bits; any other width takes the generic path.
+        if W == 52 {
+          return Self { sse: add_mul_low_u52_m128i(self.sse, a.sse, b.sse) };
+        }
+      }
+    }
+
+    // Below 33 bits the whole product fits a lane, so one widening multiply
+    // yields both halves and the split is a mask rather than an instruction.
+    if W <= 32 {
+      let mask = Self::splat(add_mul_operand_mask_u64::<W>());
+      return self + (Self::mul_masked::<W>(a, b) & mask);
+    }
+
+    let acc = self.to_array();
+    let a = a.to_array();
+    let b = b.to_array();
+    Self::new(core::array::from_fn(|i| {
+      add_mul_lo_lane_u64::<W>(acc[i], a[i], b[i])
+    }))
+  }
+
+  /// `self + ((a * b) >> W)`, reading only the low `W` bits of each lane of `a`
+  /// and `b`. `W` must be in `1..=64`.
+  #[inline]
+  #[must_use]
+  pub fn add_mul_hi<const W: u32>(self, a: Self, b: Self) -> Self {
+    pick! {
+      if #[cfg(all(target_feature="avx512ifma", target_feature="avx512vl"))] {
+        // IFMA is fixed at 52 bits; any other width takes the generic path.
+        if W == 52 {
+          return Self { sse: add_mul_high_u52_m128i(self.sse, a.sse, b.sse) };
+        }
+      }
+    }
+
+    // See `add_mul_lo`: the whole product is in the lane, so the high half is a
+    // shift.
+    if W <= 32 {
+      return self + (Self::mul_masked::<W>(a, b) >> W);
+    }
+
+    let acc = self.to_array();
+    let a = a.to_array();
+    let b = b.to_array();
+    Self::new(core::array::from_fn(|i| {
+      add_mul_hi_lane_u64::<W>(acc[i], a[i], b[i])
+    }))
+  }
 }

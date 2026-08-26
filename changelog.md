@@ -21,6 +21,10 @@
   already correct and matches [`f32::signum`].
 * Optimized float `signum`. This changes the bit-patterns of returned NaNs.
 * Optimized `copysign`.
+* Added `add_mul_lo` and `add_mul_hi` for `u32xN` and `u64xN`: a fused
+  multiply-add over the low `W` bits of each lane, keeping the low or high half
+  of the product. `u64xN` uses `vpmadd52lo/hi` on AVX-512-IFMA when `W == 52`.
+* Added `unpack_lo` and `unpack_hi` for `u32xN` and `u64xN`.
 
 ## 1.6.1
 

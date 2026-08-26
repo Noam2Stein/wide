@@ -2591,6 +2591,36 @@ fn test_unpack_lo() {
   let expected = f32x4::new([1.0, 5.0, 2.0, 6.0]);
   let actual = a.unpack_lo(b);
   assert_eq!(expected, actual);
+
+  // The low half of both vectors is interleaved one element at a time, across
+  // the whole vector rather than within each 128-bit lane.
+  let a = u32x4::new([1, 2, 3, 4]);
+  let b = u32x4::new([5, 6, 7, 8]);
+  assert_eq!(u32x4::new([1, 5, 2, 6]), a.unpack_lo(b));
+
+  let a = u32x8::new([1, 2, 3, 4, 5, 6, 7, 8]);
+  let b = u32x8::new([11, 12, 13, 14, 15, 16, 17, 18]);
+  assert_eq!(u32x8::new([1, 11, 2, 12, 3, 13, 4, 14]), a.unpack_lo(b));
+
+  let a = u32x16::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+  let b = u32x16::new([
+    21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+  ]);
+  let expected =
+    u32x16::new([1, 21, 2, 22, 3, 23, 4, 24, 5, 25, 6, 26, 7, 27, 8, 28]);
+  assert_eq!(expected, a.unpack_lo(b));
+
+  let a = u64x2::new([1, 2]);
+  let b = u64x2::new([5, 6]);
+  assert_eq!(u64x2::new([1, 5]), a.unpack_lo(b));
+
+  let a = u64x4::new([1, 2, 3, 4]);
+  let b = u64x4::new([5, 6, 7, 8]);
+  assert_eq!(u64x4::new([1, 5, 2, 6]), a.unpack_lo(b));
+
+  let a = u64x8::new([1, 2, 3, 4, 5, 6, 7, 8]);
+  let b = u64x8::new([11, 12, 13, 14, 15, 16, 17, 18]);
+  assert_eq!(u64x8::new([1, 11, 2, 12, 3, 13, 4, 14]), a.unpack_lo(b));
 }
 
 #[test]
@@ -2602,6 +2632,141 @@ fn test_unpack_hi() {
   let expected = f32x4::new([3.0, 7.0, 4.0, 8.0]);
   let actual = a.unpack_hi(b);
   assert_eq!(expected, actual);
+
+  // As in `test_unpack_lo`, across the whole vector rather than within each
+  // 128-bit lane, taking the high half of both vectors.
+  let a = u32x4::new([1, 2, 3, 4]);
+  let b = u32x4::new([5, 6, 7, 8]);
+  assert_eq!(u32x4::new([3, 7, 4, 8]), a.unpack_hi(b));
+
+  let a = u32x8::new([1, 2, 3, 4, 5, 6, 7, 8]);
+  let b = u32x8::new([11, 12, 13, 14, 15, 16, 17, 18]);
+  assert_eq!(u32x8::new([5, 15, 6, 16, 7, 17, 8, 18]), a.unpack_hi(b));
+
+  let a = u32x16::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+  let b = u32x16::new([
+    21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+  ]);
+  let expected = u32x16::new([
+    9, 29, 10, 30, 11, 31, 12, 32, 13, 33, 14, 34, 15, 35, 16, 36,
+  ]);
+  assert_eq!(expected, a.unpack_hi(b));
+
+  let a = u64x2::new([1, 2]);
+  let b = u64x2::new([5, 6]);
+  assert_eq!(u64x2::new([2, 6]), a.unpack_hi(b));
+
+  let a = u64x4::new([1, 2, 3, 4]);
+  let b = u64x4::new([5, 6, 7, 8]);
+  assert_eq!(u64x4::new([3, 7, 4, 8]), a.unpack_hi(b));
+
+  let a = u64x8::new([1, 2, 3, 4, 5, 6, 7, 8]);
+  let b = u64x8::new([11, 12, 13, 14, 15, 16, 17, 18]);
+  assert_eq!(u64x8::new([5, 15, 6, 16, 7, 17, 8, 18]), a.unpack_hi(b));
+}
+
+/// Scalar `(add_mul_lo, add_mul_hi)` for one `u32` lane, from the definition.
+fn add_mul_reference_u32<const W: u32>(acc: u32, a: u32, b: u32) -> (u32, u32) {
+  let mask = u32::MAX >> (32 - W);
+  let product = (a & mask) as u64 * (b & mask) as u64;
+  (
+    acc.wrapping_add((product as u32) & mask),
+    acc.wrapping_add((product >> W) as u32),
+  )
+}
+
+/// Scalar `(add_mul_lo, add_mul_hi)` for one `u64` lane, from the definition.
+fn add_mul_reference_u64<const W: u32>(acc: u64, a: u64, b: u64) -> (u64, u64) {
+  let mask = u64::MAX >> (64 - W);
+  let product = (a & mask) as u128 * (b & mask) as u128;
+  (
+    acc.wrapping_add((product as u64) & mask),
+    acc.wrapping_add((product >> W) as u64),
+  )
+}
+
+/// Fuzz `add_mul_lo` / `add_mul_hi` for one type against the scalar reference,
+/// at each of the given widths.
+macro_rules! check_add_mul {
+  ($Simd:ident, $reference:ident, [$($W:literal),* $(,)?]) => {
+    for [acc, a, b] in random_iter::<[$Simd; 3]>() {
+      let (acc_arr, a_arr, b_arr) = (acc.to_array(), a.to_array(), b.to_array());
+      $({
+        let expected_lo = $Simd::new(std::array::from_fn(|i| {
+          $reference::<$W>(acc_arr[i], a_arr[i], b_arr[i]).0
+        }));
+        let expected_hi = $Simd::new(std::array::from_fn(|i| {
+          $reference::<$W>(acc_arr[i], a_arr[i], b_arr[i]).1
+        }));
+        let ty = stringify!($Simd);
+        assert_eq!(expected_lo, acc.add_mul_lo::<$W>(a, b), "lo at W={} for {ty}", $W);
+        assert_eq!(expected_hi, acc.add_mul_hi::<$W>(a, b), "hi at W={} for {ty}", $W);
+      })*
+    }
+  };
+}
+
+#[test]
+fn test_add_mul_lo() {
+  // `add_mul_lo` is inconsistently missing from types.
+
+  // 3*5 = 15; 2^16 mod 2^16 = 0; 3*(2^15+1) mod 2^16 = 2^15+3; MAX+1 wraps.
+  let acc = u32x4::new([7, 1, 0, u32::MAX]);
+  let a = u32x4::new([3, 1 << 8, (1 << 15) + 1, 1]);
+  let b = u32x4::new([5, 1 << 8, 3, 1]);
+  assert_eq!(u32x4::new([22, 1, (1 << 15) + 3, 0]), acc.add_mul_lo::<16>(a, b));
+
+  // The same shape one width family up, where 52 is the IFMA width.
+  let acc = u64x4::new([7, 1, 0, u64::MAX]);
+  let a = u64x4::new([3, 1 << 30, (1 << 51) + 1, 1]);
+  let b = u64x4::new([5, 1 << 30, 3, 1]);
+  assert_eq!(u64x4::new([22, 1, (1 << 51) + 3, 0]), acc.add_mul_lo::<52>(a, b));
+}
+
+#[test]
+fn test_add_mul_hi() {
+  // `add_mul_hi` is inconsistently missing from types.
+
+  // 15 >> 16 = 0; 2^16 >> 16 = 1; (2^16+2^15+3) >> 16 = 1; 1 >> 16 = 0.
+  let acc = u32x4::new([7, 1, 0, 9]);
+  let a = u32x4::new([3, 1 << 8, (1 << 15) + 1, 1]);
+  let b = u32x4::new([5, 1 << 8, 3, 1]);
+  assert_eq!(u32x4::new([7, 2, 1, 9]), acc.add_mul_hi::<16>(a, b));
+
+  // 15 >> 52 = 0; 2^60 >> 52 = 256; (2^52+2^51+3) >> 52 = 1; 1 >> 52 = 0.
+  let acc = u64x4::new([7, 1, 0, 9]);
+  let a = u64x4::new([3, 1 << 30, (1 << 51) + 1, 1]);
+  let b = u64x4::new([5, 1 << 30, 3, 1]);
+  assert_eq!(u64x4::new([7, 257, 1, 9]), acc.add_mul_hi::<52>(a, b));
+}
+
+#[test]
+fn test_add_mul_ignores_operand_bits_above_w() {
+  // The IFMA instructions truncate their operands, so every backend must too.
+  let acc = u32x4::splat(0);
+  let a = u32x4::splat((1 << 16) | 7);
+  let b = u32x4::splat((u32::MAX ^ ((1 << 16) - 1)) | 5);
+  assert_eq!(u32x4::splat(35), acc.add_mul_lo::<16>(a, b));
+  assert_eq!(acc, acc.add_mul_hi::<16>(a, b));
+
+  let acc = u64x4::splat(0);
+  let a = u64x4::splat((1 << 52) | 7);
+  let b = u64x4::splat((u64::MAX ^ ((1 << 52) - 1)) | 5);
+  assert_eq!(u64x4::splat(35), acc.add_mul_lo::<52>(a, b));
+  assert_eq!(acc, acc.add_mul_hi::<52>(a, b));
+}
+
+#[test]
+fn test_add_mul_matches_reference() {
+  // The widths straddle each implementation's boundaries: the 32-bit types take
+  // a native lane multiply up to 16 and go scalar above it, the 64-bit types
+  // take a widening multiply up to 32, IFMA at 52, and scalar otherwise.
+  check_add_mul!(u32x4, add_mul_reference_u32, [1, 15, 16, 17, 26, 32]);
+  check_add_mul!(u32x8, add_mul_reference_u32, [1, 15, 16, 17, 26, 32]);
+  check_add_mul!(u32x16, add_mul_reference_u32, [1, 15, 16, 17, 26, 32]);
+  check_add_mul!(u64x2, add_mul_reference_u64, [1, 26, 32, 33, 51, 52, 64]);
+  check_add_mul!(u64x4, add_mul_reference_u64, [1, 26, 32, 33, 51, 52, 64]);
+  check_add_mul!(u64x8, add_mul_reference_u64, [1, 26, 32, 33, 51, 52, 64]);
 }
 
 #[test]
