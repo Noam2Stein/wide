@@ -19,6 +19,7 @@ macro_rules! impl_simd_float {
       T = $T:ident,
       N = $N:literal,
       Simd = $Simd:ident,
+      IntT = $IntT:ident,
       IntSimd = $IntSimd:ident,
       UintT = $UintT:ident,
       UintSimd = $UintSimd:ident,
@@ -1017,7 +1018,169 @@ macro_rules! impl_simd_float {
           ))] {
             self.mul_add(a, b)
           } else {
-            todo!()
+            // Based on `https://docs.rs/libm/0.2.16/src/libm/math/generic/fma.rs.html`.
+
+            const BITS: $UintT = $UintT::BITS as $UintT;
+            const MANTISSA_DIGITS: $UintT = $T::MANTISSA_DIGITS as $UintT;
+            const SIG_BITS: $UintT = MANTISSA_DIGITS - 1;
+            const EXP_BITS: $UintT = BITS - SIG_BITS - 1;
+
+            const EXP_SAT: $UintT = (1 << EXP_BITS) - 1;
+            const EXP_BIAS: $UintT = EXP_SAT >> 1;
+            const EXP_UNBIAS: $UintT = EXP_BIAS + SIG_BITS + 1;
+
+            const SIG_MASK: $UintT = (1 << SIG_BITS) - 1;
+            const IMPLICIT_BIT: $UintT = 1 << SIG_BITS;
+
+            // Scaling is used temporarely to normalize subnormal values
+            const SUBNORMAL_SCALE: $T = (BITS - 1) as $T;
+            const SUBNORMAL_SCALE_XOR_1: $T =
+              $T::from_bits(SUBNORMAL_SCALE.to_bits() ^ (1 as $T).to_bits());
+
+            // Exponent adjustments
+            const EXP_OFFSET: $IntT = -(SUBNORMAL_SCALE as $IntT) - EXP_UNBIAS as $IntT;
+            const SENTINEL_0_EXP: $IntT = 1 << EXP_BITS;
+            const SENTINEL_0_EXP_XOR_EXP_OFFSET: $IntT = SENTINEL_0_EXP ^ EXP_OFFSET;
+            /// Values greater than this had a saturated exponent (infinity or NaN), OR were zero and we
+            /// adjusted the exponent such that it exceeds this threashold.
+            const ZERO_INF_NAN: $UintT = EXP_SAT - EXP_UNBIAS;
+
+            // Splatted SIMD constants
+            const BITS_SIMD: $UintSimd = $UintSimd::splat(BITS);
+            const EXP_SAT_SIMD: $UintSimd = $UintSimd::splat(EXP_SAT);
+            const SIG_MASK_SIMD: $UintSimd = $UintSimd::splat(SIG_MASK);
+            const IMPLICIT_BIT_SIMD: $UintSimd = $UintSimd::splat(IMPLICIT_BIT);
+            const SUBNORMAL_SCALE_XOR_1_SIMD: $Simd =
+              $Simd::splat(SUBNORMAL_SCALE_XOR_1);
+            const EXP_OFFSET_SIMD: $IntSimd = $IntSimd::splat(EXP_OFFSET);
+            const SENTINEL_0_EXP_XOR_EXP_OFFSET_SIMD: $IntSimd =
+              $IntSimd::splat(SENTINEL_0_EXP_XOR_EXP_OFFSET);
+            const ZERO_INF_NAN_SIMD: $UintSimd = $UintSimd::splat(ZERO_INF_NAN);
+
+            /// Returns the exponent, not adjusting for bias, not accounting for
+            /// subnormals or zero.
+            #[inline]
+            fn ex(x: $Simd) -> $UintSimd {
+              (x.to_bits() >> SIG_BITS) & EXP_SAT_SIMD
+            }
+
+            /// Converts to a float representation that has handled subnormals.
+            ///
+            /// Returns a tuple with:
+            ///
+            /// - The normalized significand with one guard bit, unsigned.
+            ///
+            /// - The exponent of the mantissa such that `m * 2^e = x`. Accounts for the
+            ///   shift in the mantissa and the guard bit; that is, 1.0 will normalize
+            ///   as `m = 1 << 53` and `e = -53`.
+            #[inline]
+            fn norm(x: $Simd) -> ($UintSimd, $IntSimd) {
+              let exp_bits = ex(x);
+
+              // Normalize subnormals by multiplication
+              let is_subnormal =
+                $Simd::from_bits(exp_bits.simd_eq($UintSimd::ZERO));
+              // Compute select for constants
+              let scale = $Simd::ONE ^ (is_subnormal & SUBNORMAL_SCALE_XOR_1_SIMD);
+              let x = x * scale;
+              // Need to recompute exponent
+              let exp_bits = ex(x);
+
+              let sig = ((x.to_bits() & SIG_MASK_SIMD) | IMPLICIT_BIT_SIMD) << 1;
+
+              // If the exponent is still zero, the input was zero. Artifically set this
+              // value such that the final exponent will exceed `ZERO_INF_NAN`.
+              let is_zero = exp_bits.simd_eq($UintSimd::ZERO).cast_signed();
+              // Compute select for constants
+              let exp_offset =
+                EXP_OFFSET_SIMD ^ (is_zero & SENTINEL_0_EXP_XOR_EXP_OFFSET_SIMD);
+              let exp = exp_bits.cast_signed() + exp_offset;
+
+              (sig, exp)
+            }
+
+            /// Returns true if `exp` is neither zero, NaN, or infinite.
+            #[inline]
+            fn is_not_zero_nan_inf(exp: $IntSimd) -> $Simd {
+              $Simd::from_bits(
+                exp.simd_lt(ZERO_INF_NAN_SIMD.cast_signed()).cast_unsigned(),
+              )
+            }
+
+            #[inline]
+            fn is_zero(exp: $IntSimd) -> $UintSimd {
+              // The only exponent that strictly exceeds this value is our sentinel
+              // value for zero.
+              exp.simd_gt(ZERO_INF_NAN_SIMD.cast_signed()).cast_unsigned()
+            }
+
+            // Normalize such that the top of the mantissa is zero and we have a guard
+            // bit.
+            let (self_sig, self_exp) = norm(self);
+            let (a_sig, a_exp) = norm(a);
+            let (b_sig, b_exp) = norm(b);
+
+            // Compute multiplication
+            let (mul_sig_low, mul_sig_high) = self_sig.mul_keep_low_high(a_sig);
+            let mul_exp = self_exp + a_exp;
+
+            // Before addition can be done, the exponent of the multiplication and `b`
+            // need to be adjusted to be the same
+            let exp_diff = b_exp - mul_exp;
+
+            let exp_diff_minus_bits = exp_diff - BITS_SIMD.cast_signed();
+            let exp_diff_plus_bits = exp_diff + BITS_SIMD.cast_signed();
+            let bits_minus_exp_diff = -exp_diff_minus_bits;
+            let twobits_minus_exp_diff = BITS_SIMD.cast_signed() - exp_diff_minus_bits;
+            let exp_diff_is_negative = exp_diff.is_negative().cast_unsigned();
+            let exp_diff_is_positive = exp_diff.is_positive().cast_unsigned();
+            let exp_diff_lt_bits = exp_diff_minus_bits.is_negative().cast_unsigned();
+            let exp_diff_eq_bits = exp_diff_minus_bits.simd_eq($IntSimd::ZERO).cast_unsigned();
+            let exp_diff_gt_bits = exp_diff_minus_bits.is_positive().cast_unsigned();
+            let exp_diff_lt_2bits = exp_diff_minus_bits.simd_lt(BITS_SIMD.cast_signed()).cast_unsigned();
+            let exp_diff_gt_neg_bits = exp_diff.simd_gt(-BITS_SIMD.cast_signed()).cast_unsigned();
+
+            let exp = exp_diff_lt_bits.cast_signed().select(mul_exp, b_exp - BITS_SIMD.cast_signed());
+            let b_sig_low = exp_diff_is_negative.select(
+              b_sig.unbounded_shr(-exp_diff.cast_unsigned())
+                | -((b_sig << exp_diff_plus_bits).simd_ne($UintSimd::ZERO) | exp_diff_gt_neg_bits),
+              b_sig.unbounded_shl(exp_diff.cast_unsigned()),
+            );
+            let b_sig_high = b_sig.unbounded_shr(bits_minus_exp_diff.max($IntSimd::ZERO).cast_unsigned());
+            let mul_sig_low = exp_diff_gt_bits.select(
+              exp_diff_lt_2bits.select(
+                (mul_sig_high << twobits_minus_exp_diff) | (mul_sig_low >> exp_diff_minus_bits),
+                $UintSimd::ONE,
+              ),
+              mul_sig_low,
+            );
+            let mul_sig_low = exp_diff_is_positive.select(
+              exp_diff_lt_bits.select(
+                mul_sig_low,
+                exp_diff_eq_bits.select(
+                  mul_sig_low,
+                  exp_diff_lt_2bits.select(
+                    mul_sig_low | (mul_sig_low << twobits_minus_exp_diff).simd_ne($UintSimd::ZERO) & $UintSimd::ONE,
+                    mul_sig_low,
+                  ),
+                ),
+              ),
+              mul_sig_low,
+            );
+            let mul_sig_high = mul_sig_high.unbounded_shr(exp_diff_minus_bits.max($IntSimd::ZERO).cast_unsigned());
+
+            let mul_neg = self.is_sign_negative() ^ a.is_sign_negative();
+            let samesign = mul_neg ^ b.is_sign_positive();
+
+            let result = todo!();
+
+            // If these are false, our algorithm breaks, but unfused mul add actually
+            // works.
+            let use_fused = is_not_zero_nan_inf(self_exp)
+              & is_not_zero_nan_inf(a_exp)
+              & is_not_zero_nan_inf(b_exp);
+
+            use_fused.select(result, self * a + b)
           }
         }
       }

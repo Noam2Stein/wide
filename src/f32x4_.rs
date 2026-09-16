@@ -87,6 +87,7 @@ impl_simd_float! {
     T = f32,
     N = 4,
     Simd = f32x4,
+    IntT = i32,
     IntSimd = i32x4,
     UintT = u32,
     UintSimd = u32x4,
