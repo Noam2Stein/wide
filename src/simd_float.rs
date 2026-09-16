@@ -78,9 +78,13 @@ macro_rules! impl_simd_float {
     $fn_trunc:item
     $fn_trunc_int:item
     $fn_fast_trunc_int:item
+    $fn_precise_mul_add:item
     $fn_mul_add:item
+    $fn_precise_mul_sub:item
     $fn_mul_sub:item
+    $fn_precise_mul_neg_add:item
     $fn_mul_neg_add:item
+    $fn_precise_mul_neg_sub:item
     $fn_mul_neg_sub:item
     $fn_powf_simd:item
     $fn_sqrt:item
@@ -1003,6 +1007,13 @@ macro_rules! impl_simd_float {
         self - self.trunc()
       }
 
+      /// Fused multiply-add. Computes `(self * a) + b` with only one rounding
+      /// error.
+      ///
+      /// TODO(PR): Finish the documentation once naming is decided upon.
+      #[must_use]
+      $fn_precise_mul_add
+
       /// Fused multiply-add. Computes `(self * a) + b`.
       ///
       /// If there is hardware FMA support, this computes the result with only
@@ -1012,6 +1023,13 @@ macro_rules! impl_simd_float {
       /// at the cost of worse performance.
       #[must_use]
       $fn_mul_add
+
+      /// Fused multiply-sub. Computes `(self * a) - b` with only one rounding
+      /// error.
+      ///
+      /// TODO(PR): Finish the documentation once naming is decided upon.
+      #[must_use]
+      $fn_precise_mul_sub
 
       /// Fused multiply-sub. Computes `(self * a) - b`.
       ///
@@ -1023,6 +1041,13 @@ macro_rules! impl_simd_float {
       #[must_use]
       $fn_mul_sub
 
+      /// Fused multiply-negate-add. Computes `-(self * a) + b` with only one
+      /// rounding error.
+      ///
+      /// TODO(PR): Finish the documentation once naming is decided upon.
+      #[must_use]
+      $fn_precise_mul_neg_add
+
       /// Fused multiply-negate-add. Computes `-(self * a) + b`.
       ///
       /// If there is hardware FMA support, this computes the result with only
@@ -1032,6 +1057,13 @@ macro_rules! impl_simd_float {
       /// at the cost of worse performance.
       #[must_use]
       $fn_mul_neg_add
+
+      /// Fused multiply-negate-sub. Computes `-(self * a) - b` with only one
+      /// rounding error.
+      ///
+      /// TODO(PR): Finish the documentation once naming is decided upon.
+      #[must_use]
+      $fn_precise_mul_neg_sub
 
       /// Fused multiply-negate-sub. Computes `-(self * a) - b`.
       ///
