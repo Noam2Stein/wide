@@ -19,6 +19,7 @@ macro_rules! impl_simd_float {
       T = $T:ident,
       N = $N:literal,
       Simd = $Simd:ident,
+      IntT = $IntT:ident,
       IntSimd = $IntSimd:ident,
       UintT = $UintT:ident,
       UintSimd = $UintSimd:ident,
@@ -1017,7 +1018,115 @@ macro_rules! impl_simd_float {
           ))] {
             self.mul_add(a, b)
           } else {
-            todo!()
+            // Based on `https://docs.rs/libm/0.2.16/src/libm/math/generic/fma.rs.html`.
+
+            const BITS: $UintT = $UintT::BITS as $UintT;
+            const MANTISSA_DIGITS: $UintT = $T::MANTISSA_DIGITS as $UintT;
+            const SIG_BITS: $UintT = MANTISSA_DIGITS - 1;
+            const EXP_BITS: $UintT = BITS - SIG_BITS - 1;
+
+            const EXP_SAT: $UintT = (1 << EXP_BITS) - 1;
+            const EXP_BIAS: $UintT = EXP_SAT >> 1;
+            const EXP_UNBIAS: $UintT = EXP_BIAS + SIG_BITS + 1;
+
+            const SIG_MASK: $UintT = (1 << SIG_BITS) - 1;
+            const IMPLICIT_BIT: $UintT = 1 << SIG_BITS;
+
+            // Scaling is used temporarely to normalize subnormal values
+            const SUBNORMAL_SCALE: $T = (BITS - 1) as $T;
+            const SUBNORMAL_SCALE_XOR_1: $T =
+              $T::from_bits(SUBNORMAL_SCALE.to_bits() ^ (1 as $T).to_bits());
+
+            // Exponent adjustments
+            const EXP_OFFSET: $IntT = -(SUBNORMAL_SCALE as $IntT) - EXP_UNBIAS as $IntT;
+            const SENTINEL_0_EXP: $IntT = 1 << EXP_BITS;
+            const SENTINEL_0_EXP_XOR_EXP_OFFSET: $IntT = SENTINEL_0_EXP ^ EXP_OFFSET;
+            /// Values greater than this had a saturated exponent (infinity or NaN), OR were zero and we
+            /// adjusted the exponent such that it exceeds this threashold.
+            const ZERO_INF_NAN_EXP: $IntT = (EXP_SAT - EXP_UNBIAS).cast_signed();
+
+            // Splatted SIMD constants
+            const BITS_SIMD: $UintSimd = $UintSimd::splat(BITS);
+            const EXP_SAT_SIMD: $UintSimd = $UintSimd::splat(EXP_SAT);
+            const SIG_MASK_SIMD: $UintSimd = $UintSimd::splat(SIG_MASK);
+            const IMPLICIT_BIT_SIMD: $UintSimd = $UintSimd::splat(IMPLICIT_BIT);
+            const SUBNORMAL_SCALE_XOR_1_SIMD: $Simd =
+              $Simd::splat(SUBNORMAL_SCALE_XOR_1);
+            const EXP_OFFSET_SIMD: $IntSimd = $IntSimd::splat(EXP_OFFSET);
+            const SENTINEL_0_EXP_XOR_EXP_OFFSET_SIMD: $IntSimd =
+              $IntSimd::splat(SENTINEL_0_EXP_XOR_EXP_OFFSET);
+            const ZERO_INF_NAN_EXP_SIMD: $IntSimd = $IntSimd::splat(ZERO_INF_NAN_EXP);
+
+            /// Converts a float to an integer significand and exponent, such
+            /// that `x = sig * 2^exp`, and that if `x` is negative so is `sig`.
+            ///
+            /// Note that each float value could be represented by multiple
+            /// integer values in this form.
+            ///
+            /// This function computes `sig.abs()` such that it is in the range
+            /// `2^(SIG_BITS + 1)..=2^(SIG_BITS + 2) - 2`, the least significant
+            /// bit is never set, and the bit at position `SIG_BITS + 1` is
+            /// always set.
+            ///
+            /// If `x` is zero, NaN or infinite, this returns an `exp` greater
+            /// than or equal to `ZERO_INF_NAN_EXP`. Use `is_not_zero_nan_inf`
+            /// to check for that case.
+            #[inline]
+            fn to_sig_exp(x: $Simd) -> ($IntSimd, $IntSimd) {
+              let exp_bits = (x.to_bits() >> SIG_BITS) & EXP_SAT_SIMD;
+
+              let is_subnormal = exp_bits.simd_eq($UintSimd::ZERO);
+              // This is a more efficient way to compute
+              // `is_subnormal.select(SUBNORMAL_SCALE_SIMD, $Simd::ONE)`
+              let scale = $Simd::ONE
+                ^ ($Simd::from_bits(is_subnormal) & SUBNORMAL_SCALE_XOR_1_SIMD);
+              let x = x * scale;
+
+              let sig_abs = ((x.to_bits() & SIG_MASK_SIMD) | IMPLICIT_BIT_SIMD).cast_signed() << 1;
+              let sig_sign = x.is_sign_negative().to_bits().cast_signed();
+              // This is a more efficient way to compute
+              // `sig_sign.select(-sig_abs, sig_abs)`
+              let sig = (sig_abs ^ sig_sign) - sig_sign;
+
+              let exp_bits = (x.to_bits() >> SIG_BITS) & EXP_SAT_SIMD;
+              let is_zero = exp_bits.simd_eq($UintSimd::ZERO);
+              // This is a more efficient way to compute
+              // `is_zero.select(SENTINEL_0_EXP_SIMD, EXP_OFFSET_SIMD)`
+              let exp_offset = EXP_OFFSET_SIMD
+                ^ (is_zero.cast_signed() & SENTINEL_0_EXP_XOR_EXP_OFFSET_SIMD);
+              let exp = exp_bits.cast_signed() + exp_offset;
+
+              (sig, exp)
+            }
+
+            /// Returns true if the result of `to_sig_exp` is neither zero, NaN,
+            /// or infinite.
+            #[inline]
+            fn is_not_zero_nan_inf(exp: $IntSimd) -> $IntSimd {
+              exp.simd_lt(ZERO_INF_NAN_EXP_SIMD)
+            }
+
+            let (self_sig, self_exp) = to_sig_exp(self);
+            let (a_sig, a_exp) = to_sig_exp(a);
+            let (b_sig, b_exp) = to_sig_exp(b);
+
+            // Compute `self * a`
+            let (mul_sig_low, mul_sig_high) = self_sig.mul_keep_low_high(a_sig);
+            let mul_exp = self_exp + a_exp;
+
+            // Before computing `mul + b`, the exponents of `mul` and `b` must
+            // be adjusted to be the same. This implementation adjusts `b_sig`
+            // so that `b_exp` is equal to `mul_exp`.
+
+            let result = todo!();
+
+            // If this is false, the integer algorithm breaks, but unfused
+            // multiply add actually returns the correct result.
+            let use_fused = is_not_zero_nan_inf(self_exp)
+              & is_not_zero_nan_inf(a_exp)
+              & is_not_zero_nan_inf(b_exp);
+
+            use_fused.select(result, self * a + b)
           }
         }
       }
