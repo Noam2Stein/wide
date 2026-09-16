@@ -78,7 +78,6 @@ macro_rules! impl_simd_float {
     $fn_trunc:item
     $fn_trunc_int:item
     $fn_fast_trunc_int:item
-    $fn_precise_mul_add:item
     $fn_mul_add:item
     $fn_mul_sub:item
     $fn_mul_neg_add:item
@@ -1008,8 +1007,20 @@ macro_rules! impl_simd_float {
       /// error.
       ///
       /// TODO(PR): Finish the documentation once naming is decided upon.
+      #[inline]
       #[must_use]
-      $fn_precise_mul_add
+      pub fn precise_mul_add(self, a: Self, b: Self) -> Self {
+        pick! {
+          if #[cfg(any(
+            all(target_feature = "sse2", target_feature = "fma"),
+            all(target_feature = "neon", target_arch = "aarch64"),
+          ))] {
+            self.mul_add(a, b)
+          } else {
+            todo!()
+          }
+        }
+      }
 
       /// Fused multiply-add. Computes `(self * a) + b`.
       ///
@@ -1054,7 +1065,6 @@ macro_rules! impl_simd_float {
       /// rounding error.
       ///
       /// TODO(PR): Finish the documentation once naming is decided upon.
-      #[must_use]
       #[inline]
       #[must_use]
       pub fn precise_mul_neg_add(self, a: Self, b: Self) -> Self {
@@ -1084,7 +1094,6 @@ macro_rules! impl_simd_float {
       /// rounding error.
       ///
       /// TODO(PR): Finish the documentation once naming is decided upon.
-      #[must_use]
       #[inline]
       #[must_use]
       pub fn precise_mul_neg_sub(self, a: Self, b: Self) -> Self {
