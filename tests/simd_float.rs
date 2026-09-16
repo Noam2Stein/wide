@@ -767,6 +767,22 @@ fn test_fract() {
 }
 
 #[test]
+fn test_precise_mul_add() {
+  for_simd_types!(|T: Float, N| {
+    for [value, a, b] in random_iter::<[[T; N]; 3]>() {
+      let expected =
+        Simd::new(std::array::from_fn(|i| value[i].mul_add(a[i], b[i])));
+      let actual = Simd::new(value).mul_add(Simd::new(a), Simd::new(b));
+
+      assert!(
+        (actual ^ expected).to_bits() == SimdUnsigned::ZERO,
+        "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
+      );
+    }
+  });
+}
+
+#[test]
 fn test_mul_add() {
   for_simd_types!(|T: Float, N| {
     for [value, a, b] in simd_chunks!(
@@ -822,6 +838,21 @@ fn test_mul_add() {
 }
 
 #[test]
+fn test_precise_mul_neg_add() {
+  for_simd_types!(|T: Float, N| {
+    for [value, a, b] in random_iter::<[Simd; 3]>() {
+      let expected = value.precise_mul_add(-a, b);
+      let actual = value.precise_mul_neg_add(a, b);
+
+      assert!(
+        (actual ^ expected).to_bits() == SimdUnsigned::ZERO,
+        "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
+      );
+    }
+  });
+}
+
+#[test]
 fn test_mul_neg_add() {
   for_simd_types!(|T: Float, N| {
     for [value, a, b] in simd_chunks!(
@@ -864,6 +895,21 @@ fn test_mul_neg_add() {
 }
 
 #[test]
+fn test_precise_mul_sub() {
+  for_simd_types!(|T: Float, N| {
+    for [value, a, b] in random_iter::<[Simd; 3]>() {
+      let expected = value.precise_mul_add(a, -b);
+      let actual = value.precise_mul_sub(a, b);
+
+      assert!(
+        (actual ^ expected).to_bits() == SimdUnsigned::ZERO,
+        "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
+      );
+    }
+  });
+}
+
+#[test]
 fn test_mul_sub() {
   for_simd_types!(|T: Float, N| {
     for [value, a, b] in simd_chunks!(
@@ -899,6 +945,21 @@ fn test_mul_sub() {
 
       assert!(
         (actual - expected).abs().simd_le(expected.abs() * 1e-6).all(),
+        "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
+      );
+    }
+  });
+}
+
+#[test]
+fn test_precise_mul_neg_sub() {
+  for_simd_types!(|T: Float, N| {
+    for [value, a, b] in random_iter::<[Simd; 3]>() {
+      let expected = value.precise_mul_add(-a, -b);
+      let actual = value.precise_mul_neg_sub(a, b);
+
+      assert!(
+        (actual ^ expected).to_bits() == SimdUnsigned::ZERO,
         "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n       a: {a:?}\n       b: {b:?}",
       );
     }
