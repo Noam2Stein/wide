@@ -80,11 +80,8 @@ macro_rules! impl_simd_float {
     $fn_fast_trunc_int:item
     $fn_precise_mul_add:item
     $fn_mul_add:item
-    $fn_precise_mul_sub:item
     $fn_mul_sub:item
-    $fn_precise_mul_neg_add:item
     $fn_mul_neg_add:item
-    $fn_precise_mul_neg_sub:item
     $fn_mul_neg_sub:item
     $fn_powf_simd:item
     $fn_sqrt:item
@@ -1028,8 +1025,20 @@ macro_rules! impl_simd_float {
       /// error.
       ///
       /// TODO(PR): Finish the documentation once naming is decided upon.
+      #[inline]
       #[must_use]
-      $fn_precise_mul_sub
+      pub fn precise_mul_sub(self, a: Self, b: Self) -> Self {
+        pick! {
+          if #[cfg(any(
+            all(target_feature = "sse2", target_feature = "fma"),
+            all(target_feature = "neon", target_arch = "aarch64"),
+          ))] {
+            self.mul_sub(a, b)
+          } else {
+            self.precise_mul_add(a, -b)
+          }
+        }
+      }
 
       /// Fused multiply-sub. Computes `(self * a) - b`.
       ///
@@ -1046,7 +1055,20 @@ macro_rules! impl_simd_float {
       ///
       /// TODO(PR): Finish the documentation once naming is decided upon.
       #[must_use]
-      $fn_precise_mul_neg_add
+      #[inline]
+      #[must_use]
+      pub fn precise_mul_neg_add(self, a: Self, b: Self) -> Self {
+        pick! {
+          if #[cfg(any(
+            all(target_feature = "sse2", target_feature = "fma"),
+            all(target_feature = "neon", target_arch = "aarch64"),
+          ))] {
+            self.mul_neg_add(a, b)
+          } else {
+            self.precise_mul_add(-a, b)
+          }
+        }
+      }
 
       /// Fused multiply-negate-add. Computes `-(self * a) + b`.
       ///
@@ -1063,7 +1085,20 @@ macro_rules! impl_simd_float {
       ///
       /// TODO(PR): Finish the documentation once naming is decided upon.
       #[must_use]
-      $fn_precise_mul_neg_sub
+      #[inline]
+      #[must_use]
+      pub fn precise_mul_neg_sub(self, a: Self, b: Self) -> Self {
+        pick! {
+          if #[cfg(any(
+            all(target_feature = "sse2", target_feature = "fma"),
+            all(target_feature = "neon", target_arch = "aarch64"),
+          ))] {
+            self.mul_neg_sub(a, b)
+          } else {
+            -self.precise_mul_add(a, b)
+          }
+        }
+      }
 
       /// Fused multiply-negate-sub. Computes `-(self * a) - b`.
       ///
