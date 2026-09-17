@@ -1067,6 +1067,10 @@ macro_rules! impl_simd_float {
             /// `2^(SIG_BITS + 1)..=2^(SIG_BITS + 2) - 2`, the least significant
             /// bit is never set, and the bit at position `SIG_BITS + 1` is
             /// always set.
+            ///
+            /// If `x` is zero, NaN or infinite, this returns an `exp` greater
+            /// than or equal to `ZERO_INF_NAN_EXP`. Use `is_not_zero_nan_inf`
+            /// to check for that case.
             #[inline]
             fn to_sig_exp(x: $Simd) -> ($UintSimd, $IntSimd) {
               let exp_bits = (x.to_bits() >> SIG_BITS) & EXP_SAT_SIMD;
@@ -1091,7 +1095,8 @@ macro_rules! impl_simd_float {
               (sig, exp)
             }
 
-            /// Returns true if `exp` is neither zero, NaN, or infinite.
+            /// Returns true if the result of `to_sig_exp` is neither zero, NaN,
+            /// or infinite.
             #[inline]
             fn is_not_zero_nan_inf(exp: $IntSimd) -> $IntSimd {
               exp.simd_lt(ZERO_INF_NAN_EXP_SIMD)
