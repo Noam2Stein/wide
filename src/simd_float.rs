@@ -1058,12 +1058,12 @@ macro_rules! impl_simd_float {
             const ZERO_INF_NAN_EXP_SIMD: $IntSimd = $IntSimd::splat(ZERO_INF_NAN_EXP);
 
             /// Converts a float to an integer significand and exponent, such
-            /// that `x = sig * 2^exp`.
+            /// that `x = sig * 2^exp`, and that if `x` is negative so is `sig`.
             ///
             /// Note that each float value could be represented by multiple
             /// integer values in this form.
             ///
-            /// This function computes `sig` such that it is in the range
+            /// This function computes `sig.abs()` such that it is in the range
             /// `2^(SIG_BITS + 1)..=2^(SIG_BITS + 2) - 2`, the least significant
             /// bit is never set, and the bit at position `SIG_BITS + 1` is
             /// always set.
@@ -1072,7 +1072,7 @@ macro_rules! impl_simd_float {
             /// than or equal to `ZERO_INF_NAN_EXP`. Use `is_not_zero_nan_inf`
             /// to check for that case.
             #[inline]
-            fn to_sig_exp(x: $Simd) -> ($UintSimd, $IntSimd) {
+            fn to_sig_exp(x: $Simd) -> ($IntSimd, $IntSimd) {
               let exp_bits = (x.to_bits() >> SIG_BITS) & EXP_SAT_SIMD;
 
               let is_subnormal = exp_bits.simd_eq($UintSimd::ZERO);
@@ -1082,7 +1082,11 @@ macro_rules! impl_simd_float {
                 ^ ($Simd::from_bits(is_subnormal) & SUBNORMAL_SCALE_XOR_1_SIMD);
               let x = x * scale;
 
-              let sig = ((x.to_bits() & SIG_MASK_SIMD) | IMPLICIT_BIT_SIMD) << 1;
+              let sig_abs = ((x.to_bits() & SIG_MASK_SIMD) | IMPLICIT_BIT_SIMD).cast_signed() << 1;
+              let sig_sign = x.is_sign_negative().to_bits().cast_signed();
+              // This is a more efficient way to compute
+              // `sig_sign.select(-sig_abs, sig_abs)`
+              let sig = (sig_abs ^ sig_sign) - sig_sign;
 
               let exp_bits = (x.to_bits() >> SIG_BITS) & EXP_SAT_SIMD;
               let is_zero = exp_bits.simd_eq($UintSimd::ZERO);
@@ -1111,52 +1115,8 @@ macro_rules! impl_simd_float {
             let mul_exp = self_exp + a_exp;
 
             // Before computing `mul + b`, the exponents of `mul` and `b` must
-            // be adjusted to be the same
-            let exp_diff = b_exp - mul_exp;
-
-            let exp_diff_minus_bits = exp_diff - BITS_SIMD.cast_signed();
-            let exp_diff_plus_bits = exp_diff + BITS_SIMD.cast_signed();
-            let bits_minus_exp_diff = -exp_diff_minus_bits;
-            let twobits_minus_exp_diff = BITS_SIMD.cast_signed() - exp_diff_minus_bits;
-            let exp_diff_is_negative = exp_diff.is_negative().cast_unsigned();
-            let exp_diff_is_positive = exp_diff.is_positive().cast_unsigned();
-            let exp_diff_lt_bits = exp_diff_minus_bits.is_negative().cast_unsigned();
-            let exp_diff_eq_bits = exp_diff_minus_bits.simd_eq($IntSimd::ZERO).cast_unsigned();
-            let exp_diff_gt_bits = exp_diff_minus_bits.is_positive().cast_unsigned();
-            let exp_diff_lt_2bits = exp_diff_minus_bits.simd_lt(BITS_SIMD.cast_signed()).cast_unsigned();
-            let exp_diff_gt_neg_bits = exp_diff.simd_gt(-BITS_SIMD.cast_signed()).cast_unsigned();
-
-            let exp = exp_diff_lt_bits.cast_signed().select(mul_exp, b_exp - BITS_SIMD.cast_signed());
-            let b_sig_low = exp_diff_is_negative.select(
-              b_sig.unbounded_shr(-exp_diff.cast_unsigned())
-                | -((b_sig << exp_diff_plus_bits).simd_ne($UintSimd::ZERO) | exp_diff_gt_neg_bits),
-              b_sig.unbounded_shl(exp_diff.cast_unsigned()),
-            );
-            let b_sig_high = b_sig.unbounded_shr(bits_minus_exp_diff.max($IntSimd::ZERO).cast_unsigned());
-            let mul_sig_low = exp_diff_gt_bits.select(
-              exp_diff_lt_2bits.select(
-                (mul_sig_high << twobits_minus_exp_diff) | (mul_sig_low >> exp_diff_minus_bits),
-                $UintSimd::ONE,
-              ),
-              mul_sig_low,
-            );
-            let mul_sig_low = exp_diff_is_positive.select(
-              exp_diff_lt_bits.select(
-                mul_sig_low,
-                exp_diff_eq_bits.select(
-                  mul_sig_low,
-                  exp_diff_lt_2bits.select(
-                    mul_sig_low | (mul_sig_low << twobits_minus_exp_diff).simd_ne($UintSimd::ZERO) & $UintSimd::ONE,
-                    mul_sig_low,
-                  ),
-                ),
-              ),
-              mul_sig_low,
-            );
-            let mul_sig_high = mul_sig_high.unbounded_shr(exp_diff_minus_bits.max($IntSimd::ZERO).cast_unsigned());
-
-            let mul_neg = self.is_sign_negative() ^ a.is_sign_negative();
-            let samesign = mul_neg ^ b.is_sign_positive();
+            // be adjusted to be the same. This implementation adjusts `b_sig`
+            // so that `b_exp` is equal to `mul_exp`.
 
             let result = todo!();
 
