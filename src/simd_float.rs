@@ -1043,7 +1043,7 @@ macro_rules! impl_simd_float {
             const SENTINEL_0_EXP_XOR_EXP_OFFSET: $IntT = SENTINEL_0_EXP ^ EXP_OFFSET;
             /// Values greater than this had a saturated exponent (infinity or NaN), OR were zero and we
             /// adjusted the exponent such that it exceeds this threashold.
-            const ZERO_INF_NAN: $UintT = EXP_SAT - EXP_UNBIAS;
+            const ZERO_INF_NAN_EXP: $IntT = (EXP_SAT - EXP_UNBIAS).cast_signed();
 
             // Splatted SIMD constants
             const BITS_SIMD: $UintSimd = $UintSimd::splat(BITS);
@@ -1055,7 +1055,7 @@ macro_rules! impl_simd_float {
             const EXP_OFFSET_SIMD: $IntSimd = $IntSimd::splat(EXP_OFFSET);
             const SENTINEL_0_EXP_XOR_EXP_OFFSET_SIMD: $IntSimd =
               $IntSimd::splat(SENTINEL_0_EXP_XOR_EXP_OFFSET);
-            const ZERO_INF_NAN_SIMD: $UintSimd = $UintSimd::splat(ZERO_INF_NAN);
+            const ZERO_INF_NAN_EXP_SIMD: $IntSimd = $IntSimd::splat(ZERO_INF_NAN_EXP);
 
             /// Converts a float to an integer significand and exponent, such
             /// that `x = sig * 2^exp`.
@@ -1093,10 +1093,8 @@ macro_rules! impl_simd_float {
 
             /// Returns true if `exp` is neither zero, NaN, or infinite.
             #[inline]
-            fn is_not_zero_nan_inf(exp: $IntSimd) -> $Simd {
-              $Simd::from_bits(
-                exp.simd_lt(ZERO_INF_NAN_SIMD.cast_signed()).cast_unsigned(),
-              )
+            fn is_not_zero_nan_inf(exp: $IntSimd) -> $IntSimd {
+              exp.simd_lt(ZERO_INF_NAN_EXP_SIMD)
             }
 
             let (self_sig, self_exp) = to_sig_exp(self);
@@ -1157,8 +1155,8 @@ macro_rules! impl_simd_float {
 
             let result = todo!();
 
-            // If these are false, our algorithm breaks, but unfused mul add actually
-            // works.
+            // If this is false, the integer algorithm breaks, but unfused
+            // multiply add actually returns the correct result.
             let use_fused = is_not_zero_nan_inf(self_exp)
               & is_not_zero_nan_inf(a_exp)
               & is_not_zero_nan_inf(b_exp);
