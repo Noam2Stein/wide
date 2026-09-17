@@ -1057,43 +1057,35 @@ macro_rules! impl_simd_float {
               $IntSimd::splat(SENTINEL_0_EXP_XOR_EXP_OFFSET);
             const ZERO_INF_NAN_SIMD: $UintSimd = $UintSimd::splat(ZERO_INF_NAN);
 
-            /// Returns the exponent, not adjusting for bias, not accounting for
-            /// subnormals or zero.
+            /// Converts a float to an integer significand and exponent, such
+            /// that `x = sig * 2^exp`.
+            ///
+            /// Note that each float value could be represented by multiple
+            /// integer values in this form.
+            ///
+            /// This function computes `sig` such that it is in the range
+            /// `2^(SIG_BITS + 1)..=2^(SIG_BITS + 2) - 2`, the least significant
+            /// bit is never set, and the bit at position `SIG_BITS + 1` is
+            /// always set.
             #[inline]
-            fn ex(x: $Simd) -> $UintSimd {
-              (x.to_bits() >> SIG_BITS) & EXP_SAT_SIMD
-            }
+            fn to_sig_exp(x: $Simd) -> ($UintSimd, $IntSimd) {
+              let exp_bits = (x.to_bits() >> SIG_BITS) & EXP_SAT_SIMD;
 
-            /// Converts to a float representation that has handled subnormals.
-            ///
-            /// Returns a tuple with:
-            ///
-            /// - The normalized significand with one guard bit, unsigned.
-            ///
-            /// - The exponent of the mantissa such that `m * 2^e = x`. Accounts for the
-            ///   shift in the mantissa and the guard bit; that is, 1.0 will normalize
-            ///   as `m = 1 << 53` and `e = -53`.
-            #[inline]
-            fn norm(x: $Simd) -> ($UintSimd, $IntSimd) {
-              let exp_bits = ex(x);
-
-              // Normalize subnormals by multiplication
-              let is_subnormal =
-                $Simd::from_bits(exp_bits.simd_eq($UintSimd::ZERO));
-              // Compute select for constants
-              let scale = $Simd::ONE ^ (is_subnormal & SUBNORMAL_SCALE_XOR_1_SIMD);
+              let is_subnormal = exp_bits.simd_eq($UintSimd::ZERO);
+              // This is a more efficient way to compute
+              // `is_subnormal.select(SUBNORMAL_SCALE_SIMD, $Simd::ONE)`
+              let scale = $Simd::ONE
+                ^ ($Simd::from_bits(is_subnormal) & SUBNORMAL_SCALE_XOR_1_SIMD);
               let x = x * scale;
-              // Need to recompute exponent
-              let exp_bits = ex(x);
 
               let sig = ((x.to_bits() & SIG_MASK_SIMD) | IMPLICIT_BIT_SIMD) << 1;
 
-              // If the exponent is still zero, the input was zero. Artifically set this
-              // value such that the final exponent will exceed `ZERO_INF_NAN`.
-              let is_zero = exp_bits.simd_eq($UintSimd::ZERO).cast_signed();
-              // Compute select for constants
-              let exp_offset =
-                EXP_OFFSET_SIMD ^ (is_zero & SENTINEL_0_EXP_XOR_EXP_OFFSET_SIMD);
+              let exp_bits = (x.to_bits() >> SIG_BITS) & EXP_SAT_SIMD;
+              let is_zero = exp_bits.simd_eq($UintSimd::ZERO);
+              // This is a more efficient way to compute
+              // `is_zero.select(SENTINEL_0_EXP_SIMD, EXP_OFFSET_SIMD)`
+              let exp_offset = EXP_OFFSET_SIMD
+                ^ (is_zero.cast_signed() & SENTINEL_0_EXP_XOR_EXP_OFFSET_SIMD);
               let exp = exp_bits.cast_signed() + exp_offset;
 
               (sig, exp)
@@ -1107,25 +1099,16 @@ macro_rules! impl_simd_float {
               )
             }
 
-            #[inline]
-            fn is_zero(exp: $IntSimd) -> $UintSimd {
-              // The only exponent that strictly exceeds this value is our sentinel
-              // value for zero.
-              exp.simd_gt(ZERO_INF_NAN_SIMD.cast_signed()).cast_unsigned()
-            }
+            let (self_sig, self_exp) = to_sig_exp(self);
+            let (a_sig, a_exp) = to_sig_exp(a);
+            let (b_sig, b_exp) = to_sig_exp(b);
 
-            // Normalize such that the top of the mantissa is zero and we have a guard
-            // bit.
-            let (self_sig, self_exp) = norm(self);
-            let (a_sig, a_exp) = norm(a);
-            let (b_sig, b_exp) = norm(b);
-
-            // Compute multiplication
+            // Compute `self * a`
             let (mul_sig_low, mul_sig_high) = self_sig.mul_keep_low_high(a_sig);
             let mul_exp = self_exp + a_exp;
 
-            // Before addition can be done, the exponent of the multiplication and `b`
-            // need to be adjusted to be the same
+            // Before computing `mul + b`, the exponents of `mul` and `b` must
+            // be adjusted to be the same
             let exp_diff = b_exp - mul_exp;
 
             let exp_diff_minus_bits = exp_diff - BITS_SIMD.cast_signed();
