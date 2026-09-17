@@ -1926,6 +1926,26 @@ impl f64x8 {
       }
     }
   }
+
+  #[allow(dead_code, reason = "conditionally used by `precise_mul_add`")]
+  pub(crate) fn from_f32x8(value: f32x8) -> Self {
+    pick! {
+      if #[cfg(target_feature="avx512f")] {
+        #[cfg(target_arch = "x86")]
+        use core::arch::x86::_mm512_cvtps_pd;
+        #[cfg(target_arch = "x86_64")]
+        use core::arch::x86_64::_mm512_cvtps_pd;
+
+        // TODO(safe_arch): Add `_mm512_cvtps_pd`
+        unsafe {
+          Self { avx512: m512d(_mm512_cvtps_pd(value.avx.0)) }
+        }
+      } else {
+        let [value_a, value_b] = cast::<f32x8, [f32x4; 2]>(value);
+        Self { a: f64x4::from_f32x4(value_a), b: f64x4::from_f32x4(value_b) }
+      }
+    }
+  }
 }
 
 impl From<i32x8> for f64x8 {

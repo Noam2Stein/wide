@@ -2092,4 +2092,36 @@ impl f32x4 {
   pub fn sign_bit(self) -> Self {
     self.is_sign_negative()
   }
+
+  #[allow(dead_code, reason = "conditionally used by `precise_mul_add`")]
+  pub(crate) fn from_f64x4(value: f64x4) -> Self {
+    pick! {
+      if #[cfg(target_feature = "avx")] {
+        Self { sse: convert_to_m128_from_m256d(value.avx) }
+      } else if #[cfg(target_feature = "sse2")] {
+        Self {
+          sse: bitor_m128(
+            convert_to_m128_from_m128d(value.a.sse),
+            cast(shuffle_ai_f32_all_m128i::<0b_01_00_11_10>(cast(convert_to_m128_from_m128d(
+              value.b.sse,
+            )))),
+          ),
+        }
+      } else if #[cfg(target_feature = "simd128")] {
+        Self {
+          simd: v128_or(
+            f32x4_demote_f64x2_zero(value.a.simd),
+            u32x4_shuffle::<2, 3, 0, 1>(f32x4_demote_f64x2_zero(value.b.simd)),
+          ),
+        }
+      } else {
+        Self::new([
+          value.as_array()[0] as f32,
+          value.as_array()[1] as f32,
+          value.as_array()[2] as f32,
+          value.as_array()[3] as f32,
+        ])
+      }
+    }
+  }
 }

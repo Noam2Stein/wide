@@ -1945,6 +1945,36 @@ impl f64x4 {
       }
     }
   }
+
+  #[allow(dead_code, reason = "conditionally used by `precise_mul_add`")]
+  pub(crate) fn from_f32x4(value: f32x4) -> Self {
+    pick! {
+      if #[cfg(target_feature = "avx")] {
+        Self { avx: convert_to_m256d_from_m128(value.sse) }
+      } else if #[cfg(target_feature = "sse2")] {
+        Self {
+          a: f64x2 { sse: convert_to_m128d_from_lower2_m128(value.sse) },
+          b: f64x2 {
+            sse: convert_to_m128d_from_lower2_m128(cast(
+              shuffle_ai_f32_all_m128i::<0b_01_00_11_10>(cast(value.sse)),
+            ))
+          },
+        }
+      } else if #[cfg(target_feature = "simd128")] {
+        Self {
+          a: f64x2 { simd: f64x2_promote_low_f32x4(value.simd) },
+          b: f64x2 { simd: f64x2_promote_low_f32x4(u32x4_shuffle::<2, 3, 0, 1>(value.simd)) },
+        }
+      } else {
+        Self::new([
+          value.as_array()[0] as f64,
+          value.as_array()[1] as f64,
+          value.as_array()[2] as f64,
+          value.as_array()[3] as f64,
+        ])
+      }
+    }
+  }
 }
 
 impl From<i32x4> for f64x4 {
