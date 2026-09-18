@@ -764,6 +764,20 @@ impl_simd_float! {
     }
   }
 
+  #[inline]
+  pub fn precise_mul_add(self, a: Self, b: Self) -> Self {
+    pick! {
+      if #[cfg(any(
+        all(target_feature = "sse2", target_feature = "fma"),
+        all(target_feature = "neon", target_arch = "aarch64"),
+      ))] {
+        self.mul_add(self, a, b)
+      } else {
+        todo!()
+      }
+    }
+  }
+
   ///
   /// # Platform-specific behavior (may change in the future)
   ///

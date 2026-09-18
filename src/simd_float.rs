@@ -78,6 +78,7 @@ macro_rules! impl_simd_float {
     $fn_trunc:item
     $fn_trunc_int:item
     $fn_fast_trunc_int:item
+    $fn_precise_mul_add:item
     $fn_mul_add:item
     $fn_mul_sub:item
     $fn_mul_neg_add:item
@@ -1002,6 +1003,13 @@ macro_rules! impl_simd_float {
       pub fn fract(self) -> Self {
         self - self.trunc()
       }
+
+      /// Fused multiply-add. Computes `(self * a) + b` with only one rounding
+      /// error.
+      ///
+      /// TODO(PR): Finish documentation
+      #[must_use]
+      $fn_precise_mul_add
 
       /// Fused multiply-add. Computes `(self * a) + b`.
       ///
