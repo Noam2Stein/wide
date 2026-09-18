@@ -1112,7 +1112,26 @@ impl_simd_float! {
       ))] {
         self.mul_add(self, a, b)
       } else {
-        todo!()
+        // Based on `https://shnatsel.github.io/implementing-fma-finding-bugs-in-std/`
+
+        let self_f64 = f64x4::from_f32x4(self);
+        let a_f64 = f64x4::from_f32x4(a);
+        let b_f64 = f64x4::from_f32x4(b);
+
+        let product = self_f64 * a_f64;
+        let sum = product + b_f64;
+
+        let virtual_sum = sum - product;
+        let rounding_error = (product - (sum - virtual_sum)) + (b_f64 - virtual_sum);
+        let sum_needs_correction = (sum.is_finite() & rounding_error.simd_ne(f64x4::ZERO)).to_bits()
+          & (sum.to_bits() & 1).simd_eq(u64x4::ZERO);
+
+        let correction_negative = (sum ^ rounding_error).is_sign_negative().to_bits();
+        // This is a more efficient way to compute `correction_negative.select(-1, 1)`
+        let correction = correction_negative | u64x4::ONE;
+        let sum = f64x4::from_bits(sum.to_bits() + (correction & sum_needs_correction));
+
+        Self::from_f64x4(sum)
       }
     }
   }
