@@ -1047,6 +1047,7 @@ macro_rules! impl_simd_float {
 
             // Splatted SIMD constants
             const BITS_SIMD: $UintSimd = $UintSimd::splat(BITS);
+            const BITS_MUL_2_SIMD: $UintSimd = $UintSimd::splat(BITS * 2);
             const EXP_SAT_SIMD: $UintSimd = $UintSimd::splat(EXP_SAT);
             const SIG_MASK_SIMD: $UintSimd = $UintSimd::splat(SIG_MASK);
             const IMPLICIT_BIT_SIMD: $UintSimd = $UintSimd::splat(IMPLICIT_BIT);
@@ -1057,13 +1058,13 @@ macro_rules! impl_simd_float {
               $IntSimd::splat(SENTINEL_0_EXP_XOR_EXP_OFFSET);
             const ZERO_INF_NAN_EXP_SIMD: $IntSimd = $IntSimd::splat(ZERO_INF_NAN_EXP);
 
-            /// Converts a float to an integer significand and exponent, such
-            /// that `x = sig * 2^exp`, and that if `x` is negative so is `sig`.
+            /// Converts the absolute value of a float to an integer significand
+            /// and exponent, such that `abs(x) = sig * 2^exp`.
             ///
             /// Note that each float value could be represented by multiple
             /// integer values in this form.
             ///
-            /// This function computes `sig.abs()` such that it is in the range
+            /// This function computes `sig` such that it is in the range
             /// `2^(SIG_BITS + 1)..=2^(SIG_BITS + 2) - 2`, the least significant
             /// bit is never set, and the bit at position `SIG_BITS + 1` is
             /// always set.
@@ -1072,7 +1073,7 @@ macro_rules! impl_simd_float {
             /// than or equal to `ZERO_INF_NAN_EXP`. Use `is_not_zero_nan_inf`
             /// to check for that case.
             #[inline]
-            fn to_sig_exp(x: $Simd) -> ($IntSimd, $IntSimd) {
+            fn to_sig_exp(x: $Simd) -> ($UintSimd, $IntSimd) {
               let exp_bits = (x.to_bits() >> SIG_BITS) & EXP_SAT_SIMD;
 
               let is_subnormal = exp_bits.simd_eq($UintSimd::ZERO);
@@ -1082,11 +1083,7 @@ macro_rules! impl_simd_float {
                 ^ ($Simd::from_bits(is_subnormal) & SUBNORMAL_SCALE_XOR_1_SIMD);
               let x = x * scale;
 
-              let sig_abs = ((x.to_bits() & SIG_MASK_SIMD) | IMPLICIT_BIT_SIMD).cast_signed() << 1;
-              let sig_sign = x.is_sign_negative().to_bits().cast_signed();
-              // This is a more efficient way to compute
-              // `sig_sign.select(-sig_abs, sig_abs)`
-              let sig = (sig_abs ^ sig_sign) - sig_sign;
+              let sig = ((x.to_bits() & SIG_MASK_SIMD) | IMPLICIT_BIT_SIMD) << 1;
 
               let exp_bits = (x.to_bits() >> SIG_BITS) & EXP_SAT_SIMD;
               let is_zero = exp_bits.simd_eq($UintSimd::ZERO);
@@ -1115,8 +1112,22 @@ macro_rules! impl_simd_float {
             let mul_exp = self_exp + a_exp;
 
             // Before computing `mul + b`, the exponents of `mul` and `b` must
-            // be adjusted to be the same. This implementation adjusts `b_sig`
-            // so that `b_exp` is equal to `mul_exp`.
+            // be adjusted to be the same.
+            let result_exp = mul_exp.max(b_exp - BITS_SIMD.cast_signed());
+            // Right shift `mul_sig` to account for exponent change.
+            let mul_shr = (result_exp - mul_exp).cast_unsigned();
+            let mul_overflow_shl = (BITS_SIMD - mul_shr).cast_signed();
+            let shifted_mul_high = mul_sig_high >> mul_shr;
+            let mul_shr_lt_bits = mul_overflow_shl.is_positive().cast_unsigned();
+            let mul_shr_lt_2bits = mul_shr.simd_lt(BITS_MUL_2_SIMD);
+            let (mul_sig_low, mul_sig_high) = (
+              mul_shr_lt_bits.select(
+                mul_sig_low.unbounded_shr(mul_shr)
+                  | mul_sig_high.unbounded_shl(mul_overflow_shl.cast_unsigned()),
+                shifted_mul_high & mul_shr_lt_2bits,
+              ),
+              shifted_mul_high & mul_shr_lt_bits,
+            );
 
             let result = todo!();
 
