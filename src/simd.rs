@@ -34,6 +34,8 @@ macro_rules! impl_simd {
     $fn_simd_gt:item
     $fn_simd_le:item
     $fn_simd_ge:item
+    $fn_insert:item
+    $fn_extract:item
     $fn_reduce_add:item
     $fn_reduce_mul:item
     $fn_bitselect:item
@@ -530,6 +532,19 @@ macro_rules! impl_simd {
       {
         CmpGe::simd_ge(self, other)
       }
+
+      /// Returns `self` with the element at position `INDEX` replaced by
+      /// `value`.
+      ///
+      /// If `INDEX` is out of bounds, compilation fails.
+      #[must_use]
+      $fn_insert
+
+      /// Returns the element of `self` at position `INDEX`.
+      ///
+      /// If `INDEX` is out of bounds, compilation fails.
+      #[must_use]
+      $fn_extract
 
       /// Reducing addition. Returns the sum of the vector's elements.
       ///
