@@ -384,7 +384,40 @@ impl_simd_uint! {
 
   #[inline]
   pub fn insert<const INDEX: usize>(self, value: u16) -> Self {
-    todo!()
+    const {
+      assert!(INDEX < 8, "attempt to insert into an out of bounds index");
+    }
+
+    /// `x86` and `aarch64` take an `i32` constant while we have a `usize`
+    /// constant. Working around this requires boilerplate.
+    macro_rules! for_indices {
+      ($($INDEX:literal),*) => {
+        pick! {
+          if #[cfg(target_feature = "sse2")] {
+            $(
+              if const { INDEX == $INDEX } {
+                Self { sse: insert_i16_from_i32_m128i::<$INDEX>(self.sse, value as i32) }
+              } else
+            )*
+            {
+              unreachable!()
+            }
+          } else if #[cfg(all(target_arch = "aarch64", target_feature = "neon"))] {
+            $(
+              if const { INDEX == $INDEX } {
+                unsafe {
+                  Self { neon: vsetq_lane_u16::<$INDEX>(self.neon, value as i32) }
+                }
+              } else
+            )*
+            {
+              unreachable!()
+            }
+          }
+        }
+      };
+    }
+    for_indices!(0, 1, 2, 3, 4, 5, 6, 7)
   }
 
   #[inline]
