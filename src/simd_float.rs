@@ -665,36 +665,51 @@ macro_rules! impl_simd_float {
       /// Returns a [mask] that checks if each element is NaN.
       ///
       /// [mask]: crate#masks
+      #[inline]
       #[must_use]
-      $fn_is_nan
+      pub fn is_nan(self) -> Self {
+        self.is_nan_impl()
+      }
 
       /// Returns a [mask] that checks if each element is infinity (either
       /// positive or negative).
       ///
       /// [mask]: crate#masks
+      #[inline]
       #[must_use]
-      $fn_is_inf
+      pub fn is_inf(self) -> Self {
+        self.is_inf_impl()
+      }
 
       /// Returns a [mask] that checks if each element is neither infinite nor
       /// NaN.
       ///
       /// [mask]: crate#masks
+      #[inline]
       #[must_use]
-      $fn_is_finite
+      pub fn is_finite(self) -> Self {
+        self.is_finite_impl()
+      }
 
       /// Returns a [mask] that checks if each element has a positive sign,
       /// including `+0.0`, NaNs with positive sign bit and positive infinity.
       ///
       /// [mask]: crate#masks
+      #[inline]
       #[must_use]
-      $fn_is_sign_positive
+      pub fn is_sign_positive(self) -> Self {
+        self.is_sign_positive_impl()
+      }
 
       /// Returns a [mask] that checks if each element has a negative sign,
       /// including `-0.0`, NaNs with negative sign bit and negative infinity.
       ///
       /// [mask]: crate#masks
+      #[inline]
       #[must_use]
-      $fn_is_sign_negative
+      pub fn is_sign_negative(self) -> Self {
+        self.is_sign_negative_impl()
+      }
 
       /// Returns the reciprocal (inverse) of a number, `1/x`.
       ///
@@ -709,8 +724,11 @@ macro_rules! impl_simd_float {
         stringify!($Simd),
         "::ONE / x`."
       )]
+      #[inline]
       #[must_use]
-      $fn_recip
+      pub fn recip(self) -> Self {
+        self.recip_impl()
+      }
 
       /// Returns the square root of the reciprocal (inverse) of a number,
       /// `sqrt(1/x)`.
@@ -720,8 +738,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_recip_sqrt
+      pub fn recip_sqrt(self) -> Self {
+        self.recip_sqrt_impl()
+      }
 
       /// Converts radians to degrees.
       ///
@@ -762,8 +783,11 @@ macro_rules! impl_simd_float {
       /// See [`fast_max`] for a faster variant that does not handle NaNs.
       ///
       /// [`fast_max`]: Self::fast_max
+      #[inline]
       #[must_use]
-      $fn_max
+      pub fn max(self, other: Self) -> Self {
+        self.max_impl(other)
+      }
 
       /// Returns the maximum between each element of `self` and the
       /// corresponding element of `other`, not specifying behavior for NaNs.
@@ -776,8 +800,11 @@ macro_rules! impl_simd_float {
       /// See [`max`] for a slower variant that does handle NaNs.
       ///
       /// [`max`]: Self::max
+      #[inline]
       #[must_use]
-      $fn_fast_max
+      pub fn fast_max(self, other: Self) -> Self {
+        self.fast_max_impl(other)
+      }
 
       /// Returns the minimum between each element of `self` and the
       /// corresponding element of `other`, ignoring NaN.
@@ -790,8 +817,11 @@ macro_rules! impl_simd_float {
       /// See [`fast_min`] for a faster variant that does not handle NaNs.
       ///
       /// [`fast_min`]: Self::fast_min
+      #[inline]
       #[must_use]
-      $fn_min
+      pub fn min(self, other: Self) -> Self {
+        self.min_impl(other)
+      }
 
       /// Returns the minimum between each element of `self` and the
       /// corresponding element of `other`, not specifying behavior for NaNs.
@@ -804,8 +834,11 @@ macro_rules! impl_simd_float {
       /// See [`min`] for a slower variant that does handle NaNs.
       ///
       /// [`min`]: Self::min
+      #[inline]
       #[must_use]
-      $fn_fast_min
+      pub fn fast_min(self, other: Self) -> Self {
+        self.fast_min_impl(other)
+      }
 
       /// Returns the maximum between all elements of `self`.
       ///
@@ -818,8 +851,11 @@ macro_rules! impl_simd_float {
       /// NaNs.
       ///
       /// [`fast_reduce_max`]: Self::fast_reduce_max
+      #[inline]
       #[must_use]
-      $fn_reduce_max
+      pub fn reduce_max(self) -> $T {
+        self.reduce_max_impl()
+      }
 
       /// Returns the maximum between all elements of `self`.
       ///
@@ -829,8 +865,11 @@ macro_rules! impl_simd_float {
       /// non-deterministically.
       ///
       /// [`reduce_max`]: Self::reduce_max
+      #[inline]
       #[must_use]
-      $fn_fast_reduce_max
+      pub fn fast_reduce_max(self) -> $T {
+        self.fast_reduce_max_impl()
+      }
 
       /// Returns the minimum between all elements of `self`.
       ///
@@ -843,8 +882,11 @@ macro_rules! impl_simd_float {
       /// NaNs.
       ///
       /// [`fast_reduce_min`]: Self::fast_reduce_min
+      #[inline]
       #[must_use]
-      $fn_reduce_min
+      pub fn reduce_min(self) -> $T {
+        self.reduce_min_impl()
+      }
 
       /// Returns the minimum between all elements of `self`.
       ///
@@ -854,8 +896,11 @@ macro_rules! impl_simd_float {
       /// non-deterministically.
       ///
       /// [`reduce_min`]: Self::reduce_min
+      #[inline]
       #[must_use]
-      $fn_fast_reduce_min
+      pub fn fast_reduce_min(self) -> $T {
+        self.fast_reduce_min_impl()
+      }
 
       /// Calculates the midpoint (average) between `self` and `other`.
       ///
@@ -912,8 +957,11 @@ macro_rules! impl_simd_float {
       /// `max` being NaN.
       ///
       /// [`fast_clamp`]: Self::fast_clamp
+      #[inline]
       #[must_use]
-      $fn_clamp
+      pub fn clamp(self, min: Self, max: Self) -> Self {
+        self.clamp_impl(min, max)
+      }
 
       /// Restrict a value to a certain interval unless it is NaN.
       ///
@@ -926,14 +974,20 @@ macro_rules! impl_simd_float {
       /// being NaN.
       ///
       /// [`clamp`]: Self::clamp
+      #[inline]
       #[must_use]
-      $fn_fast_clamp
+      pub fn fast_clamp(self, min: Self, max: Self) -> Self {
+        self.fast_clamp_impl(min, max)
+      }
 
       /// Computes the absolute value of `self`.
       ///
       /// This function always returns the precise result.
+      #[inline]
       #[must_use]
-      $fn_abs
+      pub fn abs(self) -> Self {
+        self.abs_impl()
+      }
 
       /// Returns numbers representing the sign of each element.
       ///
@@ -977,15 +1031,21 @@ macro_rules! impl_simd_float {
       /// Returns the largest integer less than or equal to each input element.
       ///
       /// This function always returns the precise result.
+      #[inline]
       #[must_use]
-      $fn_floor
+      pub fn floor(self) -> Self {
+        self.floor_impl()
+      }
 
       /// Returns the smallest integer greater than or equal to each input
       /// element.
       ///
       /// This function always returns the precise result.
+      #[inline]
       #[must_use]
-      $fn_ceil
+      pub fn ceil(self) -> Self {
+        self.ceil_impl()
+      }
 
       /// Returns the nearest integer to each input element. If a value is
       /// half-way between two integers, round away from `0.0`.
@@ -998,8 +1058,11 @@ macro_rules! impl_simd_float {
       ///
       /// [`round`]: Self::round
       /// [`round_ties_even`]: Self::round_ties_even
+      #[inline]
       #[must_use]
-      $fn_round
+      pub fn round(self) -> Self {
+        self.round_impl()
+      }
 
       /// Returns the nearest integer to each input element.
       ///
@@ -1011,8 +1074,11 @@ macro_rules! impl_simd_float {
       /// range values or NaNs.
       ///
       /// [`fast_round_int`]: Self::fast_round_int
+      #[inline]
       #[must_use]
-      $fn_round_int
+      pub fn round_int(self) -> $IntSimd {
+        self.round_int_impl()
+      }
 
       /// Returns the nearest integer to each input element.
       ///
@@ -1024,22 +1090,31 @@ macro_rules! impl_simd_float {
       /// values and NaNs.
       ///
       /// [`round_int`]: Self::round_int
+      #[inline]
       #[must_use]
-      $fn_fast_round_int
+      pub fn fast_round_int(self) -> $IntSimd {
+        self.fast_round_int_impl()
+      }
 
       /// Returns the nearest integer to each input element. Rounds half-way
       /// cases to the number with an even least significant digit.
       ///
       /// This function always returns the precise result.
+      #[inline]
       #[must_use]
-      $fn_round_ties_even
+      pub fn round_ties_even(self) -> Self {
+        self.round_ties_even_impl()
+      }
 
       /// Returns the integer part of each input element. This means that
       /// non-integer numbers are always truncated towards zero.
       ///
       /// This function always returns the precise result.
+      #[inline]
       #[must_use]
-      $fn_trunc
+      pub fn trunc(self) -> Self {
+        self.trunc_impl()
+      }
 
       /// Returns the integer part of each input element. This means that
       /// non-integer numbers are always truncated towards zero.
@@ -1049,8 +1124,11 @@ macro_rules! impl_simd_float {
       /// range values or NaNs.
       ///
       /// [`fast_trunc_int`]: Self::fast_trunc_int
+      #[inline]
       #[must_use]
-      $fn_trunc_int
+      pub fn trunc_int(self) -> $IntSimd {
+        self.trunc_int_impl()
+      }
 
       /// Returns the integer part of each input element. This means that
       /// non-integer numbers are always truncated towards zero.
@@ -1060,8 +1138,11 @@ macro_rules! impl_simd_float {
       /// values and NaNs.
       ///
       /// [`trunc_int`]: Self::trunc_int
+      #[inline]
       #[must_use]
-      $fn_fast_trunc_int
+      pub fn fast_trunc_int(self) -> $IntSimd {
+        self.fast_trunc_int_impl()
+      }
 
       /// Returns the fractional part of each input element.
       ///
@@ -1079,8 +1160,11 @@ macro_rules! impl_simd_float {
       /// add operations, resulting in two rounding errors. Note that in the
       /// future, this function may change to always having one rounding error,
       /// at the cost of worse performance.
+      #[inline]
       #[must_use]
-      $fn_mul_add
+      pub fn mul_add(self, a: Self, b: Self) -> Self {
+        self.mul_add_impl(a, b)
+      }
 
       /// Fused multiply-sub. Computes `(self * a) - b`.
       ///
@@ -1089,8 +1173,11 @@ macro_rules! impl_simd_float {
       /// add operations, resulting in two rounding errors. Note that in the
       /// future, this function may change to always having one rounding error,
       /// at the cost of worse performance.
+      #[inline]
       #[must_use]
-      $fn_mul_sub
+      pub fn mul_sub(self, a: Self, b: Self) -> Self {
+        self.mul_sub_impl(a, b)
+      }
 
       /// Fused multiply-negate-add. Computes `-(self * a) + b`.
       ///
@@ -1099,8 +1186,11 @@ macro_rules! impl_simd_float {
       /// add operations, resulting in two rounding errors. Note that in the
       /// future, this function may change to always having one rounding error,
       /// at the cost of worse performance.
+      #[inline]
       #[must_use]
-      $fn_mul_neg_add
+      pub fn mul_neg_add(self, a: Self, b: Self) -> Self {
+        self.mul_neg_add_impl(a, b)
+      }
 
       /// Fused multiply-negate-sub. Computes `-(self * a) - b`.
       ///
@@ -1109,8 +1199,11 @@ macro_rules! impl_simd_float {
       /// add operations, resulting in two rounding errors. Note that in the
       /// future, this function may change to always having one rounding error,
       /// at the cost of worse performance.
+      #[inline]
       #[must_use]
-      $fn_mul_neg_sub
+      pub fn mul_neg_sub(self, a: Self, b: Self) -> Self {
+        self.mul_neg_sub_impl(a, b)
+      }
 
       /// Calculates Euclidean division, the matching function for
       /// [`rem_euclid`].
@@ -1164,16 +1257,22 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_powf_simd
+      pub fn powf_simd(self, n: Self) -> Self {
+        self.powf_simd_impl(n)
+      }
 
       /// Returns the square root of a number for each input element.
       ///
       /// Returns NaN if `self` is a negative number other than `-0.0`.
       ///
       /// This function always returns the precise result.
+      #[inline]
       #[must_use]
-      $fn_sqrt
+      pub fn sqrt(self) -> Self {
+        self.sqrt_impl()
+      }
 
       /// Returns `e^(self)`, (the exponential function) for each input element.
       ///
@@ -1182,8 +1281,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_exp
+      pub fn exp(self) -> Self {
+        self.exp_impl()
+      }
 
       /// Returns `2^(self)` for each input element.
       ///
@@ -1192,8 +1294,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_exp2
+      pub fn exp2(self) -> Self {
+        self.exp2_impl()
+      }
 
       /// Returns the natural logarithm of a number for each input element.
       ///
@@ -1202,8 +1307,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_ln
+      pub fn ln(self) -> Self {
+        self.ln_impl()
+      }
 
       /// Returns the base 2 logarithm of a number for each input element.
       ///
@@ -1238,8 +1346,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_cbrt
+      pub fn cbrt(self) -> Self {
+        self.cbrt_impl()
+      }
 
       /// Computes the sine of a number (in radians) for each input element.
       ///
@@ -1292,8 +1403,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_asin
+      pub fn asin(self) -> Self {
+        self.asin_impl()
+      }
 
       /// Computes the arccosine of a number for each input element. Return
       /// value is in radians in the range [0, pi] or NaN if the number is
@@ -1304,8 +1418,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_acos
+      pub fn acos(self) -> Self {
+        self.acos_impl()
+      }
 
       /// Computes the arctangent of a number for each input element. Return
       /// value is in radians in the range [-pi/2, pi/2].
@@ -1315,8 +1432,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_atan
+      pub fn atan(self) -> Self {
+        self.atan_impl()
+      }
 
       /// Computes the four quadrant arctangent of each element of `self` (`y`)
       /// and the corresponding element of `other` (`x`) in radians.
@@ -1333,8 +1453,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_atan2
+      pub fn atan2(self, other: Self) -> Self {
+        self.atan2_impl(other)
+      }
 
       /// Simultaneously computes the sine and cosine of a number `x` for each
       /// input element. Returns `(sin(x), cos(x))`.
@@ -1344,8 +1467,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_sin_cos
+      pub fn sin_cos(self) -> (Self, Self) {
+        self.sin_cos_impl()
+      }
 
       /// Simultaneously computes the arcsine and arccosine of a number `x` for
       /// each input element. Returns `(asin(x), acos(x))`.
@@ -1355,8 +1481,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_asin_acos
+      pub fn asin_acos(self) -> (Self, Self) {
+        self.asin_acos_impl()
+      }
 
       /// Returns `e^(self) - 1` for each input element in a way that is
       /// accurate even if a number is close to zero.
@@ -1366,8 +1495,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_exp_m1
+      pub fn exp_m1(self) -> Self {
+        self.exp_m1_impl()
+      }
 
       /// Returns `ln(1+n)` (natural logarithm) for each input element more
       /// accurately than if the operations were performed separately.
@@ -1377,8 +1509,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_ln_1p
+      pub fn ln_1p(self) -> Self {
+        self.ln_1p_impl()
+      }
 
       /// Returns the hyperbolic sine (`(e^self - e^(-self))/2`) for each input
       /// element.
@@ -1388,8 +1523,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_sinh
+      pub fn sinh(self) -> Self {
+        self.sinh_impl()
+      }
 
       /// Returns the hyperbolic cosine (`(e^self + e^(-self))/2`) for each
       /// input element.
@@ -1399,8 +1537,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_cosh
+      pub fn cosh(self) -> Self {
+        self.cosh_impl()
+      }
 
       /// Returns the hyperbolic tangent (`sinh(self)/cosh(self)`) for each
       /// input element.
@@ -1410,8 +1551,11 @@ macro_rules! impl_simd_float {
       /// The precision of this function is non-deterministic. This means it
       /// varies by platform, version, and can even differ within the same
       /// execution from one invocation to the next.
+      #[inline]
       #[must_use]
-      $fn_tanh
+      pub fn tanh(self) -> Self {
+        self.tanh_impl()
+      }
 
       /// Raises each element of the number `self` to the corresponding element
       /// of the floating point power `n`.

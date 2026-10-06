@@ -237,47 +237,80 @@ macro_rules! impl_simd {
     impl_formatting_trait!(core::fmt::UpperExp);
 
     impl Select<$Simd> for $Simd {
-      $fn_select
+      #[inline]
+      fn select(self, if_true: Self, if_false: Self) -> Self {
+        self.select_impl(if_true, if_false)
+      }
     }
 
     impl ShuffleExt for [$Simd; 2] {
       type Indices = $UintSimd;
       type Output = $Simd;
 
-      $fn_shuffle_2
+      #[inline]
+      fn shuffle(self, indices: $UintSimd) -> $Simd {
+        $Simd::shuffle_2_impl(self, indices)
+      }
 
-      $fn_shuffle_zeroing_2
+      #[inline]
+      fn shuffle_zeroing(self, indices: $UintSimd) -> $Simd {
+        $Simd::shuffle_zeroing_2_impl(self, indices)
+      }
 
-      $fn_shuffle_wrapping_2
+      #[inline]
+      fn shuffle_wrapping(self, indices: $UintSimd) -> $Simd {
+        $Simd::shuffle_wrapping_2_impl(self, indices)
+      }
     }
 
     impl ShuffleExt for [$Simd; 3] {
       type Indices = $UintSimd;
       type Output = $Simd;
 
-      $fn_shuffle_3
+      #[inline]
+      fn shuffle(self, indices: $UintSimd) -> $Simd {
+        $Simd::shuffle_3_impl(self, indices)
+      }
 
-      $fn_shuffle_zeroing_3
+      #[inline]
+      fn shuffle_zeroing(self, indices: $UintSimd) -> $Simd {
+        $Simd::shuffle_zeroing_3_impl(self, indices)
+      }
 
-      $fn_shuffle_wrapping_3
+      #[inline]
+      fn shuffle_wrapping(self, indices: $UintSimd) -> $Simd {
+        $Simd::shuffle_wrapping_3_impl(self, indices)
+      }
     }
 
     impl ShuffleExt for [$Simd; 4] {
       type Indices = $UintSimd;
       type Output = $Simd;
 
-      $fn_shuffle_4
+      #[inline]
+      fn shuffle(self, indices: $UintSimd) -> $Simd {
+        $Simd::shuffle_4_impl(self, indices)
+      }
 
-      $fn_shuffle_zeroing_4
+      #[inline]
+      fn shuffle_zeroing(self, indices: $UintSimd) -> $Simd {
+        $Simd::shuffle_zeroing_4_impl(self, indices)
+      }
 
-      $fn_shuffle_wrapping_4
+      #[inline]
+      fn shuffle_wrapping(self, indices: $UintSimd) -> $Simd {
+        $Simd::shuffle_wrapping_4_impl(self, indices)
+      }
     }
 
     #[expect(deprecated)]
     impl CmpEq for $Simd {
       type Output = Self;
 
-      $fn_simd_eq
+      #[inline]
+      fn simd_eq(self, rhs: Self) -> Self::Output {
+        self.simd_eq_impl(rhs)
+      }
     }
 
     #[expect(deprecated)]
@@ -294,7 +327,10 @@ macro_rules! impl_simd {
     impl CmpNe for $Simd {
       type Output = Self;
 
-      $fn_simd_ne
+      #[inline]
+      fn simd_ne(self, rhs: Self) -> Self::Output {
+        self.simd_ne_impl(rhs)
+      }
     }
 
     #[expect(deprecated)]
@@ -311,7 +347,10 @@ macro_rules! impl_simd {
     impl CmpLt for $Simd {
       type Output = Self;
 
-      $fn_simd_lt
+      #[inline]
+      fn simd_lt(self, rhs: Self) -> Self::Output {
+        self.simd_lt_impl(rhs)
+      }
     }
 
     #[expect(deprecated)]
@@ -328,7 +367,10 @@ macro_rules! impl_simd {
     impl CmpGt for $Simd {
       type Output = Self;
 
-      $fn_simd_gt
+      #[inline]
+      fn simd_gt(self, rhs: Self) -> Self::Output {
+        self.simd_gt_impl(rhs)
+      }
     }
 
     #[expect(deprecated)]
@@ -345,7 +387,10 @@ macro_rules! impl_simd {
     impl CmpLe for $Simd {
       type Output = Self;
 
-      $fn_simd_le
+      #[inline]
+      fn simd_le(self, rhs: Self) -> Self::Output {
+        self.simd_le_impl(rhs)
+      }
     }
 
     #[expect(deprecated)]
@@ -362,7 +407,10 @@ macro_rules! impl_simd {
     impl CmpGe for $Simd {
       type Output = Self;
 
-      $fn_simd_ge
+      #[inline]
+      fn simd_ge(self, rhs: Self) -> Self::Output {
+        self.simd_ge_impl(rhs)
+      }
     }
 
     #[expect(deprecated)]
@@ -540,27 +588,39 @@ macro_rules! impl_simd {
       ///
       /// If `INDEX` is out of bounds, compilation fails.
       #[doc(alias = "set", alias = "with")]
+      #[inline]
       #[must_use]
-      $fn_replace_const
+      pub fn replace_const<const INDEX: usize>(self, value: $T) -> Self {
+        self.replace_const_impl::<INDEX>(value)
+      }
 
       /// Returns the element of `self` at position `INDEX`.
       ///
       /// If `INDEX` is out of bounds, compilation fails.
       #[doc(alias = "get")]
+      #[inline]
       #[must_use]
-      $fn_extract_const
+      pub fn extract_const<const INDEX: usize>(self) -> $T {
+        self.extract_const_impl::<INDEX>()
+      }
 
       /// Reducing addition. Returns the sum of the vector's elements.
       ///
       /// Equivalent to `self[0] + self[1] + ...`.
+      #[inline]
       #[must_use]
-      $fn_reduce_add
+      pub fn reduce_add(self) -> $T {
+        self.reduce_add_impl()
+      }
 
       /// Reducing multiplication. Returns the product of the vector's elements.
       ///
       /// Equivalent to `self[0] * self[1] * ...`.
+      #[inline]
       #[must_use]
-      $fn_reduce_mul
+      pub fn reduce_mul(self) -> $T {
+        self.reduce_mul_impl()
+      }
 
       /// Bitwise selection.
       ///
@@ -574,8 +634,11 @@ macro_rules! impl_simd {
       ///
       /// [mask]: crate#masks
       /// [`select`]: Self::select
+      #[inline]
       #[must_use]
-      $fn_bitselect
+      pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+        self.bitselect_impl(if_one, if_zero)
+      }
 
       /// Lanewise SIMD selection.
       ///
@@ -616,9 +679,12 @@ macro_rules! impl_simd {
       /// is unspecified.
       ///
       /// [mask]: crate#masks
+      #[inline]
       #[must_use]
       #[doc(alias("movemask", "move_mask"))]
-      $fn_to_bitmask
+      pub fn to_bitmask(self) -> $Bitmask {
+        self.to_bitmask_impl()
+      }
 
       /// Returns `true` if any element of `self` is true.
       ///
@@ -627,8 +693,11 @@ macro_rules! impl_simd {
       /// is unspecified.
       ///
       /// [mask]: crate#masks
+      #[inline]
       #[must_use]
-      $fn_any
+      pub fn any(self) -> bool {
+        self.any_impl()
+      }
 
       /// Returns `true` if all elements of `self` are true.
       ///
@@ -637,8 +706,11 @@ macro_rules! impl_simd {
       /// is unspecified.
       ///
       /// [mask]: crate#masks
+      #[inline]
       #[must_use]
-      $fn_all
+      pub fn all(self) -> bool {
+        self.all_impl()
+      }
 
       /// Returns `true` if none of the elements of `self` are true.
       ///
@@ -657,16 +729,22 @@ macro_rules! impl_simd {
       /// halfs.
       ///
       /// Equivalent to `[self[0], other[0], self[1], other[1], ...]`.
+      #[inline]
       #[must_use]
-      $fn_unpack_lo
+      pub fn unpack_lo(self, other: Self) -> Self {
+        self.unpack_lo_impl(other)
+      }
 
       /// Interleaves the higher halfs of two SIMD vectors, discarding the lower
       /// halfs.
       ///
       /// Equivalent to
       /// `[self[N / 2], other[N / 2], self[N / 2 + 1], other[N / 2 + 1], ...]`.
+      #[inline]
       #[must_use]
-      $fn_unpack_hi
+      pub fn unpack_hi(self, other: Self) -> Self {
+        self.unpack_hi_impl(other)
+      }
 
       /// Returns a SIMD vector whose elements are selected from `self` using
       /// the corresponding runtime `indices`.
@@ -688,8 +766,11 @@ macro_rules! impl_simd {
       /// indices, either zero is returned or the index wraps around,
       /// non-deterministically (unlike other types, which can return arbitrary
       /// values).
+      #[inline]
       #[must_use]
-      $fn_shuffle
+      pub fn shuffle(self, indices: $UintSimd) -> Self {
+        self.shuffle_impl(indices)
+      }
 
       /// Returns a SIMD vector whose elements are selected from `self` using
       /// the corresponding runtime `indices`.
@@ -700,8 +781,11 @@ macro_rules! impl_simd {
       /// Equivalent to
       /// `[self[indices[0]], self[indices[1]], ..., self[[indices[N - 1]]]]`
       /// with a zero fallback.
+      #[inline]
       #[must_use]
-      $fn_shuffle_zeroing
+      pub fn shuffle_zeroing(self, indices: $UintSimd) -> Self {
+        self.shuffle_zeroing_impl(indices)
+      }
 
       /// Returns a SIMD vector whose elements are selected from `self` using
       /// the corresponding runtime `indices`.
@@ -710,12 +794,18 @@ macro_rules! impl_simd {
       ///
       /// Equivalent to
       /// `[self[indices[0] % N], self[indices[1] % N], ..., self[[indices[N - 1] % N]]]`.
+      #[inline]
       #[must_use]
-      $fn_shuffle_wrapping
+      pub fn shuffle_wrapping(self, indices: $UintSimd) -> Self {
+        self.shuffle_wrapping_impl(indices)
+      }
 
       /// Transposes an array of SIMD vectors interpreted as a square matrix.
+      #[inline]
       #[must_use]
-      $fn_transpose
+      pub fn transpose(data: [Self; $N]) -> [Self; $N] {
+        Self::transpose_impl(data)
+      }
 
       /// Elementwise selection.
       ///
