@@ -112,6 +112,7 @@ macro_rules! impl_simd_float {
         N = $N,
         Simd = $Simd,
         UintSimd = $UintSimd,
+        Bitmask = u32,
         optional_type_x86_inner { $(X86Inner = $X86Inner)? },
         optional_type_arm_inner { $(ArmInner = $ArmInner)? },
         optional_type_wasm_inner { $(WasmInner = $WasmInner)? },

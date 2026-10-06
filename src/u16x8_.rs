@@ -86,6 +86,7 @@ impl_simd_uint! {
     IntSimd = i16x8,
     T_BITS = 16,
     T_BITS_MUL_2 = 32,
+    Bitmask = u32,
     [0, 1, 2, 3, 4, 5, 6, 7],
     optional_type_x86_inner { X86Inner = __m128i },
     optional_type_arm_inner { ArmInner = uint16x8_t },

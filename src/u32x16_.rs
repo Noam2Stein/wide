@@ -32,6 +32,7 @@ impl_simd_uint! {
     IntSimd = i32x16,
     T_BITS = 32,
     T_BITS_MUL_2 = 64,
+    Bitmask = u32,
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     optional_type_x86_inner { X86Inner = __m512i },
     optional_type_arm_inner {},

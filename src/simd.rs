@@ -23,6 +23,7 @@ macro_rules! impl_simd {
       N = $N:literal,
       Simd = $Simd:ident,
       UintSimd = $UintSimd:ident,
+      Bitmask = $Bitmask:ident,
       optional_type_x86_inner { $(X86Inner = $X86Inner:ident)? },
       optional_type_arm_inner { $(ArmInner = $ArmInner:ident)? },
       optional_type_wasm_inner { $(WasmInner = $WasmInner:ident)? },
