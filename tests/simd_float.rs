@@ -157,17 +157,21 @@ fn test_ceil() {
 #[test]
 fn test_fast_max() {
   for_simd_types!(|T: Float, N| {
-    for [value, other] in simd_chunks!(
+    for [a, b] in simd_chunks!(
       [1.0, 5.0, 3.0, 0.0, 6.0, -8.0, 12.0, 9.0, 2.0, -3.0, T::INFINITY],
       [2.0, -3.0, T::INFINITY, 10.0, 19.0, -5.0, -1.0, -9.0, 1.0, 5.0, 3.0],
-    ) {
-      let expected = Simd::new(std::array::from_fn(|i| value[i].max(other[i])));
-      let actual = Simd::new(value).fast_max(Simd::new(other));
+    )
+    .chain(random_iter())
+    .map(|ab| ab.map(Simd::new))
+    {
+      let expected = a.max(b);
+      let actual = a.fast_max(b);
 
-      assert_eq!(
-        actual ^ expected,
-        Simd::ZERO,
-        "expected: {expected:?}\n  actual: {actual:?}"
+      assert!(
+        (actual.simd_eq(expected)
+          | actual.is_nan() & (a.is_nan() | b.is_nan()))
+        .all(),
+        "expected: {expected:?}\n  actual: {actual:?}\n       a: {a:?}\n       b: {b:?}"
       );
     }
   });
@@ -176,7 +180,7 @@ fn test_fast_max() {
 #[test]
 fn test_max() {
   for_simd_types!(|T: Float, N| {
-    for [value, other] in simd_chunks!(
+    for [a, b] in simd_chunks!(
       [
         1.0,
         5.0,
@@ -206,13 +210,12 @@ fn test_max() {
     )
     .chain(random_iter())
     {
-      let expected = Simd::new(std::array::from_fn(|i| value[i].max(other[i])));
-      let actual = Simd::new(value).max(Simd::new(other));
+      let expected = Simd::new(std::array::from_fn(|i| a[i].max(b[i])));
+      let actual = Simd::new(a).max(Simd::new(b));
 
-      assert_eq!(
-        actual ^ expected,
-        Simd::ZERO,
-        "expected: {expected:?}\n  actual: {actual:?}"
+      assert!(
+        (actual.simd_eq(expected) | actual.is_nan() & expected.is_nan()).all(),
+        "expected: {expected:?}\n  actual: {actual:?}\n       a: {a:?}\n       b: {b:?}"
       );
     }
   });
@@ -221,17 +224,21 @@ fn test_max() {
 #[test]
 fn test_fast_min() {
   for_simd_types!(|T: Float, N| {
-    for [value, other] in simd_chunks!(
+    for [a, b] in simd_chunks!(
       [1.0, 5.0, 3.0, 0.0, 6.0, -8.0, 12.0, 9.0, 2.0, -3.0, T::INFINITY],
       [2.0, -3.0, T::INFINITY, 10.0, 19.0, -5.0, -1.0, -9.0, 1.0, 5.0, 3.0],
-    ) {
-      let expected = Simd::new(std::array::from_fn(|i| value[i].min(other[i])));
-      let actual = Simd::new(value).fast_min(Simd::new(other));
+    )
+    .chain(random_iter())
+    .map(|ab| ab.map(Simd::new))
+    {
+      let expected = a.min(b);
+      let actual = a.fast_min(b);
 
-      assert_eq!(
-        actual ^ expected,
-        Simd::ZERO,
-        "expected: {expected:?}\n  actual: {actual:?}"
+      assert!(
+        (actual.simd_eq(expected)
+          | actual.is_nan() & (a.is_nan() | b.is_nan()))
+        .all(),
+        "expected: {expected:?}\n  actual: {actual:?}\n       a: {a:?}\n       b: {b:?}"
       );
     }
   });
@@ -240,7 +247,7 @@ fn test_fast_min() {
 #[test]
 fn test_min() {
   for_simd_types!(|T: Float, N| {
-    for [value, other] in simd_chunks!(
+    for [a, b] in simd_chunks!(
       [
         1.0,
         5.0,
@@ -270,13 +277,12 @@ fn test_min() {
     )
     .chain(random_iter())
     {
-      let expected = Simd::new(std::array::from_fn(|i| value[i].min(other[i])));
-      let actual = Simd::new(value).min(Simd::new(other));
+      let expected = Simd::new(std::array::from_fn(|i| a[i].min(b[i])));
+      let actual = Simd::new(a).min(Simd::new(b));
 
-      assert_eq!(
-        actual ^ expected,
-        Simd::ZERO,
-        "expected: {expected:?}\n  actual: {actual:?}"
+      assert!(
+        (actual.simd_eq(expected) | actual.is_nan() & expected.is_nan()).all(),
+        "expected: {expected:?}\n  actual: {actual:?}\n       a: {a:?}\n       b: {b:?}"
       );
     }
   });
@@ -314,35 +320,23 @@ fn test_clamp() {
 #[test]
 fn test_fast_clamp() {
   for_simd_types!(|T: Float, N| {
-    for [value, mut min, mut max] in simd_chunks!(
+    for [value, min, max] in simd_chunks!(
       [5.0, 10.0, 10.0, T::NAN, T::INFINITY, T::NEG_INFINITY],
       [3.0, 11.0, 5.0, 1.0, -1.0, -1.0],
       [8.0, 14.0, 9.0, 3.0, 1.0, 1.0],
     )
     .chain(random_iter())
+    .map(|arrays| arrays.map(Simd::new))
     {
-      for i in 0..N {
-        if min[i].is_nan() {
-          min[i] = 0.0;
-        }
-        if max[i].is_nan() {
-          max[i] = 0.0;
-        }
-      }
-
-      let expected = Simd::new(std::array::from_fn(|i| {
-        if value[i].is_nan() {
-          T::NAN
-        } else if min[i] > max[i] {
-          min[i]
-        } else {
-          value[i].clamp(min[i], max[i])
-        }
-      }));
-      let actual = Simd::new(value).fast_clamp(Simd::new(min), Simd::new(max));
+      let expected = value.clamp(min, max);
+      let actual = value.fast_clamp(min, max);
 
       assert!(
-        (actual.simd_eq(expected) | expected.is_nan() & actual.is_nan()).all(),
+        (actual.simd_eq(expected)
+          | actual.is_nan() & expected.is_nan()
+          | min.is_nan() & (actual.simd_eq(value) | actual.simd_eq(max))
+          | max.is_nan() & (actual.simd_eq(value) | actual.simd_eq(min)))
+        .all(),
         "expected: {expected:?}\n  actual: {actual:?}\n   value: {value:?}\n     min: {min:?}\n     max: {max:?}"
       );
     }
