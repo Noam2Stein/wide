@@ -95,9 +95,12 @@ impl_simd_float! {
     optional_type_wasm_inner { WasmInner = v128 },
   }
   old_powf_simd_fn_name = pow_f32x4,
+}
 
+/// Internal implementations of functions available for all SIMD types.
+impl f32x4 {
   #[inline]
-  fn neg(self) -> Self::Output {
+  fn neg_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: bitxor_m128(self.sse, Self::splat(-0.0).sse) }
@@ -117,12 +120,12 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn not(self) -> Self::Output {
+  fn not_impl(self) -> Self {
     self ^ cast::<u128, f32x4>(u128::MAX)
   }
 
   #[inline]
-  fn add(self, rhs: Self) -> Self::Output {
+  fn add_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: add_m128(self.sse, rhs.sse) }
@@ -142,7 +145,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn sub(self, rhs: Self) -> Self::Output {
+  fn sub_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: sub_m128(self.sse, rhs.sse) }
@@ -162,7 +165,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn mul(self, rhs: Self) -> Self::Output {
+  fn mul_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: mul_m128(self.sse, rhs.sse) }
@@ -182,7 +185,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn div(self, rhs: Self) -> Self::Output {
+  fn div_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: div_m128(self.sse, rhs.sse) }
@@ -202,7 +205,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn rem(self, rhs: Self) -> Self::Output {
+  fn rem_impl(self, rhs: Self) -> Self {
     Self::new([
       self.to_array()[0] % rhs.to_array()[0],
       self.to_array()[1] % rhs.to_array()[1],
@@ -212,7 +215,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn bitand(self, rhs: Self) -> Self::Output {
+  fn bitand_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: bitand_m128(self.sse, rhs.sse) }
@@ -232,7 +235,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn bitor(self, rhs: Self) -> Self::Output {
+  fn bitor_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: bitor_m128(self.sse, rhs.sse) }
@@ -252,7 +255,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn bitxor(self, rhs: Self) -> Self::Output {
+  fn bitxor_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: bitxor_m128(self.sse, rhs.sse) }
@@ -272,7 +275,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: cmp_eq_mask_m128(self.sse, rhs.sse) }
@@ -292,7 +295,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: cmp_neq_mask_m128(self.sse, rhs.sse) }
@@ -312,7 +315,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: cmp_lt_mask_m128(self.sse, rhs.sse) }
@@ -332,7 +335,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: cmp_gt_mask_m128(self.sse, rhs.sse) }
@@ -352,7 +355,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: cmp_le_mask_m128(self.sse, rhs.sse) }
@@ -372,7 +375,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: cmp_ge_mask_m128(self.sse, rhs.sse) }
@@ -392,19 +395,19 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn reduce_add(self) -> f32 {
+  fn reduce_add_impl(self) -> f32 {
     let arr: [f32; 4] = cast(self);
     arr.iter().sum()
   }
 
   #[inline]
-  pub fn reduce_mul(self) -> f32 {
+  fn reduce_mul_impl(self) -> f32 {
     let arr: [f32; 4] = cast(self);
     arr.iter().product()
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect_impl(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self {
@@ -424,7 +427,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  fn select(self, if_true: Self, if_false: Self) -> Self {
+  fn select_impl(self, if_true: Self, if_false: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self { sse: blend_varying_m128(if_false.sse, if_true.sse, self.sse) }
@@ -439,7 +442,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fn to_bitmask_impl(self) -> u32 {
     pick! {
       if #[cfg(target_feature="sse")] {
         move_mask_m128(self.sse) as u32
@@ -468,7 +471,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any_impl(self) -> bool {
     pick! {
       if #[cfg(target_feature="simd128")] {
         v128_any_true(self.simd)
@@ -479,7 +482,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all_impl(self) -> bool {
     pick! {
       if #[cfg(target_feature="simd128")] {
         u32x4_all_true(self.simd)
@@ -491,7 +494,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn unpack_lo(self, other: Self) -> Self {
+  fn unpack_lo_impl(self, other: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: unpack_low_m128(self.sse, other.sse) }
@@ -513,7 +516,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn unpack_hi(self, other: Self) -> Self {
+  fn unpack_hi_impl(self, other: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: unpack_high_m128(self.sse, other.sse) }
@@ -537,7 +540,7 @@ impl_simd_float! {
   ///
   /// Currently this function is only accelerated on `sse`.
   #[inline]
-  pub fn transpose(data: [f32x4; 4]) -> [f32x4; 4] {
+  fn transpose_impl(data: [f32x4; 4]) -> [f32x4; 4] {
     pick! {
       if #[cfg(target_feature="sse")] {
         let mut e0 = data[0];
@@ -580,9 +583,12 @@ impl_simd_float! {
       }
     }
   }
+}
 
+/// Internal implementations of functions available for all SIMD-float types.
+impl f32x4 {
   #[inline]
-  pub fn is_nan(self) -> Self {
+  fn is_nan_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: cmp_unord_mask_m128(self.sse, self.sse) }
@@ -602,7 +608,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn is_inf(self) -> Self {
+  fn is_inf_impl(self) -> Self {
     let shifted_inf = u32x4::from(0xFF000000);
     let u: u32x4 = cast(self);
     let shift_u = u << 1_u64;
@@ -611,7 +617,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn is_finite(self) -> Self {
+  fn is_finite_impl(self) -> Self {
     let shifted_exp_mask = u32x4::from(0xFF000000);
     let u: u32x4 = cast(self);
     let shift_u = u << 1_u64;
@@ -620,7 +626,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn is_sign_positive(self) -> Self {
+  fn is_sign_positive_impl(self) -> Self {
     const SIGN_MASK: u32x4 = u32x4::splat((-0.0_f32).to_bits());
 
     let bits = cast::<f32x4, u32x4>(self);
@@ -630,7 +636,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn is_sign_negative(self) -> Self {
+  fn is_sign_negative_impl(self) -> Self {
     const SIGN_MASK: u32x4 = u32x4::splat((-0.0_f32).to_bits());
 
     let bits = cast::<f32x4, u32x4>(self);
@@ -640,7 +646,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn recip(self) -> Self {
+  fn recip_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: reciprocal_m128(self.sse) }
@@ -660,7 +666,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn recip_sqrt(self) -> Self {
+  fn recip_sqrt_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: reciprocal_sqrt_m128(self.sse) }
@@ -687,7 +693,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn max(self, rhs: Self) -> Self {
+  fn max_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         // max_m128 seems to do rhs < self ? self : rhs. So if there's any NaN
@@ -722,7 +728,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn fast_max(self, rhs: Self) -> Self {
+  fn fast_max_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: max_m128(self.sse, rhs.sse) }
@@ -744,7 +750,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn min(self, rhs: Self) -> Self {
+  fn min_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         // min_m128 seems to do self < rhs ? self : rhs. So if there's any NaN
@@ -779,7 +785,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn fast_min(self, rhs: Self) -> Self {
+  fn fast_min_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: min_m128(self.sse, rhs.sse) }
@@ -801,7 +807,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn clamp(self, min: Self, max: Self) -> Self {
+  fn clamp_impl(self, min: Self, max: Self) -> Self {
     pick! {
       if #[cfg(any(
         target_feature="simd128",
@@ -817,7 +823,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn fast_clamp(self, min: Self, max: Self) -> Self {
+  fn fast_clamp_impl(self, min: Self, max: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         // For both `min_m128` and `max_m128` if any input is NaN, `rhs` gets
@@ -839,7 +845,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn reduce_max(self) -> f32 {
+  fn reduce_max_impl(self) -> f32 {
     pick! {
       if #[cfg(all(target_arch = "aarch64", target_feature = "neon"))] {
         unsafe { vmaxnmvq_f32(self.neon) }
@@ -855,7 +861,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn fast_reduce_max(self) -> f32 {
+  fn fast_reduce_max_impl(self) -> f32 {
     pick! {
       if #[cfg(all(target_arch = "aarch64", target_feature = "neon"))] {
         unsafe { vmaxnmvq_f32(self.neon) }
@@ -871,7 +877,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn reduce_min(self) -> f32 {
+  fn reduce_min_impl(self) -> f32 {
     pick! {
       if #[cfg(all(target_arch = "aarch64", target_feature = "neon"))] {
         unsafe { vminnmvq_f32(self.neon) }
@@ -887,7 +893,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn fast_reduce_min(self) -> f32 {
+  fn fast_reduce_min_impl(self) -> f32 {
     pick! {
       if #[cfg(all(target_arch = "aarch64", target_feature = "neon"))] {
         unsafe { vminnmvq_f32(self.neon) }
@@ -903,7 +909,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn abs(self) -> Self {
+  fn abs_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="simd128")] {
         Self { simd: f32x4_abs(self.simd) }
@@ -917,7 +923,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn floor(self) -> Self {
+  fn floor_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="simd128")] {
         Self { simd: f32x4_floor(self.simd) }
@@ -967,7 +973,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn ceil(self) -> Self {
+  fn ceil_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="simd128")] {
         Self { simd: f32x4_ceil(self.simd) }
@@ -1017,7 +1023,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn round(self) -> Self {
+  fn round_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         const_f32_as_f32x4!(HALF_NEXT_DOWN, 0.5_f32.next_down());
@@ -1101,7 +1107,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn round_int(self) -> i32x4 {
+  fn round_int_impl(self) -> i32x4 {
     pick! {
       if #[cfg(target_feature="sse2")] {
         // Based on: https://github.com/v8/v8/blob/210987a552a2bf2a854b0baa9588a5959ff3979d/src/codegen/shared-ia32-x64/macro-assembler-shared-ia32-x64.h#L489-L504
@@ -1127,7 +1133,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn fast_round_int(self) -> i32x4 {
+  fn fast_round_int_impl(self) -> i32x4 {
     pick! {
       if #[cfg(target_feature="sse2")] {
         cast(convert_to_i32_m128i_from_m128(self.sse))
@@ -1138,7 +1144,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn round_ties_even(self) -> Self {
+  fn round_ties_even_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self { sse: round_m128::<{round_op!(Nearest)}>(self.sse) }
@@ -1184,7 +1190,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn trunc(self) -> Self {
+  fn trunc_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self { sse: round_m128::<{round_op!(Zero)}>(self.sse) }
@@ -1225,7 +1231,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn trunc_int(self) -> i32x4 {
+  fn trunc_int_impl(self) -> i32x4 {
     pick! {
       if #[cfg(target_feature="sse2")] {
         // Based on: https://github.com/v8/v8/blob/210987a552a2bf2a854b0baa9588a5959ff3979d/src/codegen/shared-ia32-x64/macro-assembler-shared-ia32-x64.h#L489-L504
@@ -1251,7 +1257,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn fast_trunc_int(self) -> i32x4 {
+  fn fast_trunc_int_impl(self) -> i32x4 {
     pick! {
       if #[cfg(target_feature="sse2")] {
         cast(truncate_m128_to_m128i(self.sse))
@@ -1269,7 +1275,7 @@ impl_simd_float! {
   /// - On ARM64 with NEON: Uses `vfmaq_f32` (single rounding, best accuracy)
   /// - Without FMA support: Uses `(self * m) + a` (two roundings)
   #[inline]
-  pub fn mul_add(self, a: Self, b: Self) -> Self {
+  fn mul_add_impl(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="sse2",target_feature="fma"))] {
         Self { sse: fused_mul_add_m128(self.sse, a.sse, b.sse) }
@@ -1290,7 +1296,7 @@ impl_simd_float! {
   ///   accuracy)
   /// - Without FMA support: Uses `(self * m) - s` (two roundings)
   #[inline]
-  pub fn mul_sub(self, a: Self, b: Self) -> Self {
+  fn mul_sub_impl(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="sse2",target_feature="fma"))] {
         Self { sse: fused_mul_sub_m128(self.sse, a.sse, b.sse) }
@@ -1310,7 +1316,7 @@ impl_simd_float! {
   /// - On ARM64 with NEON: Uses `vfmsq_f32` (single rounding, best accuracy)
   /// - Without FMA support: Uses `a - (self * m)` (two roundings)
   #[inline]
-  pub fn mul_neg_add(self, a: Self, b: Self) -> Self {
+  fn mul_neg_add_impl(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="sse2",target_feature="fma"))] {
         Self { sse: fused_mul_neg_add_m128(self.sse, a.sse, b.sse) }
@@ -1331,7 +1337,7 @@ impl_simd_float! {
   ///   best accuracy)
   /// - Without FMA support: Uses `-(self * m) - s` (two roundings)
   #[inline]
-  pub fn mul_neg_sub(self, a: Self, b: Self) -> Self {
+  fn mul_neg_sub_impl(self, a: Self, b: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="sse2",target_feature="fma"))] {
         Self { sse: fused_mul_neg_sub_m128(self.sse, a.sse, b.sse) }
@@ -1344,7 +1350,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn powf_simd(self, n: Self) -> Self {
+  fn powf_simd_impl(self, n: Self) -> Self {
     const_f32_as_f32x4!(ln2f_hi, 0.693359375);
     const_f32_as_f32x4!(ln2f_lo, -2.12194440e-4);
     const_f32_as_f32x4!(P0logf, 3.3333331174E-1);
@@ -1456,7 +1462,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn sqrt(self) -> Self {
+  fn sqrt_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="sse")] {
         Self { sse: sqrt_m128(self.sse) }
@@ -1484,7 +1490,7 @@ impl_simd_float! {
 
   /// Calculate the exponent of a packed `f32x4`
   #[inline]
-  pub fn exp(self) -> Self {
+  fn exp_impl(self) -> Self {
     const_f32_as_f32x4!(P0, 1.0 / 2.0);
     const_f32_as_f32x4!(P1, 1.0 / 6.0);
     const_f32_as_f32x4!(P2, 1.0 / 24.0);
@@ -1536,7 +1542,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn exp2(self) -> Self {
+  fn exp2_impl(self) -> Self {
     const_f32_as_f32x4!(P2, 1.0 / 2.0);
     const_f32_as_f32x4!(P3, 1.0 / 6.0);
     const_f32_as_f32x4!(P4, 1.0 / 24.0);
@@ -1583,7 +1589,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn ln(self) -> Self {
+  fn ln_impl(self) -> Self {
     const_f32_as_f32x4!(HALF, 0.5);
     const_f32_as_f32x4!(P0, 3.3333331174E-1);
     const_f32_as_f32x4!(P1, -2.4999993993E-1);
@@ -1633,7 +1639,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn cbrt(self) -> Self {
+  fn cbrt_impl(self) -> Self {
     let a = self.abs();
     let zero = a.simd_eq(Self::ZERO);
     if zero.all() {
@@ -1693,7 +1699,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn asin(self) -> Self {
+  fn asin_impl(self) -> Self {
     // Based on the Agner Fog "vector class library":
     // https://github.com/vectorclass/version2/blob/master/vectormath_trig.h
     const_f32_as_f32x4!(P4asinf, 4.2163199048E-2);
@@ -1727,7 +1733,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn acos(self) -> Self {
+  fn acos_impl(self) -> Self {
     // Based on the Agner Fog "vector class library":
     // https://github.com/vectorclass/version2/blob/master/vectormath_trig.h
     const_f32_as_f32x4!(P4asinf, 4.2163199048E-2);
@@ -1761,7 +1767,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn atan(self) -> Self {
+  fn atan_impl(self) -> Self {
     // Based on the Agner Fog "vector class library":
     // https://github.com/vectorclass/version2/blob/master/vectormath_trig.h
     const_f32_as_f32x4!(P3atanf, 8.05374449538E-2);
@@ -1799,7 +1805,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn atan2(self, x: Self) -> Self {
+  fn atan2_impl(self, x: Self) -> Self {
     // Based on the Agner Fog "vector class library":
     // https://github.com/vectorclass/version2/blob/master/vectormath_trig.h
     const_f32_as_f32x4!(P3atanf, 8.05374449538E-2);
@@ -1855,7 +1861,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn sin_cos(self) -> (Self, Self) {
+  fn sin_cos_impl(self) -> (Self, Self) {
     // Based on the Agner Fog "vector class library":
     // https://github.com/vectorclass/version2/blob/master/vectormath_trig.h
 
@@ -1913,7 +1919,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn asin_acos(self) -> (Self, Self) {
+  fn asin_acos_impl(self) -> (Self, Self) {
     // Based on the Agner Fog "vector class library":
     // https://github.com/vectorclass/version2/blob/master/vectormath_trig.h
     const_f32_as_f32x4!(P4asinf, 4.2163199048E-2);
@@ -1952,7 +1958,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn exp_m1(self) -> Self {
+  fn exp_m1_impl(self) -> Self {
     // x < -17.329: e^x < 2⁻²⁵, exp_m1(x) = -1.0 exactly (mantissa exhaustion)
     // IEEE simd_lt returns false for NaN, so NaN lanes can't reach here.
     // -inf is < -17.329, and exp_m1(-inf) = -1.0, also correct.
@@ -2010,7 +2016,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn ln_1p(self) -> Self {
+  fn ln_1p_impl(self) -> Self {
     // Based on the identity ln(1+x) = x·ln(1+x)/((1+x)-1), i.e. x·ln(u)/(u-1)
     // where u = 1+x. From MUSL libc (Rich Felker et al., https://musl.libc.org) src/math/log1pf.c
     // and fdlibm (Sun Microsystems, https://www.netlib.org/fdlibm/) s_log1p.c.
@@ -2028,7 +2034,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn sinh(self) -> Self {
+  fn sinh_impl(self) -> Self {
     const_f32_as_f32x4!(P0, 1.0);
     const_f32_as_f32x4!(P1, 1.0 / 6.0);
     const_f32_as_f32x4!(P2, 1.0 / 120.0);
@@ -2047,7 +2053,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn cosh(self) -> Self {
+  fn cosh_impl(self) -> Self {
     const_f32_as_f32x4!(P0, 1.0);
     const_f32_as_f32x4!(P1, 1.0 / 2.0);
     const_f32_as_f32x4!(P2, 1.0 / 24.0);
@@ -2065,7 +2071,7 @@ impl_simd_float! {
   }
 
   #[inline]
-  pub fn tanh(self) -> Self {
+  fn tanh_impl(self) -> Self {
     // |x| < 2e-4: tanh(x) ≈ x, error x³/3 < 16·ULP(x)
     // bound: x² < 48·2⁻²³ → x < 2.39e-3; 2e-4 has 10× margin
     // |x| > 9.011: tanh(x) = ±1 to f32 precision (e⁻²ˣ < 2⁻²⁴)

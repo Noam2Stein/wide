@@ -38,9 +38,12 @@ impl_simd_int! {
     optional_type_arm_inner {},
     optional_type_wasm_inner {},
   }
+}
 
+/// Internal implementations of functions available for all SIMD types.
+impl i64x4 {
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self { avx2: !(cmp_gt_mask_i64_m256i(self.avx2, rhs.avx2) ^ cmp_eq_mask_i64_m256i(self.avx2, rhs.avx2)) }
@@ -54,7 +57,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self { avx2: cmp_gt_mask_i64_m256i(self.avx2, rhs.avx2) }
@@ -68,7 +71,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_gt(rhs)
@@ -82,7 +85,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_lt(rhs)
@@ -94,9 +97,12 @@ impl_simd_int! {
       }
     }
   }
+}
 
+/// Internal implementations of functions available for all SIMD-signed types.
+impl i64x4 {
   #[inline]
-  fn shr(self, rhs: u64x4) -> Self::Output {
+  fn shr_impl(self, rhs: u64x4) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         let arr: [i64; 4] = cast(self);
@@ -117,36 +123,36 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn shr(self, rhs: u32) -> Self::Output {
+  fn shr_impl(self, rhs: u32) -> Self {
     // there is no signed right shift in AVX2
     let [a,b] : [i64x2; 2] = cast(self);
     cast([a.shr(rhs), b.shr(rhs)])
   }
 
   #[inline]
-  pub fn max(self, rhs: Self) -> Self {
+  fn max_impl(self, rhs: Self) -> Self {
     self.simd_gt(rhs).select(self, rhs)
   }
 
   #[inline]
-  pub fn min(self, rhs: Self) -> Self {
+  fn min_impl(self, rhs: Self) -> Self {
     self.simd_lt(rhs).select(self, rhs)
   }
 
   #[inline]
-  pub fn reduce_max(self) -> i64 {
+  fn reduce_max_impl(self) -> i64 {
     let array: [i64; 4] = cast(self);
     array[0].max(array[1]).max(array[2]).max(array[3])
   }
 
   #[inline]
-  pub fn reduce_min(self) -> i64 {
+  fn reduce_min_impl(self) -> i64 {
     let array: [i64; 4] = cast(self);
     array[0].min(array[1]).min(array[2]).min(array[3])
   }
 
   #[inline]
-  pub fn unbounded_shr(self, rhs: u64x4) -> Self {
+  fn unbounded_shr_impl(self, rhs: u64x4) -> Self {
     let [self_a, self_b] = cast::<i64x4, [i64x2; 2]>(self);
     let [rhs_a, rhs_b] = cast::<u64x4, [u64x2; 2]>(rhs);
 
@@ -154,14 +160,14 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn unbounded_shr_scalar(self, rhs: u32) -> Self {
+  fn unbounded_shr_scalar_impl(self, rhs: u32) -> Self {
     // there is no signed right shift in AVX2
     let [self_a, self_b] = cast::<i64x4, [i64x2; 2]>(self);
     cast([self_a.unbounded_shr_scalar(rhs), self_b.unbounded_shr_scalar(rhs)])
   }
 
   #[inline]
-  pub fn saturating_add(self, rhs: Self) -> Self {
+  fn saturating_add_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         let result = self + rhs;
@@ -180,7 +186,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn saturating_sub(self, rhs: Self) -> Self {
+  fn saturating_sub_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         let result = self - rhs;
@@ -199,7 +205,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn overflowing_mul(self, rhs: Self) -> (Self, Self) {
+  fn overflowing_mul_impl(self, rhs: Self) -> (Self, Self) {
     // TODO(perf): This implementation looks quite bad. Is there a better
     // one? This intentionally avoids `mul_keep_low_high` because getting the
     // high bits of 64-bit multiplication could be slow.
@@ -224,12 +230,8 @@ impl_simd_int! {
     )
   }
 
-  optional_fn_widening_mul {
-    // Cannot have `widening_mul` because there is no `i128x4` type.
-  }
-
   #[inline]
-  pub fn mul_keep_low_high(self, rhs: Self) -> (u64x4, i64x4) {
+  fn mul_keep_low_high_impl(self, rhs: Self) -> (u64x4, i64x4) {
     // TODO(perf): This implementation looks quite bad. Is there a better
     // one?
 
@@ -260,7 +262,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn mul_keep_high(self, rhs: Self) -> Self {
+  fn mul_keep_high_impl(self, rhs: Self) -> Self {
     let self_array = self.to_array();
     let rhs_array = rhs.to_array();
 
@@ -273,7 +275,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn abs(self) -> Self {
+  fn abs_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         // avx x86 doesn't have this builtin
@@ -295,7 +297,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn is_positive(self) -> Self {
+  fn is_positive_impl(self) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // `neon` has dedicated greater-than-zero intrinsics.
@@ -310,7 +312,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn is_negative(self) -> Self {
+  fn is_negative_impl(self) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // `neon` has dedicated less-than-zero intrinsics.

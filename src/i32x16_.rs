@@ -38,9 +38,12 @@ impl_simd_int! {
     optional_type_arm_inner {},
     optional_type_wasm_inner {},
   }
+}
 
+/// Internal implementations of functions available for all SIMD types.
+impl i32x16 {
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self { avx512: cmp_op_mask_i32_m512i::<{cmp_int_op!(Lt)}>(self.avx512, rhs.avx512) }
@@ -54,7 +57,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self { avx512: cmp_op_mask_i32_m512i::<{cmp_int_op!(Nle)}>(self.avx512, rhs.avx512) }
@@ -68,7 +71,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self { avx512: cmp_op_mask_i32_m512i::<{cmp_int_op!(Le)}>(self.avx512, rhs.avx512) }
@@ -82,7 +85,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self { avx512: cmp_op_mask_i32_m512i::<{cmp_int_op!(Nlt)}>(self.avx512, rhs.avx512) }
@@ -94,9 +97,12 @@ impl_simd_int! {
       }
     }
   }
+}
 
+/// Internal implementations of functions available for all SIMD-signed types.
+impl i32x16 {
   #[inline]
-  fn shr(self, rhs: u32x16) -> Self::Output {
+  fn shr_impl(self, rhs: u32x16) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         #[cfg(target_arch = "x86")]
@@ -118,7 +124,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn shr(self, rhs: u32) -> Self::Output {
+  fn shr_impl(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         // Use `rhs % 32` to perform wrapping shift and not unbounded shift.
@@ -135,7 +141,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn max(self, rhs: Self) -> Self {
+  fn max_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self { avx512: max_i32_m512i(self.avx512, rhs.avx512) }
@@ -149,7 +155,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn min(self, rhs: Self) -> Self {
+  fn min_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self { avx512: min_i32_m512i(self.avx512, rhs.avx512) }
@@ -163,19 +169,19 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn reduce_max(self) -> i32 {
+  fn reduce_max_impl(self) -> i32 {
     let arr: [i32x8; 2] = cast(self);
     arr[0].max(arr[1]).reduce_max()
   }
 
   #[inline]
-  pub fn reduce_min(self) -> i32 {
+  fn reduce_min_impl(self) -> i32 {
     let arr: [i32x8; 2] = cast(self);
     arr[0].min(arr[1]).reduce_min()
   }
 
   #[inline]
-  pub fn unbounded_shr(self, rhs: u32x16) -> Self {
+  fn unbounded_shr_impl(self, rhs: u32x16) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         #[cfg(target_arch = "x86")]
@@ -195,7 +201,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn unbounded_shr_scalar(self, rhs: u32) -> Self {
+  fn unbounded_shr_scalar_impl(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         Self { avx512: shr_all_i32_m512i(self.avx512, rhs) }
@@ -209,7 +215,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn saturating_add(self, rhs: Self) -> Self {
+  fn saturating_add_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         let result = self + rhs;
@@ -228,7 +234,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn saturating_sub(self, rhs: Self) -> Self {
+  fn saturating_sub_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         let result = self - rhs;
@@ -247,7 +253,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn overflowing_mul(self, rhs: Self) -> (Self, Self) {
+  fn overflowing_mul_impl(self, rhs: Self) -> (Self, Self) {
     let (low, high) = self.mul_keep_low_high(rhs);
     let low = cast::<u32x16, i32x16>(low);
 
@@ -255,12 +261,8 @@ impl_simd_int! {
     (low, overflow)
   }
 
-  optional_fn_widening_mul {
-    // Cannot have `widening_mul` because there is no `i64x16` type.
-  }
-
   #[inline]
-  pub fn mul_keep_low_high(self, rhs: Self) -> (u32x16, i32x16) {
+  fn mul_keep_low_high_impl(self, rhs: Self) -> (u32x16, i32x16) {
     pick! {
       if #[cfg(all(target_feature="avx512f", target_feature="avx512dq"))] {
         #[cfg(target_arch = "x86")]
@@ -299,7 +301,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn mul_keep_high(self, rhs: Self) -> Self {
+  fn mul_keep_high_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="avx512f", target_feature="avx512dq"))] {
         #[cfg(target_arch = "x86")]
@@ -328,7 +330,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn abs(self) -> Self {
+  fn abs_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: abs_i32_m512i(self.avx512) }
@@ -342,7 +344,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn is_positive(self) -> Self {
+  fn is_positive_impl(self) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // `neon` has dedicated greater-than-zero intrinsics.
@@ -357,7 +359,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn is_negative(self) -> Self {
+  fn is_negative_impl(self) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // `neon` has dedicated less-than-zero intrinsics.

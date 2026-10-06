@@ -92,14 +92,17 @@ impl_simd_uint! {
     optional_type_arm_inner { ArmInner = uint32x4_t },
     optional_type_wasm_inner { WasmInner = v128 },
   }
+}
 
+/// Internal implementations of functions available for all SIMD types.
+impl u32x4 {
   #[inline]
-  fn not(self) -> Self::Output {
+  fn not(self) -> Self {
     self ^ cast::<u128, u32x4>(u128::MAX)
   }
 
   #[inline]
-  fn add(self, rhs: Self) -> Self::Output {
+  fn add(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: add_i32_m128i(self.sse, rhs.sse) }
@@ -119,7 +122,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn sub(self, rhs: Self) -> Self::Output {
+  fn sub(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: sub_i32_m128i(self.sse, rhs.sse) }
@@ -139,7 +142,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn mul(self, rhs: Self) -> Self::Output {
+  fn mul(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self { sse: mul_32_m128i(self.sse, rhs.sse) }
@@ -161,7 +164,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn bitand(self, rhs: Self) -> Self::Output {
+  fn bitand(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: bitand_m128i(self.sse, rhs.sse) }
@@ -181,7 +184,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn bitor(self, rhs: Self) -> Self::Output {
+  fn bitor(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: bitor_m128i(self.sse, rhs.sse) }
@@ -201,7 +204,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn bitxor(self, rhs: Self) -> Self::Output {
+  fn bitxor(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: bitxor_m128i(self.sse, rhs.sse) }
@@ -221,7 +224,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: cmp_eq_mask_i32_m128i(self.sse, rhs.sse) }
@@ -241,7 +244,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         !self.simd_eq(rhs)
@@ -261,13 +264,13 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     // lt is just gt the other way around
     rhs.simd_gt(self)
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         // no unsigned less than so inverting the high bit will get the correct result
@@ -289,7 +292,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         !self.simd_gt(rhs)
@@ -309,7 +312,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         !self.simd_lt(rhs)
@@ -329,7 +332,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn replace_const<const INDEX: usize>(self, value: u32) -> Self {
+  fn replace_const<const INDEX: usize>(self, value: u32) -> Self {
     const {
       assert!(INDEX < 4, "attempt to call `Simd::replace_const` with an out of bounds index");
     }
@@ -383,7 +386,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn extract_const<const INDEX: usize>(self) -> u32 {
+  fn extract_const<const INDEX: usize>(self) -> u32 {
     const {
       assert!(INDEX < 4, "attempt to call `Simd::extract_const` with an out of bounds index");
     }
@@ -423,7 +426,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn reduce_add(self) -> u32 {
+  fn reduce_add(self) -> u32 {
     pick! {
       if #[cfg(target_feature="sse2")] {
         let hi64  = unpack_high_i64_m128i(self.sse, self.sse);
@@ -440,7 +443,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn reduce_mul(self) -> u32 {
+  fn reduce_mul(self) -> u32 {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         let high_64  = unpack_high_i64_m128i(self.sse, self.sse);
@@ -470,7 +473,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self {
@@ -505,7 +508,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fnbitmask(self) -> u32 {
     pick! {
       if #[cfg(target_feature="sse2")] {
         // use f32 move_mask since it is the same size as i32
@@ -535,7 +538,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="sse2")] {
         // use f32 move_mask since it is the same size as i32
@@ -555,7 +558,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="sse2")] {
         // use f32 move_mask since it is the same size as i32
@@ -575,7 +578,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unpack_lo(self, other: Self) -> Self {
+  fn unpack_lo(self, other: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: unpack_low_i32_m128i(self.sse, other.sse) }
@@ -592,7 +595,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unpack_hi(self, other: Self) -> Self {
+  fn unpack_hi(self, other: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: unpack_high_i32_m128i(self.sse, other.sse) }
@@ -609,7 +612,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn shuffle(self, indices: u32x4) -> Self {
+  fn shuffle(self, indices: u32x4) -> Self {
     pick! {
       if #[cfg(target_feature = "avx")] {
         cast(shuffle_av_f32_all_m128(cast(self), indices.sse))
@@ -640,7 +643,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn shuffle_zeroing(self, indices: u32x4) -> Self {
+  fn shuffle_zeroing(self, indices: u32x4) -> Self {
     pick! {
       if #[cfg(any(
         target_feature = "avx",
@@ -659,7 +662,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn shuffle_wrapping(self, indices: u32x4) -> Self {
+  fn shuffle_wrapping(self, indices: u32x4) -> Self {
     self.shuffle(indices & 3)
   }
 
@@ -739,7 +742,7 @@ impl_simd_uint! {
   ///
   /// Currently this function is only accelerated on `sse`.
   #[inline]
-  pub fn transpose(data: [Self; 4]) -> [Self; 4] {
+  fn transpose(data: [Self; 4]) -> [Self; 4] {
     pick! {
       if #[cfg(target_feature="sse")] {
         let mut e0 = data[0];
@@ -775,9 +778,12 @@ impl_simd_uint! {
       }
     }
   }
+}
 
+/// Internal implementations of functions available for all SIMD-unsigned types.
+impl u32x4 {
   #[inline]
-  fn shl(self, rhs: u32x4) -> Self::Output {
+  fn shl(self, rhs: u32x4) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         // mask the shift count to 31 to have same behavior on all platforms
@@ -803,7 +809,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn shl(self, rhs: u32) -> Self::Output {
+  fn shl(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         // Use `rhs % 32` to perform wrapping shift and not unbounded shift.
@@ -828,7 +834,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn shr(self, rhs: u32x4) -> Self::Output {
+  fn shr(self, rhs: u32x4) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         // mask the shift count to 31 to have same behavior on all platforms
@@ -855,7 +861,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn shr(self, rhs: u32) -> Self::Output {
+  fn shr(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         // Use `rhs % 32` to perform wrapping shift and not unbounded shift.
@@ -880,7 +886,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn max(self, rhs: Self) -> Self {
+  fn max(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self { sse: max_u32_m128i(self.sse, rhs.sse) }
@@ -904,7 +910,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn min(self, rhs: Self) -> Self {
+  fn min(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self { sse: min_u32_m128i(self.sse, rhs.sse) }
@@ -926,19 +932,19 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn reduce_max(self) -> u32 {
+  fn reduce_max(self) -> u32 {
     let arr: [u32; 4] = cast(self);
     arr[0].max(arr[1]).max(arr[2].max(arr[3]))
   }
 
   #[inline]
-  pub fn reduce_min(self) -> u32 {
+  fn reduce_min(self) -> u32 {
     let arr: [u32; 4] = cast(self);
     arr[0].min(arr[1]).min(arr[2].min(arr[3]))
   }
 
   #[inline]
-  pub fn unbounded_shl(self, rhs: Self) -> Self {
+  fn unbounded_shl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self { sse: shl_each_u32_m128i(self.sse, rhs.sse) }
@@ -962,7 +968,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unbounded_shl_scalar(self, rhs: u32) -> Self {
+  fn unbounded_shl_scalar(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: shl_all_u32_m128i(self.sse, cast([rhs as u64, 0])) }
@@ -984,7 +990,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unbounded_shr(self, rhs: Self) -> Self {
+  fn unbounded_shr(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self { sse: shr_each_u32_m128i(self.sse, rhs.sse) }
@@ -1009,7 +1015,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unbounded_shr_scalar(self, rhs: u32) -> Self {
+  fn unbounded_shr_scalar(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: shr_all_u32_m128i(self.sse, cast([rhs as u64, 0])) }
@@ -1035,7 +1041,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn saturating_add(self, rhs: Self) -> Self {
+  fn saturating_add(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(any(target_feature="sse2", target_feature="simd128"))] {
         let result = self + rhs;
@@ -1058,7 +1064,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn saturating_sub(self, rhs: Self) -> Self {
+  fn saturating_sub(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(any(target_feature="sse2", target_feature="simd128"))] {
         let result = self - rhs;
@@ -1081,7 +1087,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn overflowing_mul(self, rhs: Self) -> (Self, Self) {
+  fn overflowing_mul(self, rhs: Self) -> (Self, Self) {
     let (low, high) = self.mul_keep_low_high(rhs);
     let overflow = high.simd_ne(Self::ZERO);
     (low, overflow)
@@ -1089,7 +1095,7 @@ impl_simd_uint! {
 
   optional_fn_widening_mul {
     #[inline]
-    pub fn widening_mul(self, rhs: Self) -> u64x4 {
+    fn widening_mul(self, rhs: Self) -> u64x4 {
       pick! {
         if #[cfg(target_feature="avx2")] {
           // ok to sign extend since we are throwing away the high half of the result anyway
@@ -1132,7 +1138,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn mul_keep_low_high(self, rhs: Self) -> (Self, Self) {
+  fn mul_keep_low_high(self, rhs: Self) -> (Self, Self) {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         let even_wide_mul = mul_widen_u32_odd_m128i(self.sse, rhs.sse);
@@ -1201,7 +1207,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn mul_keep_high(self, rhs: Self) -> Self {
+  fn mul_keep_high(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         let a = convert_to_i64_m256i_from_u32_m128i(self.sse);

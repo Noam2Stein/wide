@@ -92,14 +92,17 @@ impl_simd_uint! {
     optional_type_arm_inner { ArmInner = uint8x16_t },
     optional_type_wasm_inner { WasmInner = v128 },
   }
+}
 
+/// Internal implementations of functions available for all SIMD types.
+impl u8x16 {
   #[inline]
-  fn not(self) -> Self::Output {
+  fn not(self) -> Self {
     self ^ cast::<u128, u8x16>(u128::MAX)
   }
 
   #[inline]
-  fn add(self, rhs: Self) -> Self::Output {
+  fn add(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: add_i8_m128i(self.sse, rhs.sse) }
@@ -131,7 +134,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn sub(self, rhs: Self) -> Self::Output {
+  fn sub(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: sub_i8_m128i(self.sse, rhs.sse) }
@@ -163,7 +166,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn mul(self, rhs: Self) -> Self::Output {
+  fn mul(self, rhs: Self) -> Self {
     // For x86 and wasm, this technically can be done explicitly by converting
     // to `i16` then converting back after multiplication, but that may not
     // actually be faster than auto-vectorization.
@@ -197,7 +200,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn bitand(self, rhs: Self) -> Self::Output {
+  fn bitand(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: bitand_m128i(self.sse, rhs.sse) }
@@ -229,7 +232,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn bitor(self, rhs: Self) -> Self::Output {
+  fn bitor(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: bitor_m128i(self.sse, rhs.sse) }
@@ -261,7 +264,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn bitxor(self, rhs: Self) -> Self::Output {
+  fn bitxor(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: bitxor_m128i(self.sse, rhs.sse) }
@@ -293,7 +296,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: cmp_eq_mask_i8_m128i(self.sse, rhs.sse) }
@@ -325,7 +328,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         !self.simd_eq(rhs)
@@ -357,7 +360,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         // Convert from u8 to i8.
@@ -393,7 +396,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         // Convert from u8 to i8.
@@ -429,7 +432,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         // Convert from u8 to i8.
@@ -467,7 +470,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         // Convert from u8 to i8.
@@ -505,7 +508,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn replace_const<const INDEX: usize>(self, value: u8) -> Self {
+  fn replace_const<const INDEX: usize>(self, value: u8) -> Self {
     const {
       assert!(INDEX < 16, "attempt to call `Simd::replace_const` with an out of bounds index");
     }
@@ -571,7 +574,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn extract_const<const INDEX: usize>(self) -> u8 {
+  fn extract_const<const INDEX: usize>(self) -> u8 {
     const {
       assert!(INDEX < 16, "attempt to call `Simd::extract_const` with an out of bounds index");
     }
@@ -632,7 +635,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn reduce_add(self) -> u8 {
+  fn reduce_add(self) -> u8 {
     #[allow(dead_code)]
     const SHUFFLE_1: [u8; 16] =
       [8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -689,7 +692,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn reduce_mul(self) -> u8 {
+  fn reduce_mul(self) -> u8 {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         const HIGH_64: [u8; 16] = [8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -717,7 +720,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self {
@@ -752,7 +755,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u32 {
+  fn to_bitmask(self) -> u32 {
     pick! {
       if #[cfg(target_feature="sse2")] {
         move_mask_i8_m128i(self.sse) as u32
@@ -796,7 +799,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="sse2")] {
         move_mask_i8_m128i(self.sse) != 0
@@ -814,7 +817,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="sse2")] {
         move_mask_i8_m128i(self.sse) == 0b1111_1111_1111_1111
@@ -832,7 +835,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unpack_lo(self, other: Self) -> Self {
+  fn unpack_lo(self, other: Self) -> Self {
     pick! {
         if #[cfg(target_feature = "sse2")] {
             u8x16 { sse: unpack_low_i8_m128i(self.sse, other.sse) }
@@ -860,7 +863,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unpack_hi(self, other: Self) -> Self {
+  fn unpack_hi(self, other: Self) -> Self {
     pick! {
         if #[cfg(target_feature = "sse2")] {
             u8x16 { sse: unpack_high_i8_m128i(self.sse, other.sse) }
@@ -888,7 +891,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn shuffle(self, indices: u8x16) -> Self {
+  fn shuffle(self, indices: u8x16) -> Self {
     pick! {
       if #[cfg(target_feature="ssse3")] {
         Self { sse: shuffle_av_i8z_all_m128i(self.sse, indices.sse) }
@@ -916,7 +919,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn shuffle_zeroing(self, indices: u8x16) -> Self {
+  fn shuffle_zeroing(self, indices: u8x16) -> Self {
     pick! {
       if #[cfg(target_feature="ssse3")] {
         Self {
@@ -935,7 +938,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn shuffle_wrapping(self, indices: u8x16) -> Self {
+  fn shuffle_wrapping(self, indices: u8x16) -> Self {
     pick! {
       if #[cfg(all(target_feature = "avx512vbmi", target_feature = "avx512vl"))] {
         #[cfg(target_arch = "x86")]
@@ -1046,7 +1049,7 @@ impl_simd_uint! {
   ///
   /// Currently this function is never accelerated.
   #[inline]
-  pub fn transpose(data: [Self; 16]) -> [Self; 16] {
+  fn transpose(data: [Self; 16]) -> [Self; 16] {
     // Can this be optimized?
 
     #[inline(always)]
@@ -1090,9 +1093,12 @@ impl_simd_uint! {
       transpose_column(&data, 15),
     ]
   }
+}
 
+/// Internal implementations of functions available for all SIMD-unsigned types.
+impl u8x16 {
   #[inline]
-  fn shl(self, rhs: Self) -> Self::Output {
+  fn shl(self, rhs: Self) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `u16` or `u32` then converting back after multiplication, but that may
     // not actually be faster than auto-vectorization.
@@ -1130,7 +1136,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn shl(self, rhs: u32) -> Self::Output {
+  fn shl(self, rhs: u32) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `u16` or `u32` then converting back after multiplication, but that
     // may not actually be faster than auto-vectorization.
@@ -1152,7 +1158,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn shr(self, rhs: Self) -> Self::Output {
+  fn shr(self, rhs: Self) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `u16` or `u32` then converting back after multiplication, but that may
     // not actually be faster than auto-vectorization.
@@ -1191,7 +1197,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn shr(self, rhs: u32) -> Self::Output {
+  fn shr(self, rhs: u32) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `u16` or `u32` then converting back after multiplication, but that
     // may not actually be faster than auto-vectorization.
@@ -1214,7 +1220,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn max(self, rhs: Self) -> Self {
+  fn max(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: max_u8_m128i(self.sse, rhs.sse) }
@@ -1246,7 +1252,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn min(self, rhs: Self) -> Self {
+  fn min(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: min_u8_m128i(self.sse, rhs.sse) }
@@ -1278,7 +1284,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn reduce_max(self) -> u8 {
+  fn reduce_max(self) -> u8 {
     #[allow(dead_code)]
     const SHUFFLE_1: [i8; 16] =
       [8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -1335,7 +1341,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn reduce_min(self) -> u8 {
+  fn reduce_min(self) -> u8 {
     #[allow(dead_code)]
     const SHUFFLE_1: [i8; 16] =
       [8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -1392,7 +1398,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unbounded_shl(self, rhs: Self) -> Self {
+  fn unbounded_shl(self, rhs: Self) -> Self {
     // For x86, this technically can be done explicitly by converting to `u16`
     // or `u32` then converting back after multiplication, but that may not
     // actually be faster than auto-vectorization.
@@ -1428,7 +1434,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unbounded_shl_scalar(self, rhs: u32) -> Self {
+  fn unbounded_shl_scalar(self, rhs: u32) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `u16` or `u32` then converting back after multiplication, but that
     // may not actually be faster than auto-vectorization.
@@ -1449,7 +1455,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unbounded_shr(self, rhs: Self) -> Self {
+  fn unbounded_shr(self, rhs: Self) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `u16` or `u32` then converting back after multiplication, but that may
     // not actually be faster than auto-vectorization.
@@ -1487,7 +1493,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unbounded_shr_scalar(self, rhs: u32) -> Self {
+  fn unbounded_shr_scalar(self, rhs: u32) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `u16` or `u32` then converting back after multiplication, but that
     // may not actually be faster than auto-vectorization.
@@ -1510,7 +1516,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn saturating_add(self, rhs: Self) -> Self {
+  fn saturating_add(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: add_saturating_u8_m128i(self.sse, rhs.sse) }
@@ -1542,7 +1548,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn saturating_sub(self, rhs: Self) -> Self {
+  fn saturating_sub(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: sub_saturating_u8_m128i(self.sse, rhs.sse) }
@@ -1574,7 +1580,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn overflowing_mul(self, rhs: Self) -> (Self, Self) {
+  fn overflowing_mul(self, rhs: Self) -> (Self, Self) {
     let (low, high) = self.mul_keep_low_high(rhs);
     let overflow = high.simd_ne(Self::ZERO);
     (low, overflow)
@@ -1582,7 +1588,7 @@ impl_simd_uint! {
 
   optional_fn_widening_mul {
     #[inline]
-    pub fn widening_mul(self, rhs: Self) -> u16x16 {
+    fn widening_mul(self, rhs: Self) -> u16x16 {
       pick! {
         if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
           unsafe {
@@ -1622,7 +1628,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn mul_keep_low_high(self, rhs: Self) -> (Self, Self) {
+  fn mul_keep_low_high(self, rhs: Self) -> (Self, Self) {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         unsafe {
@@ -1707,7 +1713,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn mul_keep_high(self, rhs: Self) -> Self {
+  fn mul_keep_high(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         unsafe {

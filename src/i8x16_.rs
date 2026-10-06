@@ -92,9 +92,12 @@ impl_simd_int! {
     optional_type_arm_inner { ArmInner = int8x16_t },
     optional_type_wasm_inner { WasmInner = v128 },
   }
+}
 
+/// Internal implementations of functions available for all SIMD types.
+impl i8x16 {
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: cmp_lt_mask_i8_m128i(self.sse, rhs.sse) }
@@ -126,7 +129,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: cmp_gt_mask_i8_m128i(self.sse, rhs.sse) }
@@ -158,7 +161,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         !self.simd_gt(rhs)
@@ -190,7 +193,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         !self.simd_lt(rhs)
@@ -220,9 +223,12 @@ impl_simd_int! {
       }
     }
   }
+}
 
+/// Internal implementations of functions available for all SIMD-signed types.
+impl i8x16 {
   #[inline]
-  fn shr(self, rhs: u8x16) -> Self::Output {
+  fn shr_impl(self, rhs: u8x16) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `i16` or `i32` then converting back after multiplication, but that may
     // not actually be faster than auto-vectorization.
@@ -261,7 +267,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn shr(self, rhs: u32) -> Self::Output {
+  fn shr_impl(self, rhs: u32) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `i16` or `i32` then converting back after multiplication, but that
     // may not actually be faster than auto-vectorization.
@@ -299,7 +305,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn max(self, rhs: Self) -> Self {
+  fn max_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self { sse: max_i8_m128i(self.sse, rhs.sse) }
@@ -314,7 +320,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn min(self, rhs: Self) -> Self {
+  fn min_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         Self { sse: min_i8_m128i(self.sse, rhs.sse) }
@@ -329,7 +335,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn reduce_max(self) -> i8 {
+  fn reduce_max_impl(self) -> i8 {
     #[allow(dead_code)]
     const SHUFFLE_1: [i8; 16] =
       [8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -386,7 +392,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn reduce_min(self) -> i8 {
+  fn reduce_min_impl(self) -> i8 {
     #[allow(dead_code)]
     const SHUFFLE_1: [i8; 16] =
       [8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -443,7 +449,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn unbounded_shr(self, rhs: u8x16) -> Self {
+  fn unbounded_shr_impl(self, rhs: u8x16) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `i16` or `i32` then converting back after multiplication, but that may
     // not actually be faster than auto-vectorization.
@@ -482,7 +488,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn unbounded_shr_scalar(self, rhs: u32) -> Self {
+  fn unbounded_shr_scalar_impl(self, rhs: u32) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `i16` or `i32` then converting back after multiplication, but that
     // may not actually be faster than auto-vectorization.
@@ -521,7 +527,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn saturating_add(self, rhs: Self) -> Self {
+  fn saturating_add_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: add_saturating_i8_m128i(self.sse, rhs.sse) }
@@ -553,7 +559,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn saturating_sub(self, rhs: Self) -> Self {
+  fn saturating_sub_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse2")] {
         Self { sse: sub_saturating_i8_m128i(self.sse, rhs.sse) }
@@ -585,7 +591,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn overflowing_mul(self, rhs: Self) -> (Self, Self) {
+  fn overflowing_mul_impl(self, rhs: Self) -> (Self, Self) {
     let (low, high) = self.mul_keep_low_high(rhs);
     let low = cast::<u8x16, i8x16>(low);
 
@@ -593,49 +599,47 @@ impl_simd_int! {
     (low, overflow)
   }
 
-  optional_fn_widening_mul {
-    #[inline]
-    pub fn widening_mul(self, rhs: Self) -> i16x16 {
-      pick! {
-        if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
-          unsafe {
-            let low_wide_mul = vmull_s8(vget_low_s8(self.neon), vget_low_s8(rhs.neon));
-            let high_wide_mul = vmull_s8(vget_high_s8(self.neon), vget_high_s8(rhs.neon));
+  #[inline]
+  fn widening_mul_impl(self, rhs: Self) -> i16x16 {
+    pick! {
+      if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
+        unsafe {
+          let low_wide_mul = vmull_s8(vget_low_s8(self.neon), vget_low_s8(rhs.neon));
+          let high_wide_mul = vmull_s8(vget_high_s8(self.neon), vget_high_s8(rhs.neon));
 
-            i16x16 {
-              a: i16x8 { neon: low_wide_mul },
-              b: i16x8 { neon: high_wide_mul },
-            }
+          i16x16 {
+            a: i16x8 { neon: low_wide_mul },
+            b: i16x8 { neon: high_wide_mul },
           }
-        } else {
-          let self_array = self.to_array();
-          let rhs_array = rhs.to_array();
-
-          i16x16::new([
-            (self_array[0] as i16).wrapping_mul(rhs_array[0] as i16),
-            (self_array[1] as i16).wrapping_mul(rhs_array[1] as i16),
-            (self_array[2] as i16).wrapping_mul(rhs_array[2] as i16),
-            (self_array[3] as i16).wrapping_mul(rhs_array[3] as i16),
-            (self_array[4] as i16).wrapping_mul(rhs_array[4] as i16),
-            (self_array[5] as i16).wrapping_mul(rhs_array[5] as i16),
-            (self_array[6] as i16).wrapping_mul(rhs_array[6] as i16),
-            (self_array[7] as i16).wrapping_mul(rhs_array[7] as i16),
-            (self_array[8] as i16).wrapping_mul(rhs_array[8] as i16),
-            (self_array[9] as i16).wrapping_mul(rhs_array[9] as i16),
-            (self_array[10] as i16).wrapping_mul(rhs_array[10] as i16),
-            (self_array[11] as i16).wrapping_mul(rhs_array[11] as i16),
-            (self_array[12] as i16).wrapping_mul(rhs_array[12] as i16),
-            (self_array[13] as i16).wrapping_mul(rhs_array[13] as i16),
-            (self_array[14] as i16).wrapping_mul(rhs_array[14] as i16),
-            (self_array[15] as i16).wrapping_mul(rhs_array[15] as i16),
-          ])
         }
+      } else {
+        let self_array = self.to_array();
+        let rhs_array = rhs.to_array();
+
+        i16x16::new([
+          (self_array[0] as i16).wrapping_mul(rhs_array[0] as i16),
+          (self_array[1] as i16).wrapping_mul(rhs_array[1] as i16),
+          (self_array[2] as i16).wrapping_mul(rhs_array[2] as i16),
+          (self_array[3] as i16).wrapping_mul(rhs_array[3] as i16),
+          (self_array[4] as i16).wrapping_mul(rhs_array[4] as i16),
+          (self_array[5] as i16).wrapping_mul(rhs_array[5] as i16),
+          (self_array[6] as i16).wrapping_mul(rhs_array[6] as i16),
+          (self_array[7] as i16).wrapping_mul(rhs_array[7] as i16),
+          (self_array[8] as i16).wrapping_mul(rhs_array[8] as i16),
+          (self_array[9] as i16).wrapping_mul(rhs_array[9] as i16),
+          (self_array[10] as i16).wrapping_mul(rhs_array[10] as i16),
+          (self_array[11] as i16).wrapping_mul(rhs_array[11] as i16),
+          (self_array[12] as i16).wrapping_mul(rhs_array[12] as i16),
+          (self_array[13] as i16).wrapping_mul(rhs_array[13] as i16),
+          (self_array[14] as i16).wrapping_mul(rhs_array[14] as i16),
+          (self_array[15] as i16).wrapping_mul(rhs_array[15] as i16),
+        ])
       }
     }
   }
 
   #[inline]
-  pub fn mul_keep_low_high(self, rhs: Self) -> (u8x16, i8x16) {
+  fn mul_keep_low_high_impl(self, rhs: Self) -> (u8x16, i8x16) {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         unsafe {
@@ -721,7 +725,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn mul_keep_high(self, rhs: Self) -> Self {
+  fn mul_keep_high_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         unsafe {
@@ -761,7 +765,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn abs(self) -> Self {
+  fn abs_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="ssse3")] {
         Self { sse: abs_i8_m128i(self.sse) }
@@ -794,7 +798,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn is_positive(self) -> Self {
+  fn is_positive_impl(self) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         Self { neon: unsafe { vreinterpretq_s8_u8(vcgtzq_s8(self.neon)) } }
@@ -805,7 +809,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn is_negative(self) -> Self {
+  fn is_negative_impl(self) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         Self { neon: unsafe { vreinterpretq_s8_u8(vcltzq_s8(self.neon)) } }

@@ -41,14 +41,17 @@ impl_simd_int! {
     optional_type_arm_inner {},
     optional_type_wasm_inner {},
   }
+}
 
+/// Internal implementations of functions available for all SIMD types.
+impl i8x32 {
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt_impl(self, rhs: Self) -> Self {
     rhs.simd_gt(self)
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self { avx : cmp_gt_mask_i8_m256i(self.avx,rhs.avx) }
@@ -62,7 +65,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_gt(rhs)
@@ -76,7 +79,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         !self.simd_lt(rhs)
@@ -88,9 +91,12 @@ impl_simd_int! {
       }
     }
   }
+}
 
+/// Internal implementations of functions available for all SIMD-signed types.
+impl i8x32 {
   #[inline]
-  fn shr(self, rhs: u8x32) -> Self::Output {
+  fn shr_impl(self, rhs: u8x32) -> Self {
     // For x86, this technically can be done explicitly by converting to `i16`
     // or `i32` then converting back after multiplication, but that may not
     // actually be faster than auto-vectorization.
@@ -100,7 +106,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn shr(self, rhs: u32) -> Self::Output {
+  fn shr_impl(self, rhs: u32) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `i16` or `i32` then converting back after multiplication, but that
     // may not actually be faster than auto-vectorization.
@@ -109,7 +115,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn max(self, rhs: Self) -> Self {
+  fn max_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self { avx: max_i8_m256i(self.avx,rhs.avx) }
@@ -123,7 +129,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn min(self, rhs: Self) -> Self {
+  fn min_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self { avx: min_i8_m256i(self.avx,rhs.avx) }
@@ -137,19 +143,19 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn reduce_max(self) -> i8 {
+  fn reduce_max_impl(self) -> i8 {
     let array: [i8x16; 2] = cast(self);
     array[0].max(array[1]).reduce_max()
   }
 
   #[inline]
-  pub fn reduce_min(self) -> i8 {
+  fn reduce_min_impl(self) -> i8 {
     let array: [i8x16; 2] = cast(self);
     array[0].min(array[1]).reduce_min()
   }
 
   #[inline]
-  pub fn unbounded_shr(self, rhs: u8x32) -> Self {
+  fn unbounded_shr_impl(self, rhs: u8x32) -> Self {
     // For x86, this technically can be done explicitly by converting to `i16`
     // or `i32` then converting back after multiplication, but that may not
     // actually be faster than auto-vectorization.
@@ -159,7 +165,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn unbounded_shr_scalar(self, rhs: u32) -> Self {
+  fn unbounded_shr_scalar_impl(self, rhs: u32) -> Self {
     // For x86, this technically can be done explicitly by converting
     // to `i16` or `i32` then converting back after multiplication, but that
     // may not actually be faster than auto-vectorization.
@@ -168,7 +174,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn saturating_add(self, rhs: Self) -> Self {
+  fn saturating_add_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self { avx: add_saturating_i8_m256i(self.avx, rhs.avx) }
@@ -182,7 +188,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn saturating_sub(self, rhs: Self) -> Self {
+  fn saturating_sub_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self { avx: sub_saturating_i8_m256i(self.avx, rhs.avx) }
@@ -196,7 +202,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn overflowing_mul(self, rhs: Self) -> (Self, Self) {
+  fn overflowing_mul_impl(self, rhs: Self) -> (Self, Self) {
     let (low, high) = self.mul_keep_low_high(rhs);
     let low = cast::<u8x32, i8x32>(low);
 
@@ -204,21 +210,19 @@ impl_simd_int! {
     (low, overflow)
   }
 
-  optional_fn_widening_mul {
-    #[inline]
-    pub fn widening_mul(self, rhs: Self) -> i16x32 {
-      // x86 has no `_mm256_mul_epi8` intrinsic so there is no `avx2`
-      // optimization.
+  #[inline]
+  fn widening_mul_impl(self, rhs: Self) -> i16x32 {
+    // x86 has no `_mm256_mul_epi8` intrinsic so there is no `avx2`
+    // optimization.
 
-      let [self_a, self_b] = cast::<i8x32, [i8x16; 2]>(self);
-      let [rhs_a, rhs_b] = cast::<i8x32, [i8x16; 2]>(rhs);
+    let [self_a, self_b] = cast::<i8x32, [i8x16; 2]>(self);
+    let [rhs_a, rhs_b] = cast::<i8x32, [i8x16; 2]>(rhs);
 
-      cast([self_a.widening_mul(rhs_a), self_b.widening_mul(rhs_b)])
-    }
+    cast([self_a.widening_mul(rhs_a), self_b.widening_mul(rhs_b)])
   }
 
   #[inline]
-  pub fn mul_keep_low_high(self, rhs: Self) -> (u8x32, i8x32) {
+  fn mul_keep_low_high_impl(self, rhs: Self) -> (u8x32, i8x32) {
     // x86 has no `_mm256_mul_epi8` intrinsic so there is no `avx2`
     // optimization.
 
@@ -231,7 +235,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn mul_keep_high(self, rhs: Self) -> Self {
+  fn mul_keep_high_impl(self, rhs: Self) -> Self {
     // x86 has no `_mm256_mul_epi8` intrinsic so there is no `avx2`
     // optimization.
 
@@ -242,7 +246,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn abs(self) -> Self {
+  fn abs_impl(self) -> Self {
     pick! {
       if #[cfg(target_feature="avx2")] {
         Self { avx: abs_i8_m256i(self.avx) }
@@ -256,7 +260,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn is_positive(self) -> Self {
+  fn is_positive_impl(self) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // `neon` has dedicated greater-than-zero intrinsics.
@@ -271,7 +275,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn is_negative(self) -> Self {
+  fn is_negative_impl(self) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         // `neon` has dedicated less-than-zero intrinsics.

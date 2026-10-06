@@ -43,7 +43,10 @@ impl_simd_uint! {
     optional_type_arm_inner {},
     optional_type_wasm_inner {},
   }
+}
 
+/// Internal implementations of functions available for all SIMD types.
+impl u8x64 {
   #[inline]
   fn not(self) -> Self {
     pick! {
@@ -59,7 +62,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn add(self, rhs: Self) -> Self::Output {
+  fn add(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: add_i8_m512i(self.avx512, rhs.avx512) }
@@ -73,7 +76,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn sub(self, rhs: Self) -> Self::Output {
+  fn sub(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: sub_i8_m512i(self.avx512, rhs.avx512) }
@@ -87,7 +90,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn mul(self, rhs: Self) -> Self::Output {
+  fn mul(self, rhs: Self) -> Self {
     // There is no `_mm512_mullo_epi8` intrinsic, so there is no `avx512bw`
     // optimization. This technically can be done explicitly by converting to
     // `i16` then converting back after multiplication, but that may not
@@ -98,7 +101,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn bitand(self, rhs: Self) -> Self::Output {
+  fn bitand(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: bitand_m512i(self.avx512, rhs.avx512) }
@@ -112,7 +115,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn bitor(self, rhs: Self) -> Self::Output {
+  fn bitor(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: bitor_m512i(self.avx512, rhs.avx512) }
@@ -126,7 +129,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn bitxor(self, rhs: Self) -> Self::Output {
+  fn bitxor(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: bitxor_m512i(self.avx512, rhs.avx512) }
@@ -140,7 +143,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_eq(self, rhs: Self) -> Self::Output {
+  fn simd_eq(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: cmp_op_mask_u8_m512i::<{cmp_int_op!(Eq)}>(self.avx512, rhs.avx512) }
@@ -154,7 +157,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_ne(self, rhs: Self) -> Self::Output {
+  fn simd_ne(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: cmp_op_mask_u8_m512i::<{cmp_int_op!(Ne)}>(self.avx512, rhs.avx512) }
@@ -168,7 +171,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: cmp_op_mask_u8_m512i::<{cmp_int_op!(Lt)}>(self.avx512, rhs.avx512) }
@@ -179,7 +182,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: cmp_op_mask_u8_m512i::<{cmp_int_op!(Nle)}>(self.avx512, rhs.avx512) }
@@ -190,7 +193,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: cmp_op_mask_u8_m512i::<{cmp_int_op!(Le)}>(self.avx512, rhs.avx512) }
@@ -201,7 +204,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: cmp_op_mask_u8_m512i::<{cmp_int_op!(Nlt)}>(self.avx512, rhs.avx512) }
@@ -212,7 +215,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn replace_const<const INDEX: usize>(self, value: u8) -> Self {
+  fn replace_const<const INDEX: usize>(self, value: u8) -> Self {
     const {
       assert!(INDEX < 64, "attempt to call `Simd::replace_const` with an out of bounds index");
     }
@@ -282,7 +285,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn extract_const<const INDEX: usize>(self) -> u8 {
+  fn extract_const<const INDEX: usize>(self) -> u8 {
     const {
       assert!(INDEX < 64, "attempt to call `Simd::extract_const` with an out of bounds index");
     }
@@ -350,21 +353,21 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn reduce_add(self) -> u8 {
+  fn reduce_add(self) -> u8 {
     // `_mm512_reduce_add_epi8` does not exist.
     let array: [u8x32; 2] = cast(self);
     (array[0] + array[1]).reduce_add()
   }
 
   #[inline]
-  pub fn reduce_mul(self) -> u8 {
+  fn reduce_mul(self) -> u8 {
     // `_mm512_reduce_mul_epi8` does not exist.
     let array: [u8x32; 2] = cast(self);
     (array[0] * array[1]).reduce_mul()
   }
 
   #[inline]
-  pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+  fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self {
@@ -397,7 +400,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn to_bitmask(self) -> u64 {
+  fn to_bitmask(self) -> u64 {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         movepi8_mask_m512i(self.avx512) as u64
@@ -408,7 +411,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn any(self) -> bool {
+  fn any(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         movepi8_mask_m512i(self.avx512) != 0
@@ -419,7 +422,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn all(self) -> bool {
+  fn all(self) -> bool {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         movepi8_mask_m512i(self.avx512) == u64::MAX
@@ -430,7 +433,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unpack_lo(self, other: Self) -> Self {
+  fn unpack_lo(self, other: Self) -> Self {
     // `_mm512_unpacklo_epi8` cannot be used because it acts within each
     // 128-bit lane, which is a different operation.
     let [self_a, _] = cast::<u8x64, [u8x32; 2]>(self);
@@ -439,7 +442,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unpack_hi(self, other: Self) -> Self {
+  fn unpack_hi(self, other: Self) -> Self {
     // `_mm512_unpackhi_epi8` cannot be used because it acts within each
     // 128-bit lane, which is a different operation.
     let [_, self_b] = cast::<u8x64, [u8x32; 2]>(self);
@@ -448,7 +451,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn shuffle(self, indices: u8x64) -> Self {
+  fn shuffle(self, indices: u8x64) -> Self {
     pick! {
       if #[cfg(target_feature = "avx512vbmi")] {
         Self { avx512: permute_i8_m512i(indices.avx512, self.avx512) }
@@ -462,7 +465,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn shuffle_zeroing(self, indices: u8x64) -> Self {
+  fn shuffle_zeroing(self, indices: u8x64) -> Self {
     pick! {
       if #[cfg(target_feature = "avx512vbmi")] {
         self.shuffle(indices) & indices.simd_lt(64)
@@ -479,7 +482,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn shuffle_wrapping(self, indices: u8x64) -> Self {
+  fn shuffle_wrapping(self, indices: u8x64) -> Self {
     pick! {
       if #[cfg(target_feature = "avx512vbmi")] {
         // `avx512` shuffle intrinsics are wrapping
@@ -574,7 +577,7 @@ impl_simd_uint! {
   ///
   /// Currently this function is never accelerated.
   #[inline]
-  pub fn transpose(data: [Self; 64]) -> [Self; 64] {
+  fn transpose(data: [Self; 64]) -> [Self; 64] {
     // Can this be optimized?
 
     #[inline(always)]
@@ -714,9 +717,12 @@ impl_simd_uint! {
       transpose_column(&data, 63),
     ]
   }
+}
 
+/// Internal implementations of functions available for all SIMD-unsigned types.
+impl u8x64 {
   #[inline]
-  fn shl(self, rhs: Self) -> Self::Output {
+  fn shl(self, rhs: Self) -> Self {
     // There's no dedicated `u8` shift instruction, so we split into halves
     // and let `u8x32` handle it (it widens to `u16` internally where
     // supported).
@@ -726,7 +732,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn shl(self, rhs: u32) -> Self::Output {
+  fn shl(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         let values: u16x32 = cast(self);
@@ -742,14 +748,14 @@ impl_simd_uint! {
   }
 
   #[inline]
-  fn shr(self, rhs: Self) -> Self::Output {
+  fn shr(self, rhs: Self) -> Self {
     let [self_a, self_b]: [u8x32; 2] = cast(self);
     let [rhs_a, rhs_b]: [u8x32; 2] = cast(rhs);
     cast([self_a >> rhs_a, self_b >> rhs_b])
   }
 
   #[inline]
-  fn shr(self, rhs: u32) -> Self::Output {
+  fn shr(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         let values: u16x32 = cast(self);
@@ -765,7 +771,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn max(self, rhs: Self) -> Self {
+  fn max(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: max_u8_m512i(self.avx512, rhs.avx512) }
@@ -779,7 +785,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn min(self, rhs: Self) -> Self {
+  fn min(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: min_u8_m512i(self.avx512, rhs.avx512) }
@@ -793,26 +799,26 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn reduce_max(self) -> u8 {
+  fn reduce_max(self) -> u8 {
     let array: [u8x32; 2] = cast(self);
     array[0].max(array[1]).reduce_max()
   }
 
   #[inline]
-  pub fn reduce_min(self) -> u8 {
+  fn reduce_min(self) -> u8 {
     let array: [u8x32; 2] = cast(self);
     array[0].min(array[1]).reduce_min()
   }
 
   #[inline]
-  pub fn unbounded_shl(self, rhs: Self) -> Self {
+  fn unbounded_shl(self, rhs: Self) -> Self {
     let [self_a, self_b] = cast::<u8x64, [u8x32; 2]>(self);
     let [rhs_a, rhs_b] = cast::<u8x64, [u8x32; 2]>(rhs);
     cast([self_a.unbounded_shl(rhs_a), self_b.unbounded_shl(rhs_b)])
   }
 
   #[inline]
-  pub fn unbounded_shl_scalar(self, rhs: u32) -> Self {
+  fn unbounded_shl_scalar(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         let values: u16x32 = cast(self);
@@ -827,14 +833,14 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn unbounded_shr(self, rhs: Self) -> Self {
+  fn unbounded_shr(self, rhs: Self) -> Self {
     let [self_a, self_b] = cast::<u8x64, [u8x32; 2]>(self);
     let [rhs_a, rhs_b] = cast::<u8x64, [u8x32; 2]>(rhs);
     cast([self_a.unbounded_shr(rhs_a), self_b.unbounded_shr(rhs_b)])
   }
 
   #[inline]
-  pub fn unbounded_shr_scalar(self, rhs: u32) -> Self {
+  fn unbounded_shr_scalar(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         let values: u16x32 = cast(self);
@@ -849,7 +855,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn saturating_add(self, rhs: Self) -> Self {
+  fn saturating_add(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: add_saturating_u8_m512i(self.avx512, rhs.avx512) }
@@ -863,7 +869,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn saturating_sub(self, rhs: Self) -> Self {
+  fn saturating_sub(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         Self { avx512: sub_saturating_u8_m512i(self.avx512, rhs.avx512) }
@@ -877,7 +883,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn overflowing_mul(self, rhs: Self) -> (Self, Self) {
+  fn overflowing_mul(self, rhs: Self) -> (Self, Self) {
     let (low, high) = self.mul_keep_low_high(rhs);
     let overflow = high.simd_ne(Self::ZERO);
     (low, overflow)
@@ -888,7 +894,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn mul_keep_low_high(self, rhs: Self) -> (Self, Self) {
+  fn mul_keep_low_high(self, rhs: Self) -> (Self, Self) {
     // There is no `_mm512_mullo_epi8`/`_mm512_mulhi_epu8` intrinsic, so there
     // is no `avx512bw` optimization.
 
@@ -901,7 +907,7 @@ impl_simd_uint! {
   }
 
   #[inline]
-  pub fn mul_keep_high(self, rhs: Self) -> Self {
+  fn mul_keep_high(self, rhs: Self) -> Self {
     // There is no `_mm512_mulhi_epu8` intrinsic, so there is no `avx512bw`
     // optimization.
 

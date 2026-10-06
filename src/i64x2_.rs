@@ -94,9 +94,12 @@ impl_simd_int! {
     optional_type_arm_inner { ArmInner = int64x2_t },
     optional_type_wasm_inner { WasmInner = v128 },
   }
+}
 
+/// Internal implementations of functions available for all SIMD types.
+impl i64x2 {
   #[inline]
-  fn simd_lt(self, rhs: Self) -> Self::Output {
+  fn simd_lt_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.2")] {
         // only has gt, so flip arguments around to get lt
@@ -117,7 +120,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_gt(self, rhs: Self) -> Self::Output {
+  fn simd_gt_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.2")] {
         Self { sse: cmp_gt_mask_i64_m128i(self.sse, rhs.sse) }
@@ -137,7 +140,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_le(self, rhs: Self) -> Self::Output {
+  fn simd_le_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         !self.simd_gt(rhs)
@@ -157,7 +160,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn simd_ge(self, rhs: Self) -> Self::Output {
+  fn simd_ge_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(target_feature="sse4.1")] {
         !self.simd_lt(rhs)
@@ -175,9 +178,12 @@ impl_simd_int! {
       }
     }
   }
+}
 
+/// Internal implementations of functions available for all SIMD-signed types.
+impl i64x2 {
   #[inline]
-  fn shr(self, rhs: u64x2) -> Self::Output {
+  fn shr_impl(self, rhs: u64x2) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         unsafe {
@@ -198,7 +204,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  fn shr(self, rhs: u32) -> Self::Output {
+  fn shr_impl(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="simd128")] {
         Self { simd: i64x2_shr(self.simd, rhs) }
@@ -213,17 +219,17 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn max(self, rhs: Self) -> Self {
+  fn max_impl(self, rhs: Self) -> Self {
     self.simd_gt(rhs).select(self, rhs)
   }
 
   #[inline]
-  pub fn min(self, rhs: Self) -> Self {
+  fn min_impl(self, rhs: Self) -> Self {
     self.simd_lt(rhs).select(self, rhs)
   }
 
   #[inline]
-  pub fn reduce_max(self) -> i64 {
+  fn reduce_max_impl(self) -> i64 {
     pick! {
       if #[cfg(any(target_feature="sse2", target_feature="simd128"))] {
         let array: [i64; 2] = cast(self);
@@ -237,7 +243,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn reduce_min(self) -> i64 {
+  fn reduce_min_impl(self) -> i64 {
     pick! {
       if #[cfg(any(target_feature="sse2", target_feature="simd128"))] {
         let array: [i64; 2] = cast(self);
@@ -251,7 +257,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn unbounded_shr(self, rhs: u64x2) -> Self {
+  fn unbounded_shr_impl(self, rhs: u64x2) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         unsafe {
@@ -271,7 +277,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn unbounded_shr_scalar(self, rhs: u32) -> Self {
+  fn unbounded_shr_scalar_impl(self, rhs: u32) -> Self {
     pick! {
       if #[cfg(target_feature="simd128")] {
         if rhs < 64 { Self { simd: i64x2_shr(self.simd, rhs) } } else { self.is_negative() }
@@ -287,7 +293,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn saturating_add(self, rhs: Self) -> Self {
+  fn saturating_add_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(any(target_feature="sse2", target_feature="simd128"))] {
         let result = self + rhs;
@@ -310,7 +316,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn saturating_sub(self, rhs: Self) -> Self {
+  fn saturating_sub_impl(self, rhs: Self) -> Self {
     pick! {
       if #[cfg(any(target_feature="sse2", target_feature="simd128"))] {
         let result = self - rhs;
@@ -333,7 +339,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn overflowing_mul(self, rhs: Self) -> (Self, Self) {
+  fn overflowing_mul_impl(self, rhs: Self) -> (Self, Self) {
     // TODO(perf): This implementation looks quite bad. Is there a better
     // one? This intentionally avoids `mul_keep_low_high` because getting the
     // high bits of 64-bit multiplication could be slow.
@@ -351,12 +357,8 @@ impl_simd_int! {
     )
   }
 
-  optional_fn_widening_mul {
-    // Cannot have `widening_mul` because there is no `i128x2` type.
-  }
-
   #[inline]
-  pub fn mul_keep_low_high(self, rhs: Self) -> (u64x2, i64x2) {
+  fn mul_keep_low_high_impl(self, rhs: Self) -> (u64x2, i64x2) {
     // TODO(perf): This implementation looks quite bad. Is there a better
     // one?
 
@@ -381,7 +383,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn mul_keep_high(self, rhs: Self) -> Self {
+  fn mul_keep_high_impl(self, rhs: Self) -> Self {
     let self_array = self.to_array();
     let rhs_array = rhs.to_array();
 
@@ -392,7 +394,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn abs(self) -> Self {
+  fn abs_impl(self) -> Self {
     pick! {
       // x86 doesn't have this builtin
       if #[cfg(target_feature="simd128")] {
@@ -411,7 +413,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn is_positive(self) -> Self {
+  fn is_positive_impl(self) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         Self { neon: unsafe { vreinterpretq_s64_u64(vcgtzq_s64(self.neon)) } }
@@ -422,7 +424,7 @@ impl_simd_int! {
   }
 
   #[inline]
-  pub fn is_negative(self) -> Self {
+  fn is_negative_impl(self) -> Self {
     pick! {
       if #[cfg(all(target_feature="neon", target_arch="aarch64"))] {
         Self { neon: unsafe { vreinterpretq_s64_u64(vcltzq_s64(self.neon)) } }
