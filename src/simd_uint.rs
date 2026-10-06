@@ -28,65 +28,6 @@ macro_rules! impl_simd_uint {
       optional_type_arm_inner { $(ArmInner = $ArmInner:ident)? },
       optional_type_wasm_inner { $(WasmInner = $WasmInner:ident)? },
     }
-
-    // General SIMD functions
-    $fn_not:item
-    $fn_add:item
-    $fn_sub:item
-    $fn_mul:item
-    $fn_bitand:item
-    $fn_bitor:item
-    $fn_bitxor:item
-    $fn_simd_eq:item
-    $fn_simd_ne:item
-    $fn_simd_lt:item
-    $fn_simd_gt:item
-    $fn_simd_le:item
-    $fn_simd_ge:item
-    $fn_replace_const:item
-    $fn_extract_const:item
-    $fn_reduce_add:item
-    $fn_reduce_mul:item
-    $fn_bitselect:item
-    $fn_select:item
-    $fn_to_bitmask:item
-    $fn_any:item
-    $fn_all:item
-    $fn_unpack_lo:item
-    $fn_unpack_hi:item
-    $fn_shuffle:item
-    $fn_shuffle_zeroing:item
-    $fn_shuffle_wrapping:item
-    $fn_shuffle_2:item
-    $fn_shuffle_zeroing_2:item
-    $fn_shuffle_wrapping_2:item
-    $fn_shuffle_3:item
-    $fn_shuffle_zeroing_3:item
-    $fn_shuffle_wrapping_3:item
-    $fn_shuffle_4:item
-    $fn_shuffle_zeroing_4:item
-    $fn_shuffle_wrapping_4:item
-    $fn_transpose:item
-
-    // Uint-specific functions
-    $fn_shl_unsigned_simd:item
-    $fn_shl_u32:item
-    $fn_shr_unsigned_simd:item
-    $fn_shr_u32:item
-    $fn_max:item
-    $fn_min:item
-    $fn_reduce_max:item
-    $fn_reduce_min:item
-    $fn_unbounded_shl:item
-    $fn_unbounded_shl_scalar:item
-    $fn_unbounded_shr:item
-    $fn_unbounded_shr_scalar:item
-    $fn_saturating_add:item
-    $fn_saturating_sub:item
-    $fn_overflowing_mul:item
-    optional_fn_widening_mul { $($fn_widening_mul:item)? }
-    $fn_mul_keep_low_high:item
-    $fn_mul_keep_high:item
   ) => {
     impl_simd!(
       unsafe {
@@ -99,66 +40,6 @@ macro_rules! impl_simd_uint {
         optional_type_arm_inner { $(ArmInner = $ArmInner)? },
         optional_type_wasm_inner { $(WasmInner = $WasmInner)? },
       }
-
-      $fn_simd_eq
-
-      $fn_simd_ne
-
-      $fn_simd_lt
-
-      $fn_simd_gt
-
-      $fn_simd_le
-
-      $fn_simd_ge
-
-      $fn_replace_const
-
-      $fn_extract_const
-
-      $fn_reduce_add
-
-      $fn_reduce_mul
-
-      $fn_bitselect
-
-      $fn_select
-
-      $fn_to_bitmask
-
-      $fn_any
-
-      $fn_all
-
-      $fn_unpack_lo
-
-      $fn_unpack_hi
-
-      $fn_shuffle
-
-      $fn_shuffle_zeroing
-
-      $fn_shuffle_wrapping
-
-      $fn_shuffle_2
-
-      $fn_shuffle_zeroing_2
-
-      $fn_shuffle_wrapping_2
-
-      $fn_shuffle_3
-
-      $fn_shuffle_zeroing_3
-
-      $fn_shuffle_wrapping_3
-
-      $fn_shuffle_4
-
-      $fn_shuffle_zeroing_4
-
-      $fn_shuffle_wrapping_4
-
-      $fn_transpose
     );
 
     impl_unary_operator!(

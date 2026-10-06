@@ -28,31 +28,6 @@ macro_rules! impl_simd_int {
       optional_type_arm_inner { $(ArmInner = $ArmInner:ident)? },
       optional_type_wasm_inner { $(WasmInner = $WasmInner:ident)? },
     }
-
-    // General SIMD functions
-    $fn_simd_lt:item
-    $fn_simd_gt:item
-    $fn_simd_le:item
-    $fn_simd_ge:item
-
-    // Int-specific functions
-    $fn_shr_unsigned_simd:item
-    $fn_shr_u32:item
-    $fn_max:item
-    $fn_min:item
-    $fn_reduce_max:item
-    $fn_reduce_min:item
-    $fn_unbounded_shr:item
-    $fn_unbounded_shr_scalar:item
-    $fn_saturating_add:item
-    $fn_saturating_sub:item
-    $fn_overflowing_mul:item
-    optional_fn_widening_mul { $($fn_widening_mul:item)? }
-    $fn_mul_keep_low_high:item
-    $fn_mul_keep_high:item
-    $fn_abs:item
-    $fn_is_positive:item
-    $fn_is_negative:item
   ) => {
     impl_simd!(
       unsafe {
@@ -65,151 +40,147 @@ macro_rules! impl_simd_int {
         optional_type_arm_inner { $(ArmInner = $ArmInner)? },
         optional_type_wasm_inner { $(WasmInner = $WasmInner)? },
       }
+    );
 
+    /// Internal implementations of functions that are available for all SIMD
+    /// types and share the same implementatin for all SIMD-signed types.
+    impl $Simd {
       #[inline]
-      fn simd_eq(self, other: Self) -> Self {
+      fn simd_eq_impl(self, other: Self) -> Self {
         self.cast_unsigned().simd_eq(other.cast_unsigned()).cast_signed()
       }
 
       #[inline]
-      fn simd_ne(self, other: Self) -> Self {
+      fn simd_ne_impl(self, other: Self) -> Self {
         self.cast_unsigned().simd_ne(other.cast_unsigned()).cast_signed()
       }
 
-      $fn_simd_lt
-
-      $fn_simd_gt
-
-      $fn_simd_le
-
-      $fn_simd_ge
-
       #[inline]
-      pub fn replace_const<const INDEX: usize>(self, value: $T) -> Self {
+      fn replace_const_impl<const INDEX: usize>(self, value: $T) -> Self {
         self.cast_unsigned().replace_const::<INDEX>(value.cast_unsigned()).cast_signed()
       }
 
       #[inline]
-      pub fn extract_const<const INDEX: usize>(self) -> $T {
+      fn extract_const_impl<const INDEX: usize>(self) -> $T {
         self.cast_unsigned().extract_const::<INDEX>().cast_signed()
       }
 
       #[inline]
-      pub fn reduce_add(self) -> $T {
+      fn reduce_add_impl(self) -> $T {
         // Wrapping addition is the same for signed and unsigned integers.
         cast::<$Simd, $UintSimd>(self).reduce_add().cast_signed()
       }
 
       #[inline]
-      pub fn reduce_mul(self) -> $T {
+      fn reduce_mul_impl(self) -> $T {
         // Wrapping multiplication is the same for signed and unsigned integers.
         cast::<$Simd, $UintSimd>(self).reduce_mul().cast_signed()
       }
 
       #[inline]
-      pub fn bitselect(self, if_one: Self, if_zero: Self) -> Self {
+      fn bitselect_impl(self, if_one: Self, if_zero: Self) -> Self {
         self.cast_unsigned()
           .bitselect(if_one.cast_unsigned(), if_zero.cast_unsigned())
           .cast_signed()
       }
 
       #[inline]
-      fn select(self, if_true: Self, if_false: Self) -> Self {
+      fn select_impl(self, if_true: Self, if_false: Self) -> Self {
         self.cast_unsigned()
           .select(if_true.cast_unsigned(), if_false.cast_unsigned())
           .cast_signed()
       }
 
       #[inline]
-      pub fn to_bitmask(self) -> $Bitmask {
+      fn to_bitmask_impl(self) -> $Bitmask {
         self.cast_unsigned().to_bitmask()
       }
 
       #[inline]
-      pub fn any(self) -> bool {
+      fn any_impl(self) -> bool {
         self.cast_unsigned().any()
       }
 
       #[inline]
-      pub fn all(self) -> bool {
+      fn all_impl(self) -> bool {
         self.cast_unsigned().all()
       }
 
       #[inline]
-      pub fn unpack_lo(self, other: Self) -> Self {
+      fn unpack_lo_impl(self, other: Self) -> Self {
         self.cast_unsigned().unpack_lo(other.cast_unsigned()).cast_signed()
       }
 
       #[inline]
-      pub fn unpack_hi(self, other: Self) -> Self {
+      fn unpack_hi_impl(self, other: Self) -> Self {
         self.cast_unsigned().unpack_hi(other.cast_unsigned()).cast_signed()
       }
 
       #[inline]
-      pub fn shuffle(self, indices: $UintSimd) -> Self {
+      fn shuffle_impl(self, indices: $UintSimd) -> Self {
         self.cast_unsigned().shuffle(indices).cast_signed()
       }
 
       #[inline]
-      pub fn shuffle_zeroing(self, indices: $UintSimd) -> Self {
+      fn shuffle_zeroing_impl(self, indices: $UintSimd) -> Self {
         self.cast_unsigned().shuffle_zeroing(indices).cast_signed()
       }
 
       #[inline]
-      pub fn shuffle_wrapping(self, indices: $UintSimd) -> Self {
+      fn shuffle_wrapping_impl(self, indices: $UintSimd) -> Self {
         self.cast_unsigned().shuffle_wrapping(indices).cast_signed()
       }
 
       #[inline]
-      fn shuffle(self: [$Simd; 2], indices: $UintSimd) -> $Simd {
-        cast(cast::<[$Simd; 2], [$UintSimd; 2]>(self).shuffle(indices))
+      fn shuffle_2_impl(vectors: [$Simd; 2], indices: $UintSimd) -> $Simd {
+        cast(cast::<[$Simd; 2], [$UintSimd; 2]>(vectors).shuffle(indices))
       }
 
       #[inline]
-      fn shuffle_zeroing(self: [$Simd; 2], indices: $UintSimd) -> $Simd {
-        cast(cast::<[$Simd; 2], [$UintSimd; 2]>(self).shuffle_zeroing(indices))
+      fn shuffle_zeroing_2_impl(vectors: [$Simd; 2], indices: $UintSimd) -> $Simd {
+        cast(cast::<[$Simd; 2], [$UintSimd; 2]>(vectors).shuffle_zeroing(indices))
       }
 
       #[inline]
-      fn shuffle_wrapping(self: [$Simd; 2], indices: $UintSimd) -> $Simd {
-        cast(cast::<[$Simd; 2], [$UintSimd; 2]>(self).shuffle_wrapping(indices))
+      fn shuffle_wrapping_2_impl(vectors: [$Simd; 2], indices: $UintSimd) -> $Simd {
+        cast(cast::<[$Simd; 2], [$UintSimd; 2]>(vectors).shuffle_wrapping(indices))
       }
 
       #[inline]
-      fn shuffle(self: [$Simd; 3], indices: $UintSimd) -> $Simd {
-        cast(cast::<[$Simd; 3], [$UintSimd; 3]>(self).shuffle(indices))
+      fn shuffle_3_impl(vectors: [$Simd; 3], indices: $UintSimd) -> $Simd {
+        cast(cast::<[$Simd; 3], [$UintSimd; 3]>(vectors).shuffle(indices))
       }
 
       #[inline]
-      fn shuffle_zeroing(self: [$Simd; 3], indices: $UintSimd) -> $Simd {
-        cast(cast::<[$Simd; 3], [$UintSimd; 3]>(self).shuffle_zeroing(indices))
+      fn shuffle_zeroing_3_impl(vectors: [$Simd; 3], indices: $UintSimd) -> $Simd {
+        cast(cast::<[$Simd; 3], [$UintSimd; 3]>(vectors).shuffle_zeroing(indices))
       }
 
       #[inline]
-      fn shuffle_wrapping(self: [$Simd; 3], indices: $UintSimd) -> $Simd {
-        cast(cast::<[$Simd; 3], [$UintSimd; 3]>(self).shuffle_wrapping(indices))
+      fn shuffle_wrapping_3_impl(vectors: [$Simd; 3], indices: $UintSimd) -> $Simd {
+        cast(cast::<[$Simd; 3], [$UintSimd; 3]>(vectors).shuffle_wrapping(indices))
       }
 
       #[inline]
-      fn shuffle(self: [$Simd; 4], indices: $UintSimd) -> $Simd {
-        cast(cast::<[$Simd; 4], [$UintSimd; 4]>(self).shuffle(indices))
+      fn shuffle_4_impl(vectors: [$Simd; 4], indices: $UintSimd) -> $Simd {
+        cast(cast::<[$Simd; 4], [$UintSimd; 4]>(vectors).shuffle(indices))
       }
 
       #[inline]
-      fn shuffle_zeroing(self: [$Simd; 4], indices: $UintSimd) -> $Simd {
-        cast(cast::<[$Simd; 4], [$UintSimd; 4]>(self).shuffle_zeroing(indices))
+      fn shuffle_zeroing_4_impl(vectors: [$Simd; 4], indices: $UintSimd) -> $Simd {
+        cast(cast::<[$Simd; 4], [$UintSimd; 4]>(vectors).shuffle_zeroing(indices))
       }
 
       #[inline]
-      fn shuffle_wrapping(self: [$Simd; 4], indices: $UintSimd) -> $Simd {
-        cast(cast::<[$Simd; 4], [$UintSimd; 4]>(self).shuffle_wrapping(indices))
+      fn shuffle_wrapping_4_impl(vectors: [$Simd; 4], indices: $UintSimd) -> $Simd {
+        cast(cast::<[$Simd; 4], [$UintSimd; 4]>(vectors).shuffle_wrapping(indices))
       }
 
       #[inline]
-      pub fn transpose(data: [Self; $N]) -> [Self; $N] {
+      fn transpose_impl(data: [Self; $N]) -> [Self; $N] {
         cast($UintSimd::transpose(cast::<[$Simd; $N], [$UintSimd; $N]>(data)))
       }
-    );
+    }
 
     impl_unary_operator!(
       $Simd,

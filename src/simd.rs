@@ -28,37 +28,6 @@ macro_rules! impl_simd {
       optional_type_arm_inner { $(ArmInner = $ArmInner:ident)? },
       optional_type_wasm_inner { $(WasmInner = $WasmInner:ident)? },
     }
-
-    $fn_simd_eq:item
-    $fn_simd_ne:item
-    $fn_simd_lt:item
-    $fn_simd_gt:item
-    $fn_simd_le:item
-    $fn_simd_ge:item
-    $fn_replace_const:item
-    $fn_extract_const:item
-    $fn_reduce_add:item
-    $fn_reduce_mul:item
-    $fn_bitselect:item
-    $fn_select:item
-    $fn_to_bitmask:item
-    $fn_any:item
-    $fn_all:item
-    $fn_unpack_lo:item
-    $fn_unpack_hi:item
-    $fn_shuffle:item
-    $fn_shuffle_zeroing:item
-    $fn_shuffle_wrapping:item
-    $fn_shuffle_2:item
-    $fn_shuffle_zeroing_2:item
-    $fn_shuffle_wrapping_2:item
-    $fn_shuffle_3:item
-    $fn_shuffle_zeroing_3:item
-    $fn_shuffle_wrapping_3:item
-    $fn_shuffle_4:item
-    $fn_shuffle_zeroing_4:item
-    $fn_shuffle_wrapping_4:item
-    $fn_transpose:item
   ) => {
     impl From<[$T; $N]> for $Simd {
       /// Converts an array to a SIMD vector.
