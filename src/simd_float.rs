@@ -977,6 +977,32 @@ macro_rules! impl_simd_float {
         self - self.trunc()
       }
 
+      /// Fused multiply-add. Computes `(self * a) + b` with only one rounding
+      /// error, yielding a more accurate result than an unfused multiply-add.
+      ///
+      /// This is equivalent to primitive float [`mul_add`], but that name is
+      /// already taken by a deprecated function.
+      ///
+      /// On targets with hardware FMA, this is faster than an unfused
+      /// multiply-add. However, on targets without hardware FMA, this uses
+      /// software emulation which is significantly slower. Consider using
+      /// [`fast_mul_add`] which selects the faster operation between fused and
+      /// unfused.
+      ///
+      /// # Precision
+      ///
+      /// The result of this operation is guaranteed to be the rounded
+      /// infinite-precision result. It is specified by IEEE 754 as
+      /// `fusedMultiplyAdd` and guaranteed not to change.
+      ///
+      /// [`mul_add`]: https://doc.rust-lang.org/std/primitive.f32.html#method.mul_add
+      /// [`fast_mul_add`]: Self::fast_mul_add
+      #[inline]
+      #[must_use]
+      pub fn precise_mul_add(self, a: Self, b: Self) -> Self {
+        self.precise_mul_add_backend(a, b)
+      }
+
       /// Fused multiply-add. Computes `(self * a) + b`.
       ///
       /// If there is hardware FMA support, this computes the result with only
@@ -986,6 +1012,33 @@ macro_rules! impl_simd_float {
       #[must_use]
       pub fn fast_mul_add(self, a: Self, b: Self) -> Self {
         self.fast_mul_add_backend(a, b)
+      }
+
+      /// Fused multiply-subtract. Computes `(self * a) - b` with only one
+      /// rounding error, yielding a more accurate result than an unfused
+      /// multiply-subtract.
+      ///
+      /// This is equivalent to primitive float [`mul_add`], but the name
+      /// `mul_sub` is already taken by a deprecated function.
+      ///
+      /// On targets with hardware FMA, this is faster than an unfused
+      /// multiply-subtract. However, on targets without hardware FMA, this uses
+      /// software emulation which is significantly slower. Consider using
+      /// [`fast_mul_sub`] which selects the faster operation between fused and
+      /// unfused.
+      ///
+      /// # Precision
+      ///
+      /// The result of this operation is guaranteed to be the rounded
+      /// infinite-precision result. It is specified by IEEE 754 as
+      /// `fusedMultiplyAdd` and guaranteed not to change.
+      ///
+      /// [`mul_add`]: https://doc.rust-lang.org/std/primitive.f32.html#method.mul_add
+      /// [`fast_mul_sub`]: Self::fast_mul_sub
+      #[inline]
+      #[must_use]
+      pub fn precise_mul_sub(self, a: Self, b: Self) -> Self {
+        self.precise_mul_sub_backend(a, b)
       }
 
       /// Fused multiply-sub. Computes `(self * a) - b`.
@@ -999,6 +1052,33 @@ macro_rules! impl_simd_float {
         self.fast_mul_sub_backend(a, b)
       }
 
+      /// Fused multiply-negate-add. Computes `-(self * a) + b` with only one
+      /// rounding error, yielding a more accurate result than an unfused
+      /// multiply-negate-add.
+      ///
+      /// This is equivalent to primitive float [`mul_add`], but the name
+      /// `mul_neg_add` is already taken by a deprecated function.
+      ///
+      /// On targets with hardware FMA, this is faster than an unfused
+      /// multiply-negate-add. However, on targets without hardware FMA, this
+      /// uses software emulation which is significantly slower. Consider using
+      /// [`fast_mul_neg_add`] which selects the faster operation between fused
+      /// and unfused.
+      ///
+      /// # Precision
+      ///
+      /// The result of this operation is guaranteed to be the rounded
+      /// infinite-precision result. It is specified by IEEE 754 as
+      /// `fusedMultiplyAdd` and guaranteed not to change.
+      ///
+      /// [`mul_add`]: https://doc.rust-lang.org/std/primitive.f32.html#method.mul_add
+      /// [`fast_mul_neg_add`]: Self::fast_mul_neg_add
+      #[inline]
+      #[must_use]
+      pub fn precise_mul_neg_add(self, a: Self, b: Self) -> Self {
+        self.precise_mul_neg_add_backend(a, b)
+      }
+
       /// Fused multiply-negate-add. Computes `-(self * a) + b`.
       ///
       /// If there is hardware FMA support, this computes the result with only
@@ -1008,6 +1088,33 @@ macro_rules! impl_simd_float {
       #[must_use]
       pub fn fast_mul_neg_add(self, a: Self, b: Self) -> Self {
         self.fast_mul_neg_add_backend(a, b)
+      }
+
+      /// Fused multiply-negate-subtract. Computes `-(self * a) - b` with only
+      /// one rounding error, yielding a more accurate result than an unfused
+      /// multiply-negate-subtract.
+      ///
+      /// This is equivalent to primitive float [`mul_add`], but the name
+      /// `mul_neg_sub` is already taken by a deprecated function.
+      ///
+      /// On targets with hardware FMA, this is faster than an unfused
+      /// multiply-negate-subtract. However, on targets without hardware FMA,
+      /// this uses software emulation which is significantly slower. Consider
+      /// using [`fast_mul_neg_sub`] which selects the faster operation between
+      /// fused and unfused.
+      ///
+      /// # Precision
+      ///
+      /// The result of this operation is guaranteed to be the rounded
+      /// infinite-precision result. It is specified by IEEE 754 as
+      /// `fusedMultiplyAdd` and guaranteed not to change.
+      ///
+      /// [`mul_add`]: https://doc.rust-lang.org/std/primitive.f32.html#method.mul_add
+      /// [`fast_mul_neg_sub`]: Self::fast_mul_neg_sub
+      #[inline]
+      #[must_use]
+      pub fn precise_mul_neg_sub(self, a: Self, b: Self) -> Self {
+        self.precise_mul_neg_sub_backend(a, b)
       }
 
       /// Fused multiply-negate-sub. Computes `-(self * a) - b`.
