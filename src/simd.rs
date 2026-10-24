@@ -51,7 +51,7 @@ pub trait SimdElement: Sealed {
 /// [`Simd<T, N>`] would support all combinations of `T` and `N`, the trait
 /// bound would be removed and this trait would be deprecated.
 #[expect(private_bounds)]
-pub trait SupportedSimd: Sealed + SimdInner {
+pub trait SupportedSimd: Sealed + SimdInner + SimdAssociatedTypes {
     /// Add a dummy associated constant in order to avoid marking this trait as
     /// dyn compatible.
     ///
@@ -69,7 +69,9 @@ pub trait SupportedSimd: Sealed + SimdInner {
 
 pub(crate) trait SimdInner {
     type Inner: Copy;
+}
 
+pub(crate) trait SimdBackend {
     fn simd_eq_backend(self, other: Self) -> Self;
 
     fn simd_ne_backend(self, other: Self) -> Self;
@@ -112,6 +114,13 @@ pub(crate) trait SimdInner {
     // fn transpose_backend(data: [Self; N]) -> [Self; N];
     // fn replace_const_backend<const INDEX: usize>(self, value: T) -> Self;
     // fn extract_const_backend<const INDEX: usize>(self) -> T;
+}
+
+pub(crate) trait SimdAssociatedTypes {
+    type T;
+    type WithT<T2: SimdElement + Sized>
+    where
+        Self::WithT<T2>: SupportedSimd;
 }
 
 /// A trait for lanewise SIMD selection.
@@ -515,7 +524,7 @@ macro_rules! define_simd {
     /// `{simd-type}(Inner)`. Wait until the generics API is ready to be merged
     /// onto `main`, only then remove this function if decided so (wait to avoid
     /// merge conflicts with `main`).
-    pub(crate) fn $Simd(inner: <$Simd as SimdBackend>::Inner) -> $Simd {
+    pub(crate) fn $Simd(inner: <$Simd as SimdInner>::Inner) -> $Simd {
       Simd(inner)
     }
 
@@ -1584,6 +1593,18 @@ macro_rules! simd_backend_unsigned_autofill {
     ) => {
         // There are currently no such functions.
     };
+}
+
+impl<T, const N: usize> SimdAssociatedTypes for Simd<T, N>
+where
+    T: SimdElement,
+    Simd<T, N>: SupportedSimd,
+{
+    type T = T;
+    type WithT<T2: SimdElement + Sized>
+        = Simd<T2, N>
+    where
+        Simd<T2, N>: SupportedSimd;
 }
 
 impl Sealed for f32 {}
