@@ -4,6 +4,8 @@ use bytemuck::{Pod, Zeroable, cast, pod_align_to, pod_align_to_mut};
 #[cfg(feature = "serde")]
 use serde_core::{Deserialize, Serialize, ser::SerializeTuple};
 
+use crate::PrimitiveUnsigned;
+
 /// TODO(generics): Add documentation and explain how to use SIMD vectors.
 ///
 /// # Layout
@@ -33,6 +35,9 @@ pub trait SimdElement: Sealed {
     /// guarantee that all SIMD element types implement `Sized`.
     #[doc(hidden)]
     const NOT_DYN_COMPATIBLE_MARKER: () = ();
+
+    /// The unsigned integer with the same size as `Self`.
+    type Unsigned: PrimitiveUnsigned;
 }
 
 /// A trait for [`Simd<T, N>`] types that are actually supported.
@@ -54,10 +59,59 @@ pub trait SupportedSimd: Sealed + SimdInner {
     /// guarantee that all SIMD vector types implement `Sized`.
     #[doc(hidden)]
     const NOT_DYN_COMPATIBLE_MARKER: () = ();
+
+    /// The type used in [`Simd::to_bitmask`].
+    ///
+    /// This is [`u32`] for most SIMD types and [`u64`] for [`u8x64`] and
+    /// [`i8x64`].
+    type Bitmask: PrimitiveUnsigned;
 }
 
 pub(crate) trait SimdInner {
     type Inner: Copy;
+
+    fn simd_eq_backend(self, other: Self) -> Self;
+
+    fn simd_ne_backend(self, other: Self) -> Self;
+
+    fn simd_lt_backend(self, other: Self) -> Self;
+
+    fn simd_gt_backend(self, other: Self) -> Self;
+
+    fn simd_le_backend(self, other: Self) -> Self;
+
+    fn simd_ge_backend(self, other: Self) -> Self;
+
+    fn select_backend(self, if_true: Self, if_false: Self) -> Self;
+
+    fn to_bitmask_backend(self) -> Self::Bitmask
+    where
+        Self: SupportedSimd;
+
+    fn any_backend(self) -> bool;
+
+    fn all_backend(self) -> bool;
+
+    fn interleave_low_backend(self, other: Self) -> Self;
+
+    fn interleave_high_backend(self, other: Self) -> Self;
+
+    // TODO(generics): Find a trick to have these functions
+    // fn shuffle_backend(self, indices: Simd<T::Unsigned, N>) -> Self;
+    // fn shuffle_zeroing_backend(self, indices: Simd<T::Unsigned, N>) -> Self;
+    // fn shuffle_wrapping_backend(self, indices: Simd<T::Unsigned, N>) -> Self;
+    // fn shuffle_2_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
+    // fn shuffle_2_zeroing_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
+    // fn shuffle_2_wrapping_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
+    // fn shuffle_3_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
+    // fn shuffle_3_zeroing_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
+    // fn shuffle_3_wrapping_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
+    // fn shuffle_4_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
+    // fn shuffle_4_zeroing_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
+    // fn shuffle_4_wrapping_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
+    // fn transpose_backend(data: [Self; N]) -> [Self; N];
+    // fn replace_const_backend<const INDEX: usize>(self, value: T) -> Self;
+    // fn extract_const_backend<const INDEX: usize>(self) -> T;
 }
 
 /// A trait for lanewise SIMD selection.
@@ -391,20 +445,48 @@ where
 
 trait Sealed {}
 
-impl SimdElement for f32 {}
-impl SimdElement for f64 {}
-impl SimdElement for i8 {}
-impl SimdElement for i16 {}
-impl SimdElement for i32 {}
-impl SimdElement for i64 {}
-impl SimdElement for i128 {}
-impl SimdElement for isize {}
-impl SimdElement for u8 {}
-impl SimdElement for u16 {}
-impl SimdElement for u32 {}
-impl SimdElement for u64 {}
-impl SimdElement for u128 {}
-impl SimdElement for usize {}
+impl SimdElement for f32 {
+    type Unsigned = u32;
+}
+impl SimdElement for f64 {
+    type Unsigned = u64;
+}
+impl SimdElement for i8 {
+    type Unsigned = u8;
+}
+impl SimdElement for i16 {
+    type Unsigned = u16;
+}
+impl SimdElement for i32 {
+    type Unsigned = u32;
+}
+impl SimdElement for i64 {
+    type Unsigned = u64;
+}
+impl SimdElement for i128 {
+    type Unsigned = u128;
+}
+impl SimdElement for isize {
+    type Unsigned = usize;
+}
+impl SimdElement for u8 {
+    type Unsigned = u8;
+}
+impl SimdElement for u16 {
+    type Unsigned = u16;
+}
+impl SimdElement for u32 {
+    type Unsigned = u32;
+}
+impl SimdElement for u64 {
+    type Unsigned = u64;
+}
+impl SimdElement for u128 {
+    type Unsigned = u128;
+}
+impl SimdElement for usize {
+    type Unsigned = usize;
+}
 
 macro_rules! define_simd {
   (
@@ -437,7 +519,9 @@ macro_rules! define_simd {
       Simd(inner)
     }
 
-    impl SupportedSimd for Simd<$T, $N> {}
+    impl SupportedSimd for Simd<$T, $N> {
+      type Bitmask = $Bitmask;
+    }
 
     impl PartialEq for $Simd {
       #[inline]
