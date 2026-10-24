@@ -8,7 +8,7 @@ pub(crate) struct Inner {
     pub hi: u64x4,
 }
 
-impl SimdBackend for u64x8 {
+impl SimdInner for u64x8 {
     pick! {
       if #[cfg(target_feature="avx512f")] {
         type Inner = __m512i;

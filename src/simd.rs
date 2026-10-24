@@ -12,7 +12,7 @@ use serde_core::{Deserialize, Serialize, ser::SerializeTuple};
 /// alignment, what about non-power-of-two lane counts).
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct Simd<T, const N: usize>(pub(crate) <Self as SimdBackend>::Inner)
+pub struct Simd<T, const N: usize>(pub(crate) <Self as SimdInner>::Inner)
 where
     T: SimdElement,
     Simd<T, N>: SupportedSimd;
@@ -46,7 +46,7 @@ pub trait SimdElement: Sealed {
 /// [`Simd<T, N>`] would support all combinations of `T` and `N`, the trait
 /// bound would be removed and this trait would be deprecated.
 #[expect(private_bounds)]
-pub trait SupportedSimd: Sealed + SimdBackend {
+pub trait SupportedSimd: Sealed + SimdInner {
     /// Add a dummy associated constant in order to avoid marking this trait as
     /// dyn compatible.
     ///
@@ -56,7 +56,7 @@ pub trait SupportedSimd: Sealed + SimdBackend {
     const NOT_DYN_COMPATIBLE_MARKER: () = ();
 }
 
-pub(crate) trait SimdBackend {
+pub(crate) trait SimdInner {
     type Inner: Copy;
 }
 

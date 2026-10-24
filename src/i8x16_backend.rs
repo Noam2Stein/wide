@@ -11,7 +11,7 @@ pub(crate) struct Inner {
     pub arr: [i8; 16],
 }
 
-impl SimdBackend for i8x16 {
+impl SimdInner for i8x16 {
     pick! {
       if #[cfg(target_feature="sse2")] {
         type Inner = __m128i;
