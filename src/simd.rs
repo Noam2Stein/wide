@@ -98,29 +98,106 @@ pub(crate) trait SimdBackend {
 
     fn interleave_high_backend(self, other: Self) -> Self;
 
-    // TODO(generics): Find a trick to have these functions
-    // fn shuffle_backend(self, indices: Simd<T::Unsigned, N>) -> Self;
-    // fn shuffle_zeroing_backend(self, indices: Simd<T::Unsigned, N>) -> Self;
-    // fn shuffle_wrapping_backend(self, indices: Simd<T::Unsigned, N>) -> Self;
-    // fn shuffle_2_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
-    // fn shuffle_2_zeroing_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
-    // fn shuffle_2_wrapping_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
-    // fn shuffle_3_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
-    // fn shuffle_3_zeroing_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
-    // fn shuffle_3_wrapping_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
-    // fn shuffle_4_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
-    // fn shuffle_4_zeroing_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
-    // fn shuffle_4_wrapping_backend(inputs: [Self; 2], indices: Simd<T::Unsigned, N>) -> Self;
-    // fn transpose_backend(data: [Self; N]) -> [Self; N];
-    // fn replace_const_backend<const INDEX: usize>(self, value: T) -> Self;
-    // fn extract_const_backend<const INDEX: usize>(self) -> T;
+    fn shuffle_backend(self, indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SupportedSimd;
+
+    fn shuffle_zeroing_backend(self, indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SupportedSimd;
+
+    fn shuffle_wrapping_backend(self, indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SupportedSimd;
+
+    fn shuffle_2_backend(inputs: [Self; 2], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SupportedSimd + Sized;
+
+    fn shuffle_2_zeroing_backend(inputs: [Self; 2], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SupportedSimd + Sized;
+
+    fn shuffle_2_wrapping_backend(inputs: [Self; 2], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SupportedSimd + Sized;
+
+    fn shuffle_3_backend(inputs: [Self; 2], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SupportedSimd + Sized;
+
+    fn shuffle_3_zeroing_backend(inputs: [Self; 2], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SupportedSimd + Sized;
+
+    fn shuffle_3_wrapping_backend(inputs: [Self; 2], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SupportedSimd + Sized;
+
+    fn shuffle_4_backend(inputs: [Self; 2], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SupportedSimd + Sized;
+
+    fn shuffle_4_zeroing_backend(inputs: [Self; 2], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SupportedSimd + Sized;
+
+    fn shuffle_4_wrapping_backend(inputs: [Self; 2], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SupportedSimd + Sized;
+
+    fn transpose_backend(data: Self::Matrix) -> Self::Matrix
+    where
+        Self: SupportedSimd;
+
+    fn replace_const_backend<const INDEX: usize>(self, value: Self::T) -> Self
+    where
+        Self: SupportedSimd;
+
+    fn extract_const_backend<const INDEX: usize>(self) -> Self::T
+    where
+        Self: SupportedSimd;
 }
 
-pub(crate) trait SimdAssociatedTypes {
+/// Bypasses language limitations in order to allow functions that use the `T`
+/// and `N` parameters to be included in [`SimdBackend`].
+///
+/// Due to language limitations, the [`SimdBackend`] trait cannot be made
+/// generic over `T` and `N` without [`SupportedSimd`] also being made so (which
+/// we do not want, since that would be an odd trait-bound for users:
+/// `where Simd<T, N>: SupportedSimd<T, N>`).
+///
+/// Because of this, the [`SimdBackend`] trait does not have access to `T` and
+/// `N`, making it impossible to add any functions that use those parameters in
+/// types, such as [`Simd::transpose`] and [`Simd::shuffle`]. To bypass this
+/// limitation, this trait exists to provide those types.
+///
+/// This trait cannot simply include a `const N: usize;` associated constant
+/// next to `T`, since const-generic parameters cannot be used in type
+/// expressions on current stable Rust. Instead, this trait defines whatever
+/// types are required for existing functions, and is implemented for each
+/// concrete type in the `define_simd!` macro.
+///
+/// In generic contexts, the compiler does not know that the types in this trait
+/// actually correspond to what they say they correspond to. Because of that,
+/// usage of this trait's types usually requires using unsafe transmutations.
+///
+/// This trick is definitely awkward, but it works and it's not exposed publcly,
+/// so it's *okay*.
+///
+/// # Safety
+///
+/// Implementations must fill associated types exactly as they are documented,
+/// and generic code may assume they do.
+pub(crate) unsafe trait SimdAssociatedTypes {
+    /// If `Self` is `Simd<T, N>`, this corresponds to `T`.
     type T;
-    type WithT<T2: SimdElement + Sized>
-    where
-        Self::WithT<T2>: SupportedSimd;
+
+    /// If `Self` is `Simd<T, N>`, this corresponds to `Simd<T::Unsigned, N>`.
+    type UnsignedSimd;
+
+    /// If `Self` is `Simd<T, N>`, this corresponds to `[Self; N]`.
+    type Matrix;
 }
 
 /// A trait for lanewise SIMD selection.
@@ -1593,18 +1670,6 @@ macro_rules! simd_backend_unsigned_autofill {
     ) => {
         // There are currently no such functions.
     };
-}
-
-impl<T, const N: usize> SimdAssociatedTypes for Simd<T, N>
-where
-    T: SimdElement,
-    Simd<T, N>: SupportedSimd,
-{
-    type T = T;
-    type WithT<T2: SimdElement + Sized>
-        = Simd<T2, N>
-    where
-        Simd<T2, N>: SupportedSimd;
 }
 
 impl Sealed for f32 {}
