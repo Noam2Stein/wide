@@ -19,7 +19,7 @@ impl SimdBackend for i16x32 {
     }
 
     #[inline]
-    pub(crate) fn simd_lt_backend(self, rhs: Self) -> Self {
+    fn simd_lt_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512bw")] {
             Self(_mm512_maskz_mov_epi16(
@@ -36,7 +36,7 @@ impl SimdBackend for i16x32 {
     }
 
     #[inline]
-    pub(crate) fn simd_gt_backend(self, rhs: Self) -> Self {
+    fn simd_gt_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512bw")] {
             Self(_mm512_maskz_mov_epi16(_mm512_cmp_epi16_mask::<{_MM_CMPINT_NLE}>(self.0, rhs.0),
@@ -52,7 +52,7 @@ impl SimdBackend for i16x32 {
     }
 
     #[inline]
-    pub(crate) fn simd_le_backend(self, rhs: Self) -> Self {
+    fn simd_le_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512bw")] {
             Self(_mm512_maskz_mov_epi16(_mm512_cmp_epi16_mask::<{_MM_CMPINT_LE}>(self.0, rhs.0),
@@ -68,7 +68,7 @@ impl SimdBackend for i16x32 {
     }
 
     #[inline]
-    pub(crate) fn simd_ge_backend(self, rhs: Self) -> Self {
+    fn simd_ge_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512bw")] {
             Self(_mm512_maskz_mov_epi16(_mm512_cmp_epi16_mask::<{_MM_CMPINT_NLT}>(self.0, rhs.0),

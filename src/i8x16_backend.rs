@@ -26,7 +26,7 @@ impl SimdBackend for i8x16 {
     }
 
     #[inline]
-    pub(crate) fn simd_lt_backend(self, rhs: Self) -> Self {
+    fn simd_lt_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse2")] {
             Self(_mm_cmplt_epi8(self.0, rhs.0))
@@ -58,7 +58,7 @@ impl SimdBackend for i8x16 {
     }
 
     #[inline]
-    pub(crate) fn simd_gt_backend(self, rhs: Self) -> Self {
+    fn simd_gt_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse2")] {
             Self(_mm_cmpgt_epi8(self.0, rhs.0))
@@ -90,7 +90,7 @@ impl SimdBackend for i8x16 {
     }
 
     #[inline]
-    pub(crate) fn simd_le_backend(self, rhs: Self) -> Self {
+    fn simd_le_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse2")] {
             !self.simd_gt(rhs)
@@ -122,7 +122,7 @@ impl SimdBackend for i8x16 {
     }
 
     #[inline]
-    pub(crate) fn simd_ge_backend(self, rhs: Self) -> Self {
+    fn simd_ge_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse2")] {
             !self.simd_lt(rhs)

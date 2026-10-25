@@ -19,7 +19,7 @@ impl SimdBackend for f32x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_eq_backend(self, rhs: Self) -> Self {
+    fn simd_eq_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx")] {
             Self(_mm256_cmp_ps::<{_CMP_EQ_OQ}>(self.0, rhs.0))
@@ -33,7 +33,7 @@ impl SimdBackend for f32x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_ne_backend(self, rhs: Self) -> Self {
+    fn simd_ne_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx")] {
             Self(_mm256_cmp_ps::<{_CMP_NEQ_UQ}>(self.0, rhs.0))
@@ -47,7 +47,7 @@ impl SimdBackend for f32x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_lt_backend(self, rhs: Self) -> Self {
+    fn simd_lt_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx")] {
             Self(_mm256_cmp_ps::<{_CMP_LT_OQ}>(self.0, rhs.0))
@@ -61,7 +61,7 @@ impl SimdBackend for f32x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_gt_backend(self, rhs: Self) -> Self {
+    fn simd_gt_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx")] {
             Self(_mm256_cmp_ps::<{_CMP_GT_OQ}>(self.0, rhs.0))
@@ -75,7 +75,7 @@ impl SimdBackend for f32x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_le_backend(self, rhs: Self) -> Self {
+    fn simd_le_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx")] {
             Self(_mm256_cmp_ps::<{_CMP_LE_OQ}>(self.0, rhs.0))
@@ -89,7 +89,7 @@ impl SimdBackend for f32x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_ge_backend(self, rhs: Self) -> Self {
+    fn simd_ge_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx")] {
             Self(_mm256_cmp_ps::<{_CMP_GE_OQ}>(self.0, rhs.0))
@@ -103,7 +103,7 @@ impl SimdBackend for f32x8 {
     }
 
     #[inline]
-    pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
+    fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx")] {
             Self(_mm256_blendv_ps(if_false.0, if_true.0, self.0))
@@ -117,7 +117,7 @@ impl SimdBackend for f32x8 {
     }
 
     #[inline]
-    pub(crate) fn to_bitmask_backend(self) -> u32 {
+    fn to_bitmask_backend(self) -> u32 {
         pick! {
           if #[cfg(target_feature="avx")] {
             _mm256_movemask_ps(self.0) as u32
@@ -128,7 +128,7 @@ impl SimdBackend for f32x8 {
     }
 
     #[inline]
-    pub(crate) fn any_backend(self) -> bool {
+    fn any_backend(self) -> bool {
         pick! {
           if #[cfg(target_feature="avx")] {
             _mm256_movemask_ps(self.0) != 0
@@ -139,7 +139,7 @@ impl SimdBackend for f32x8 {
     }
 
     #[inline]
-    pub(crate) fn all_backend(self) -> bool {
+    fn all_backend(self) -> bool {
         pick! {
           if #[cfg(target_feature="avx")] {
             _mm256_movemask_ps(self.0) == 0b11111111
@@ -150,17 +150,17 @@ impl SimdBackend for f32x8 {
     }
 
     #[inline]
-    pub(crate) fn interleave_low_backend(self, other: Self) -> Self {
+    fn interleave_low_backend(self, other: Self) -> Self {
         Self::from_bits(self.to_bits().interleave_low(other.to_bits()))
     }
 
     #[inline]
-    pub(crate) fn interleave_high_backend(self, other: Self) -> Self {
+    fn interleave_high_backend(self, other: Self) -> Self {
         Self::from_bits(self.to_bits().interleave_high(other.to_bits()))
     }
 
     #[inline]
-    pub(crate) fn transpose_backend(data: [f32x8; 8]) -> [f32x8; 8] {
+    fn transpose_backend(data: [f32x8; 8]) -> [f32x8; 8] {
         pick! {
           if #[cfg(target_feature="avx")] {
             let a0 = _mm256_unpacklo_ps(data[0].0, data[1].0);

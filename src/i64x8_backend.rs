@@ -19,7 +19,7 @@ impl SimdBackend for i64x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_lt_backend(self, rhs: Self) -> Self {
+    fn simd_lt_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512f")] {
             Self(_mm512_maskz_mov_epi64(
@@ -36,7 +36,7 @@ impl SimdBackend for i64x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_gt_backend(self, rhs: Self) -> Self {
+    fn simd_gt_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512f")] {
             Self(_mm512_maskz_mov_epi64(
@@ -53,7 +53,7 @@ impl SimdBackend for i64x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_le_backend(self, rhs: Self) -> Self {
+    fn simd_le_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512f")] {
             Self(_mm512_maskz_mov_epi64(
@@ -70,7 +70,7 @@ impl SimdBackend for i64x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_ge_backend(self, rhs: Self) -> Self {
+    fn simd_ge_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512f")] {
             Self(_mm512_maskz_mov_epi64(
