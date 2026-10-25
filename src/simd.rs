@@ -1413,16 +1413,10 @@ macro_rules! define_simd {
   };
 }
 
-/// Automatically fills SIMD backend functions that have the same implementation
-/// for all SIMD float types.
+/// Automatically fills [`SimdBackend`] functions that have the same
+/// implementation for all SIMD float types.
 macro_rules! simd_backend_float_autofill {
-    (
-        T = $T:ident,
-        N = $N:literal,
-        Simd = $Simd:ident,
-        UnsignedSimd = $UnsignedSimd:ident,
-        Bitmask = $Bitmask:ident,
-    ) => {
+    (T = $T:ident, N = $N:literal) => {
         #[inline]
         fn replace_const_backend<const INDEX: usize>(self, value: $T) -> Self {
             Self::from_bits(self.to_bits().replace_const::<INDEX>(value.to_bits()))
