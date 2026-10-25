@@ -11,7 +11,8 @@ pub(crate) struct Inner {
     pub arr: [u16; 8],
 }
 
-impl SimdInner for u16x8 {
+safe_target_feature! {
+impl SimdBackend for u16x8 {
     pick! {
       if #[cfg(target_feature="sse2")] {
         type Inner = __m128i;
@@ -23,11 +24,7 @@ impl SimdInner for u16x8 {
         type Inner = Inner;
       }
     }
-}
 
-safe_target_feature! {
-// Backend of general-SIMD functions.
-impl u16x8 {
     #[inline]
     pub(crate) fn simd_eq_backend(self, rhs: Self) -> Self {
         pick! {

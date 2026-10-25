@@ -11,7 +11,8 @@ pub(crate) struct Inner {
     pub arr: [u8; 16],
 }
 
-impl SimdInner for u8x16 {
+safe_target_feature! {
+impl SimdBackend for u8x16 {
     pick! {
       if #[cfg(target_feature="sse2")] {
         type Inner = __m128i;
@@ -23,13 +24,9 @@ impl SimdInner for u8x16 {
         type Inner = Inner;
       }
     }
-}
 
-safe_target_feature! {
-// Backend of general-SIMD functions.
-impl u8x16 {
     #[inline]
-    pub(crate) fn simd_eq_backend(self, rhs: Self) -> Self {
+    fn simd_eq_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse2")] {
             Self(_mm_cmpeq_epi8(self.0, rhs.0))
@@ -61,7 +58,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn simd_ne_backend(self, rhs: Self) -> Self {
+    fn simd_ne_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse2")] {
             !self.simd_eq(rhs)
@@ -93,7 +90,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn simd_lt_backend(self, rhs: Self) -> Self {
+    fn simd_lt_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse2")] {
             // Convert from u8 to i8.
@@ -129,7 +126,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn simd_gt_backend(self, rhs: Self) -> Self {
+    fn simd_gt_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse2")] {
             // Convert from u8 to i8.
@@ -165,7 +162,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn simd_le_backend(self, rhs: Self) -> Self {
+    fn simd_le_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse2")] {
             // Convert from u8 to i8.
@@ -203,7 +200,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn simd_ge_backend(self, rhs: Self) -> Self {
+    fn simd_ge_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse2")] {
             // Convert from u8 to i8.
@@ -241,7 +238,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
+    fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse4.1")] {
             Self(_mm_blendv_epi8(if_false.0, if_true.0, self.0))
@@ -256,7 +253,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn to_bitmask_backend(self) -> u32 {
+    fn to_bitmask_backend(self) -> u32 {
         pick! {
           if #[cfg(target_feature="sse2")] {
             _mm_movemask_epi8(self.0) as u32
@@ -302,7 +299,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn any_backend(self) -> bool {
+    fn any_backend(self) -> bool {
         pick! {
           if #[cfg(target_feature="sse2")] {
             _mm_movemask_epi8(self.0) != 0
@@ -318,7 +315,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn all_backend(self) -> bool {
+    fn all_backend(self) -> bool {
         pick! {
           if #[cfg(target_feature="sse2")] {
             _mm_movemask_epi8(self.0) == 0b1111_1111_1111_1111
@@ -334,7 +331,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn interleave_low_backend(self, other: Self) -> Self {
+    fn interleave_low_backend(self, other: Self) -> Self {
         pick! {
             if #[cfg(target_feature = "sse2")] {
                 u8x16(_mm_unpacklo_epi8(self.0, other.0))
@@ -362,7 +359,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn interleave_high_backend(self, other: Self) -> Self {
+    fn interleave_high_backend(self, other: Self) -> Self {
         pick! {
             if #[cfg(target_feature = "sse2")] {
                 u8x16(_mm_unpackhi_epi8(self.0, other.0))
@@ -390,7 +387,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn shuffle_backend(self, indices: u8x16) -> Self {
+    fn shuffle_backend(self, indices: u8x16) -> Self {
         pick! {
           if #[cfg(target_feature="ssse3")] {
             Self(_mm_shuffle_epi8(self.0, indices.0))
@@ -418,7 +415,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn shuffle_zeroing_backend(self, indices: u8x16) -> Self {
+    fn shuffle_zeroing_backend(self, indices: u8x16) -> Self {
         pick! {
           if #[cfg(target_feature="ssse3")] {
             Self(_mm_shuffle_epi8(
@@ -435,7 +432,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn shuffle_wrapping_backend(self, indices: u8x16) -> Self {
+    fn shuffle_wrapping_backend(self, indices: u8x16) -> Self {
         pick! {
           if #[cfg(all(target_feature = "avx512vbmi", target_feature = "avx512vl"))] {
             Self(_mm_permutexvar_epi8(indices.0, self.0))
@@ -446,7 +443,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn shuffle_2_backend(inputs: [Self; 2], indices: u8x16) -> u8x16 {
+    fn shuffle_2_backend(inputs: [Self; 2], indices: u8x16) -> u8x16 {
         pick! {
           if #[cfg(all(target_feature = "avx512vbmi", target_feature = "avx512vl"))] {
             u8x16(_mm_permutex2var_epi8(inputs[0].0, indices.0, inputs[1].0))
@@ -460,7 +457,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn shuffle_zeroing_2_backend(inputs: [Self; 2], indices: u8x16) -> u8x16 {
+    fn shuffle_zeroing_2_backend(inputs: [Self; 2], indices: u8x16) -> u8x16 {
         pick! {
           if #[cfg(all(target_feature = "avx512vbmi", target_feature = "avx512vl"))] {
             inputs.shuffle(indices) & indices.simd_lt(32)
@@ -471,7 +468,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn shuffle_wrapping_2_backend(inputs: [Self; 2], indices: u8x16) -> u8x16 {
+    fn shuffle_wrapping_2_backend(inputs: [Self; 2], indices: u8x16) -> u8x16 {
         pick! {
           if #[cfg(all(target_feature = "avx512vbmi", target_feature = "avx512vl"))] {
             // `avx512` shuffle intrinsics are wrapping
@@ -483,7 +480,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn shuffle_3_backend(inputs: [Self; 3], indices: u8x16) -> u8x16 {
+    fn shuffle_3_backend(inputs: [Self; 3], indices: u8x16) -> u8x16 {
         pick! {
           if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
             let table = uint8x16x3_t(inputs[0].0, inputs[1].0, inputs[2].0);
@@ -495,17 +492,17 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn shuffle_zeroing_3_backend(inputs: [Self; 3], indices: u8x16) -> u8x16 {
+    fn shuffle_zeroing_3_backend(inputs: [Self; 3], indices: u8x16) -> u8x16 {
         inputs.shuffle(indices)
     }
 
     #[inline]
-    pub(crate) fn shuffle_wrapping_3_backend(inputs: [Self; 3], indices: u8x16) -> u8x16 {
+    fn shuffle_wrapping_3_backend(inputs: [Self; 3], indices: u8x16) -> u8x16 {
         inputs.shuffle(indices % 48)
     }
 
     #[inline]
-    pub(crate) fn shuffle_4_backend(inputs: [Self; 4], indices: u8x16) -> u8x16 {
+    fn shuffle_4_backend(inputs: [Self; 4], indices: u8x16) -> u8x16 {
         pick! {
           if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
             let table = uint8x16x4_t(inputs[0].0, inputs[1].0, inputs[2].0, inputs[3].0);
@@ -518,17 +515,17 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn shuffle_zeroing_4_backend(inputs: [Self; 4], indices: u8x16) -> u8x16 {
+    fn shuffle_zeroing_4_backend(inputs: [Self; 4], indices: u8x16) -> u8x16 {
         inputs.shuffle(indices)
     }
 
     #[inline]
-    pub(crate) fn shuffle_wrapping_4_backend(inputs: [Self; 4], indices: u8x16) -> u8x16 {
+    fn shuffle_wrapping_4_backend(inputs: [Self; 4], indices: u8x16) -> u8x16 {
         inputs.shuffle(indices & 63)
     }
 
     #[inline]
-    pub(crate) fn transpose_backend(data: [Self; 16]) -> [Self; 16] {
+    fn transpose_backend(data: [Self; 16]) -> [Self; 16] {
         // Can this be optimized?
 
         #[inline(always)]
@@ -574,7 +571,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn replace_const_backend<const INDEX: usize>(self, value: u8) -> Self {
+    fn replace_const_backend<const INDEX: usize>(self, value: u8) -> Self {
         /// Because of limitations in const generics, this must have separate
         /// branches per index. This macro is used to avoid duplication.
         macro_rules! use_indices {
@@ -626,7 +623,7 @@ impl u8x16 {
     }
 
     #[inline]
-    pub(crate) fn extract_const_backend<const INDEX: usize>(self) -> u8 {
+    fn extract_const_backend<const INDEX: usize>(self) -> u8 {
         /// Because of limitations in const generics, this must have separate
         /// branches per index. This macro is used to avoid duplication.
         macro_rules! use_indices {

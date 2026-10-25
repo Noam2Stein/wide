@@ -14,7 +14,7 @@ use crate::PrimitiveUnsigned;
 /// alignment, what about non-power-of-two lane counts).
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct Simd<T, const N: usize>(pub(crate) <Self as SimdInner>::Inner)
+pub struct Simd<T, const N: usize>(pub(crate) <Self as SimdBackend>::Inner)
 where
     T: SimdElement,
     Simd<T, N>: SupportedSimd;
@@ -51,7 +51,7 @@ pub trait SimdElement: Sealed {
 /// [`Simd<T, N>`] would support all combinations of `T` and `N`, the trait
 /// bound would be removed and this trait would be deprecated.
 #[expect(private_bounds)]
-pub trait SupportedSimd: Sealed + SimdInner {
+pub trait SupportedSimd: Sealed + SimdBackend {
     /// Add a dummy associated constant in order to avoid marking this trait as
     /// dyn compatible.
     ///
@@ -67,11 +67,9 @@ pub trait SupportedSimd: Sealed + SimdInner {
     type Bitmask: PrimitiveUnsigned;
 }
 
-pub(crate) trait SimdInner {
-    type Inner: Copy;
-}
-
 pub(crate) trait SimdBackend {
+    type Inner: Copy;
+
     fn simd_eq_backend(self, other: Self) -> Self;
 
     fn simd_ne_backend(self, other: Self) -> Self;
@@ -114,35 +112,35 @@ pub(crate) trait SimdBackend {
     where
         Self: SimdAssociatedTypes + SupportedSimdWithT<<Self::T as SimdElement>::Unsigned> + Sized;
 
-    fn shuffle_2_zeroing_backend(inputs: [Self; 2], indices: UnsignedSimd<Self>) -> Self
+    fn shuffle_zeroing_2_backend(inputs: [Self; 2], indices: UnsignedSimd<Self>) -> Self
     where
         Self: SimdAssociatedTypes + SupportedSimdWithT<<Self::T as SimdElement>::Unsigned> + Sized;
 
-    fn shuffle_2_wrapping_backend(inputs: [Self; 2], indices: UnsignedSimd<Self>) -> Self
+    fn shuffle_wrapping_2_backend(inputs: [Self; 2], indices: UnsignedSimd<Self>) -> Self
     where
         Self: SimdAssociatedTypes + SupportedSimdWithT<<Self::T as SimdElement>::Unsigned> + Sized;
 
-    fn shuffle_3_backend(inputs: [Self; 2], indices: UnsignedSimd<Self>) -> Self
+    fn shuffle_3_backend(inputs: [Self; 3], indices: UnsignedSimd<Self>) -> Self
     where
         Self: SimdAssociatedTypes + SupportedSimdWithT<<Self::T as SimdElement>::Unsigned> + Sized;
 
-    fn shuffle_3_zeroing_backend(inputs: [Self; 2], indices: UnsignedSimd<Self>) -> Self
+    fn shuffle_zeroing_3_backend(inputs: [Self; 3], indices: UnsignedSimd<Self>) -> Self
     where
         Self: SimdAssociatedTypes + SupportedSimdWithT<<Self::T as SimdElement>::Unsigned> + Sized;
 
-    fn shuffle_3_wrapping_backend(inputs: [Self; 2], indices: UnsignedSimd<Self>) -> Self
+    fn shuffle_wrapping_3_backend(inputs: [Self; 3], indices: UnsignedSimd<Self>) -> Self
     where
         Self: SimdAssociatedTypes + SupportedSimdWithT<<Self::T as SimdElement>::Unsigned> + Sized;
 
-    fn shuffle_4_backend(inputs: [Self; 2], indices: UnsignedSimd<Self>) -> Self
+    fn shuffle_4_backend(inputs: [Self; 4], indices: UnsignedSimd<Self>) -> Self
     where
         Self: SimdAssociatedTypes + SupportedSimdWithT<<Self::T as SimdElement>::Unsigned> + Sized;
 
-    fn shuffle_4_zeroing_backend(inputs: [Self; 2], indices: UnsignedSimd<Self>) -> Self
+    fn shuffle_zeroing_4_backend(inputs: [Self; 4], indices: UnsignedSimd<Self>) -> Self
     where
         Self: SimdAssociatedTypes + SupportedSimdWithT<<Self::T as SimdElement>::Unsigned> + Sized;
 
-    fn shuffle_4_wrapping_backend(inputs: [Self; 2], indices: UnsignedSimd<Self>) -> Self
+    fn shuffle_wrapping_4_backend(inputs: [Self; 4], indices: UnsignedSimd<Self>) -> Self
     where
         Self: SimdAssociatedTypes + SupportedSimdWithT<<Self::T as SimdElement>::Unsigned> + Sized;
 
@@ -582,7 +580,7 @@ macro_rules! define_simd {
     /// `{simd-type}(Inner)`. Wait until the generics API is ready to be merged
     /// onto `main`, only then remove this function if decided so (wait to avoid
     /// merge conflicts with `main`).
-    pub(crate) fn $Simd(inner: <$Simd as SimdInner>::Inner) -> $Simd {
+    pub(crate) fn $Simd(inner: <$Simd as SimdBackend>::Inner) -> $Simd {
       Simd(inner)
     }
 

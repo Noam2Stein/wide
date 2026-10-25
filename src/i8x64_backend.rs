@@ -8,7 +8,8 @@ pub(crate) struct Inner {
     pub hi: i8x32,
 }
 
-impl SimdInner for i8x64 {
+safe_target_feature! {
+impl SimdBackend for i8x64 {
     pick! {
       if #[cfg(target_feature="avx512bw")] {
         type Inner = __m512i;
@@ -16,11 +17,7 @@ impl SimdInner for i8x64 {
         type Inner = Inner;
       }
     }
-}
 
-safe_target_feature! {
-// Backend of general-SIMD functions.
-impl i8x64 {
     #[inline]
     pub(crate) fn simd_lt_backend(self, rhs: Self) -> Self {
         rhs.simd_gt(self)
