@@ -81,15 +81,15 @@ pub(crate) trait SimdBackend {
     type Inner: Copy;
 }
 
-type ArrayOf<T, Simd> = <Simd as AssociatedArrayOf<T>>::ArrayOf;
+pub(crate) type ArrayOf<T, Simd> = <Simd as AssociatedArrayOf<T>>::ArrayOf;
 
-type SimdOf<T, Simd> = <Simd as AssociatedSimdOf<T>>::SimdOf;
+pub(crate) type SimdOf<T, Simd> = <Simd as AssociatedSimdOf<T>>::SimdOf;
 
-trait AssociatedArrayOf<T> {
+pub(crate) trait AssociatedArrayOf<T> {
     type ArrayOf;
 }
 
-trait AssociatedSimdOf<T> {
+pub(crate) trait AssociatedSimdOf<T> {
     type SimdOf;
 }
 
