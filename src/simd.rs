@@ -81,6 +81,18 @@ pub(crate) trait SimdBackend {
     type Inner: Copy;
 }
 
+type ArrayOf<T, Simd> = <Simd as AssociatedArrayOf<T>>::ArrayOf;
+
+type SimdOf<T, Simd> = <Simd as AssociatedSimdOf<T>>::SimdOf;
+
+trait AssociatedArrayOf<T> {
+    type ArrayOf;
+}
+
+trait AssociatedSimdOf<T> {
+    type SimdOf;
+}
+
 /// A trait for lanewise SIMD selection.
 ///
 /// The method [`select`] is used to select lanes from two SIMD values based on
@@ -1654,6 +1666,24 @@ macro_rules! simd_backend_unsigned_autofill {
     ($T:ident, $N:literal) => {
         // There are currently no such functions.
     };
+}
+
+impl<T, const N: usize, U> AssociatedArrayOf<U> for Simd<T, N>
+where
+    T: SimdElement,
+    Simd<T, N>: SupportedSimd,
+{
+    type ArrayOf = [U; N];
+}
+
+impl<T, const N: usize, U> AssociatedSimdOf<U> for Simd<T, N>
+where
+    T: SimdElement,
+    Simd<T, N>: SupportedSimd,
+    U: SimdElement,
+    Simd<U, N>: SupportedSimd,
+{
+    type SimdOf = Simd<U, N>;
 }
 
 impl Sealed for f32 {}
