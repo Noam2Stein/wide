@@ -79,18 +79,109 @@ pub trait SupportedSimd: Sealed + SimdBackend {
 
 pub(crate) trait SimdBackend {
     type Inner: Copy;
+
+    fn simd_eq_backend(self, other: Self) -> Self;
+
+    fn simd_ne_backend(self, other: Self) -> Self;
+
+    fn simd_lt_backend(self, other: Self) -> Self;
+
+    fn simd_gt_backend(self, other: Self) -> Self;
+
+    fn simd_le_backend(self, other: Self) -> Self;
+
+    fn simd_ge_backend(self, other: Self) -> Self;
+
+    fn select_backend(self, if_true: Self, if_false: Self) -> Self;
+
+    fn to_bitmask_backend(self) -> Self::Bitmask
+    where
+        Self: SupportedSimd;
+
+    fn any_backend(self) -> bool;
+
+    fn all_backend(self) -> bool;
+
+    fn interleave_low_backend(self, other: Self) -> Self;
+
+    fn interleave_high_backend(self, other: Self) -> Self;
+
+    fn shuffle_backend(self, indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+
+    fn shuffle_zeroing_backend(self, indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+
+    fn shuffle_wrapping_backend(self, indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+
+    fn shuffle_2_backend(inputs: [Self; 2], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+
+    fn shuffle_zeroing_2_backend(inputs: [Self; 2], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+
+    fn shuffle_wrapping_2_backend(inputs: [Self; 2], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+
+    fn shuffle_3_backend(inputs: [Self; 3], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+
+    fn shuffle_zeroing_3_backend(inputs: [Self; 3], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+
+    fn shuffle_wrapping_3_backend(inputs: [Self; 3], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+
+    fn shuffle_4_backend(inputs: [Self; 4], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+
+    fn shuffle_zeroing_4_backend(inputs: [Self; 4], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+
+    fn shuffle_wrapping_4_backend(inputs: [Self; 4], indices: Self::UnsignedSimd) -> Self
+    where
+        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+
+    fn transpose_backend(data: Self::ArrayOf<Self>) -> Self::ArrayOf<Self>
+    where
+        Self: SimdAssociatedTypes;
+
+    fn replace_const_backend<const INDEX: usize>(self, value: Self::T) -> Self
+    where
+        Self: SimdAssociatedTypes;
+
+    fn extract_const_backend<const INDEX: usize>(self) -> Self::T
+    where
+        Self: SimdAssociatedTypes;
 }
 
-pub(crate) type ArrayOf<T, Simd> = <Simd as AssociatedArrayOf<T>>::ArrayOf;
+pub(crate) trait SimdAssociatedTypes: Sized {
+    type T;
+    type ArrayOf<T>;
+    type SimdOf<T>
+    where
+        Self: SupportSimdOf<T>;
 
-pub(crate) type SimdOf<T, Simd> = <Simd as AssociatedSimdOf<T>>::SimdOf;
-
-pub(crate) trait AssociatedArrayOf<T> {
-    type ArrayOf;
+    type UnsignedT;
+    type UnsignedSimd: ?Sized
+    where
+        Self: SupportSimdOf<Self::UnsignedT>;
 }
 
-pub(crate) trait AssociatedSimdOf<T> {
-    type SimdOf;
+pub(crate) trait SupportSimdOf<T> {
+    type Ty;
 }
 
 /// A trait for lanewise SIMD selection.
@@ -1668,22 +1759,33 @@ macro_rules! simd_backend_unsigned_autofill {
     };
 }
 
-impl<T, const N: usize, U> AssociatedArrayOf<U> for Simd<T, N>
+impl<T, const N: usize> SimdAssociatedTypes for Simd<T, N>
 where
     T: SimdElement,
     Simd<T, N>: SupportedSimd,
 {
-    type ArrayOf = [U; N];
+    type T = T;
+    type ArrayOf<U> = [U; N];
+    type SimdOf<U>
+        = <Self as SupportSimdOf<U>>::Ty
+    where
+        Self: SupportSimdOf<U>;
+
+    type UnsignedT = T::Unsigned;
+    type UnsignedSimd
+        = <Self as SupportSimdOf<T::Unsigned>>::Ty
+    where
+        Self: SupportSimdOf<T::Unsigned>;
 }
 
-impl<T, const N: usize, U> AssociatedSimdOf<U> for Simd<T, N>
+impl<T, const N: usize, U> SupportSimdOf<U> for Simd<T, N>
 where
     T: SimdElement,
     Simd<T, N>: SupportedSimd,
     U: SimdElement,
     Simd<U, N>: SupportedSimd,
 {
-    type SimdOf = Simd<U, N>;
+    type Ty = Simd<U, N>;
 }
 
 impl Sealed for f32 {}
