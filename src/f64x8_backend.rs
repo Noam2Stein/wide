@@ -19,7 +19,7 @@ impl SimdBackend for f64x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_eq_backend(self, rhs: Self) -> Self {
+    fn simd_eq_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512f")] {
             Self(_mm512_maskz_mov_pd(
@@ -36,7 +36,7 @@ impl SimdBackend for f64x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_ne_backend(self, rhs: Self) -> Self {
+    fn simd_ne_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512f")] {
             Self(_mm512_maskz_mov_pd(
@@ -53,7 +53,7 @@ impl SimdBackend for f64x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_lt_backend(self, rhs: Self) -> Self {
+    fn simd_lt_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512f")] {
             Self(_mm512_maskz_mov_pd(
@@ -70,7 +70,7 @@ impl SimdBackend for f64x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_gt_backend(self, rhs: Self) -> Self {
+    fn simd_gt_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512f")] {
             Self(_mm512_maskz_mov_pd(
@@ -87,7 +87,7 @@ impl SimdBackend for f64x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_le_backend(self, rhs: Self) -> Self {
+    fn simd_le_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512f")] {
             Self(_mm512_maskz_mov_pd(
@@ -104,7 +104,7 @@ impl SimdBackend for f64x8 {
     }
 
     #[inline]
-    pub(crate) fn simd_ge_backend(self, rhs: Self) -> Self {
+    fn simd_ge_backend(self, rhs: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512f")] {
             Self(_mm512_maskz_mov_pd(
@@ -121,7 +121,7 @@ impl SimdBackend for f64x8 {
     }
 
     #[inline]
-    pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
+    fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512dq")] {
             Self(_mm512_mask_blend_pd(
@@ -142,7 +142,7 @@ impl SimdBackend for f64x8 {
     }
 
     #[inline]
-    pub(crate) fn to_bitmask_backend(self) -> u32 {
+    fn to_bitmask_backend(self) -> u32 {
         pick! {
           if #[cfg(target_feature="avx512dq")] {
             _mm512_movepi64_mask(_mm512_castpd_si512(self.0)) as u32
@@ -154,7 +154,7 @@ impl SimdBackend for f64x8 {
     }
 
     #[inline]
-    pub(crate) fn any_backend(self) -> bool {
+    fn any_backend(self) -> bool {
         pick! {
           if #[cfg(target_feature="avx512dq")] {
             _mm512_movepi64_mask(_mm512_castpd_si512(self.0)) != 0
@@ -166,7 +166,7 @@ impl SimdBackend for f64x8 {
     }
 
     #[inline]
-    pub(crate) fn all_backend(self) -> bool {
+    fn all_backend(self) -> bool {
         pick! {
           if #[cfg(target_feature="avx512dq")] {
             _mm512_movepi64_mask(_mm512_castpd_si512(self.0)) == 0b11111111
@@ -178,17 +178,17 @@ impl SimdBackend for f64x8 {
     }
 
     #[inline]
-    pub(crate) fn interleave_low_backend(self, other: Self) -> Self {
+    fn interleave_low_backend(self, other: Self) -> Self {
         Self::from_bits(self.to_bits().interleave_low(other.to_bits()))
     }
 
     #[inline]
-    pub(crate) fn interleave_high_backend(self, other: Self) -> Self {
+    fn interleave_high_backend(self, other: Self) -> Self {
         Self::from_bits(self.to_bits().interleave_high(other.to_bits()))
     }
 
     #[inline]
-    pub(crate) fn transpose_backend(data: [f64x8; 8]) -> [f64x8; 8] {
+    fn transpose_backend(data: [f64x8; 8]) -> [f64x8; 8] {
         // Can this be optimized?
 
         #[inline(always)]
