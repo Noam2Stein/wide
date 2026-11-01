@@ -151,6 +151,21 @@ trait NotPrimitiveInteger {}
 macro_rules! impl_primitive_integer {
     ($T:ident) => {
         impl PrimitiveInteger for $T {}
+
+        impl_unary_operator!(
+            T = $T,
+            Neg,
+            neg,
+            neg_backend,
+            /// Computes wrapping negation for each element of `self`.
+        );
+        impl_unary_operator!(
+            T = $T,
+            Not,
+            not,
+            not_backend,
+            /// Computes bitwise NOT for each element of `self`.
+        );
     };
 }
 impl_primitive_integer!(i8);
@@ -725,21 +740,6 @@ macro_rules! impl_simd_integer {
         T_BITS_MUL_2 = $T_BITS_MUL_2:literal,
         INDICES = [$($INDEX:literal),* $(,)?],
     ) => {
-        impl_unary_operator!(
-            $Simd,
-            Neg,
-            neg,
-            neg_backend,
-            /// Computes wrapping negation for each element of `self`.
-        );
-        impl_unary_operator!(
-            $Simd,
-            Not,
-            not,
-            not_backend,
-            /// Computes bitwise NOT for each element of `self`.
-        );
-
         impl_binary_operator!(
             $T,
             $Simd,

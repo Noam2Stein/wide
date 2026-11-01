@@ -417,6 +417,26 @@ where
     }
 }
 
+impl_unary_operator!(
+  T: PrimitiveFloat,
+  Neg,
+  neg,
+  neg_backend,
+  /// Computes negation for each element of `self`.
+  ///
+  /// This always returns the precise result, simply flipping the sign-bit.
+);
+impl_unary_operator!(
+  T: PrimitiveFloat,
+  Not,
+  not,
+  not_backend,
+  /// Computes bitwise NOT for each element of `self`.
+  ///
+  /// This computes bitwise NOT, even though the `!` operator is not
+  /// implemented for Rust's primitive floats.
+);
+
 macro_rules! impl_simd_float {
   (
       T = $T:ident,
@@ -425,26 +445,6 @@ macro_rules! impl_simd_float {
       UnsignedT = $UnsignedT:ident,
       UnsignedSimd = $UnsignedSimd:ident,
   ) => {
-    impl_unary_operator!(
-      $Simd,
-      Neg,
-      neg,
-      neg_backend,
-      /// Computes negation for each element of `self`.
-      ///
-      /// This always returns the precise result, simply flipping the sign-bit.
-    );
-    impl_unary_operator!(
-      $Simd,
-      Not,
-      not,
-      not_backend,
-      /// Computes bitwise NOT for each element of `self`.
-      ///
-      /// This computes bitwise NOT, even though the `!` operator is not
-      /// implemented for Rust's primitive floats.
-    );
-
     impl_binary_operator!(
       $T,
       $Simd,

@@ -139,9 +139,20 @@ macro_rules! pick {
   };
 }
 
+/// Implements an unary operator for SIMD vectors of a given `T` type or a group
+/// of `T` types.
+///
+/// The first parameter this macro takes can be either:
+///
+/// - `T: $ElementBound:ident` to implement for any `T` that implements a trait
+/// - `T = $T:ident` to implement for one specific `T` type
 macro_rules! impl_unary_operator {
-  ($Simd:ident, $Op:ident, $op:ident, $op_backend:ident, $(#[$doc:meta])*) => {
-    impl $Op for $Simd {
+  (T: $ElementBound:ident, $Op:ident, $op:ident, $op_backend:ident, $(#[$doc:meta])*) => {
+    impl<T, const N: usize> $Op for Simd<T, N>
+    where
+        T: $ElementBound,
+        Simd<T, N>: SupportedSimd,
+    {
       type Output = Self;
 
       $(#[$doc])*
@@ -151,8 +162,12 @@ macro_rules! impl_unary_operator {
       }
     }
 
-    impl $Op for &$Simd {
-      type Output = $Simd;
+    impl<T, const N: usize> $Op for &Simd<T, N>
+    where
+        T: $ElementBound,
+        Simd<T, N>: SupportedSimd,
+    {
+      type Output = Simd<T, N>;
 
       $(#[$doc])*
       #[inline]
@@ -160,7 +175,34 @@ macro_rules! impl_unary_operator {
         self.$op_backend()
       }
     }
-  }
+  };
+  (T = $T:ident, $Op:ident, $op:ident, $op_backend:ident, $(#[$doc:meta])*) => {
+    impl<const N: usize> $Op for Simd<$T, N>
+    where
+        Simd<$T, N>: SupportedSimd,
+    {
+      type Output = Self;
+
+      $(#[$doc])*
+      #[inline]
+      fn $op(self) -> Self::Output {
+        self.$op_backend()
+      }
+    }
+
+    impl<const N: usize> $Op for &Simd<$T, N>
+    where
+        Simd<$T, N>: SupportedSimd,
+    {
+      type Output = Simd<$T, N>;
+
+      $(#[$doc])*
+      #[inline]
+      fn $op(self) -> Self::Output {
+        self.$op_backend()
+      }
+    }
+  };
 }
 
 macro_rules! impl_binary_operator {
