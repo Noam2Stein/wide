@@ -546,17 +546,8 @@ impl_unary_operator!(
 );
 */
 
-macro_rules! impl_simd_float {
-  (
-      T = $T:ident,
-      Simd = $Simd:ident,
-      SignedSimd = $SignedSimd:ident,
-      UnsignedT = $UnsignedT:ident,
-      UnsignedSimd = $UnsignedSimd:ident,
-  ) => {
     impl_binary_operator!(
-      $T,
-      $Simd,
+      T: PrimitiveFloat,
       Add,
       add,
       AddAssign,
@@ -572,8 +563,7 @@ macro_rules! impl_simd_float {
       /// This always returns the precise result.
     );
     impl_binary_operator!(
-      $T,
-      $Simd,
+      T: PrimitiveFloat,
       Sub,
       sub,
       SubAssign,
@@ -589,8 +579,7 @@ macro_rules! impl_simd_float {
       /// This always returns the precise result.
     );
     impl_binary_operator!(
-      $T,
-      $Simd,
+      T: PrimitiveFloat,
       Mul,
       mul,
       MulAssign,
@@ -607,8 +596,7 @@ macro_rules! impl_simd_float {
       /// This always returns the precise result.
     );
     impl_binary_operator!(
-      $T,
-      $Simd,
+      T: PrimitiveFloat,
       Div,
       div,
       DivAssign,
@@ -624,8 +612,7 @@ macro_rules! impl_simd_float {
       /// This always returns the precise result.
     );
     impl_binary_operator!(
-      $T,
-      $Simd,
+      T: PrimitiveFloat,
       Rem,
       rem,
       RemAssign,
@@ -642,8 +629,7 @@ macro_rules! impl_simd_float {
       /// This always returns the precise result.
     );
     impl_binary_operator!(
-      $T,
-      $Simd,
+      T: PrimitiveFloat,
       BitAnd,
       bitand,
       BitAndAssign,
@@ -661,8 +647,7 @@ macro_rules! impl_simd_float {
       /// implemented for Rust's primitive floats.
     );
     impl_binary_operator!(
-      $T,
-      $Simd,
+      T: PrimitiveFloat,
       BitOr,
       bitor,
       BitOrAssign,
@@ -680,8 +665,7 @@ macro_rules! impl_simd_float {
       /// implemented for Rust's primitive floats.
     );
     impl_binary_operator!(
-      $T,
-      $Simd,
+      T: PrimitiveFloat,
       BitXor,
       bitxor,
       BitXorAssign,
@@ -699,6 +683,14 @@ macro_rules! impl_simd_float {
       /// implemented for Rust's primitive floats.
     );
 
+macro_rules! impl_simd_float {
+  (
+      T = $T:ident,
+      Simd = $Simd:ident,
+      SignedSimd = $SignedSimd:ident,
+      UnsignedT = $UnsignedT:ident,
+      UnsignedSimd = $UnsignedSimd:ident,
+  ) => {
     impl<Rhs> core::iter::Sum<Rhs> for $Simd
     where
       $Simd: AddAssign<Rhs>,
