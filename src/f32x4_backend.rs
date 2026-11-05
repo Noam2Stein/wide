@@ -2008,25 +2008,5 @@ impl f32x4 {
     fn nan_pow() -> Self {
         cast::<_, f32x4>(i32x4::splat(0x7FC00000 | 0x101 & 0x003FFFFF))
     }
-
-    #[inline]
-    pub(crate) fn from_i32x4_backend(v: i32x4) -> Self {
-        pick! {
-          if #[cfg(target_feature="sse2")] {
-            Self(_mm_cvtepi32_ps(v.0))
-          } else if #[cfg(target_feature="simd128")] {
-            Self(f32x4_convert_i32x4(v.0))
-          } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))] {
-            Self(vcvtq_f32_s32(v.0))
-          } else {
-            Self::from_array([
-                v.as_array()[0] as f32,
-                v.as_array()[1] as f32,
-                v.as_array()[2] as f32,
-                v.as_array()[3] as f32,
-            ])
-          }
-        }
-    }
 }
 }

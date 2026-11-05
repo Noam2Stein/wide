@@ -44,7 +44,7 @@ impl f32x4 {
     #[inline]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i32x4(v: i32x4) -> Self {
-        Self::from_i32x4_backend(v)
+        v.cast::<f32>()
     }
 
     /// Returns a [mask] that checks if each element has a negative sign,
@@ -88,7 +88,7 @@ impl f32x8 {
     #[inline]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i32x8(v: i32x8) -> Self {
-        Self::from_i32x8_backend(v)
+        v.cast::<f32>()
     }
 
     /// Returns a [mask] that checks if each element has a negative sign,
@@ -132,7 +132,7 @@ impl f32x16 {
     #[inline]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i32x16(v: i32x16) -> Self {
-        Self::from_i32x16_backend(v)
+        v.cast::<f32>()
     }
 
     /// Returns a [mask] that checks if each element has a negative sign,

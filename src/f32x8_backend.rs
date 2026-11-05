@@ -1644,25 +1644,5 @@ impl f32x8 {
     fn nan_pow() -> Self {
         cast::<_, f32x8>(i32x8::splat(0x7FC00000 | 0x101 & 0x003FFFFF))
     }
-
-    #[inline]
-    pub(crate) fn from_i32x8_backend(v: i32x8) -> Self {
-        pick! {
-          if #[cfg(target_feature="avx2")] {
-            Self(_mm256_cvtepi32_ps(v.0))
-          } else {
-            Self::from_array([
-                v.as_array()[0] as f32,
-                v.as_array()[1] as f32,
-                v.as_array()[2] as f32,
-                v.as_array()[3] as f32,
-                v.as_array()[4] as f32,
-                v.as_array()[5] as f32,
-                v.as_array()[6] as f32,
-                v.as_array()[7] as f32,
-              ])
-          }
-        }
-    }
 }
 }

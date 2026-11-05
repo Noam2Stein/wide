@@ -1639,19 +1639,5 @@ impl f32x16 {
     fn nan_pow() -> Self {
         cast::<_, f32x16>(i32x16::splat(0x7FC00000 | 0x101 & 0x003FFFFF))
     }
-
-    #[inline]
-    pub(crate) fn from_i32x16_backend(v: i32x16) -> Self {
-        pick! {
-          if #[cfg(target_feature="avx512f")] {
-            Self(_mm512_cvtepi32_ps(v.0))
-          } else {
-            Self(Inner {
-              lo: v.0.lo.cast::<f32>(),
-              hi: v.0.hi.cast::<f32>(),
-            })
-          }
-        }
-    }
 }
 }
