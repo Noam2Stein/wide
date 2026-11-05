@@ -37,7 +37,12 @@ impl f32x4 {
     }
 
     /// Converts each element from [`i32`] to [`f32`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](i32x4::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i32x4(v: i32x4) -> Self {
         Self::from_i32x4_backend(v)
     }
@@ -76,7 +81,12 @@ impl f32x4 {
 /// particular types inconsistently.
 impl f32x8 {
     /// Converts each element from [`i32`] to [`f32`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](i32x8::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i32x8(v: i32x8) -> Self {
         Self::from_i32x8_backend(v)
     }
@@ -115,7 +125,12 @@ impl f32x8 {
 /// particular types inconsistently.
 impl f32x16 {
     /// Converts each element from [`i32`] to [`f32`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](i32x16::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i32x16(v: i32x16) -> Self {
         Self::from_i32x16_backend(v)
     }
@@ -205,7 +220,12 @@ impl f64x4 {
 /// particular types inconsistently.
 impl f64x8 {
     /// Converts each element from [`i32`] to [`f64`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](i32x8::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i32x8(v: i32x8) -> Self {
         Self::from_i32x8_backend(v)
     }
@@ -228,7 +248,12 @@ impl f64x8 {
 /// particular types inconsistently.
 impl f64x4 {
     /// Converts each element from [`i32`] to [`f64`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](i32x4::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i32x4(v: i32x4) -> Self {
         Self::from_i32x4_backend(v)
     }
@@ -249,8 +274,13 @@ impl i8x16 {
     /// values (behaves like [`as`] casting).
     ///
     /// [`as`]: https://doc.rust-lang.org/stable/reference/expressions/operator-expr.html#r-expr.as.numeric
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](i16x16::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i16x16_truncate(v: i16x16) -> i8x16 {
         Self::from_i16x16_truncate_backend(v)
     }
@@ -395,8 +425,13 @@ impl i16x8 {
     /// values (behaves like [`as`] casting).
     ///
     /// [`as`]: https://doc.rust-lang.org/stable/reference/expressions/operator-expr.html#r-expr.as.numeric
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](i32x8::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i32x8_truncate(v: i32x8) -> Self {
         Self::from_i32x8_truncate_backend(v)
     }
@@ -470,8 +505,13 @@ impl i16x8 {
 /// particular types inconsistently.
 impl i16x16 {
     /// Converts each element from [`i8`] to [`i16`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](i8x16::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i8x16(v: i8x16) -> Self {
         Self::from_i8x16_backend(v)
     }
@@ -518,8 +558,13 @@ impl i16x16 {
 /// particular types inconsistently.
 impl i16x32 {
     /// Converts each element from [`i8`] to [`i16`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](i8x32::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i8x32(v: i8x32) -> Self {
         Self::from_i8x32_backend(v)
     }
@@ -556,8 +601,13 @@ impl i32x4 {
     }
 
     /// Converts each element from [`i32`] to [`f32`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](Self::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn round_float(self) -> f32x4 {
         self.round_float_backend()
     }
@@ -582,22 +632,37 @@ impl i32x4 {
 /// particular types inconsistently.
 impl i32x8 {
     /// Converts each element from [`i16`] to [`i32`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](i16x8::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i16x8(v: i16x8) -> Self {
         Self::from_i16x8_backend(v)
     }
 
     /// Converts each element from [`u16`] to [`i32`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](u16x8::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_u16x8(v: u16x8) -> Self {
         Self::from_u16x8_backend(v)
     }
 
     /// Converts each element from [`i32`] to [`f32`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](Self::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn round_float(self) -> f32x8 {
         self.round_float_backend()
     }
@@ -607,15 +672,25 @@ impl i32x8 {
 /// particular types inconsistently.
 impl i32x16 {
     /// Converts each element from [`i16`] to [`i32`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](i16x16::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i16x16(v: i16x16) -> Self {
         Self::from_i16x16_backend(v)
     }
 
     /// Converts each element from [`i32`] to [`f32`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](Self::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn round_float(self) -> f32x16 {
         self.round_float_backend()
     }
@@ -639,8 +714,13 @@ impl i64x2 {
     }
 
     /// Converts each element from [`i64`] to [`f64`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](Self::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn round_float(self) -> f64x2 {
         self.round_float_backend()
     }
@@ -650,8 +730,13 @@ impl i64x2 {
 /// particular types inconsistently.
 impl i64x4 {
     /// Converts each element from [`i64`] to [`f64`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](Self::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn round_float(self) -> f64x4 {
         self.round_float_backend()
     }
@@ -661,8 +746,13 @@ impl i64x4 {
 /// particular types inconsistently.
 impl i64x8 {
     /// Converts each element from [`i64`] to [`f64`].
+    ///
+    /// This function has been deprecated and replaced by the generic
+    /// [`cast`](Self::cast) method.
+    // TODO(PR): Fix the `since` in the deprecated
     #[inline]
     #[must_use]
+    #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn round_float(self) -> f64x8 {
         self.round_float_backend()
     }
