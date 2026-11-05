@@ -73,6 +73,13 @@ impl i16x16 {
     }
 
     #[inline]
+    pub(crate) fn cast_u8_backend(self) -> u8x16 {
+      // Casting to a smaller integer behaves the same for signed and unsigned
+      // inputs.
+      self.cast_unsigned().cast::<u8>()
+    }
+
+    #[inline]
     pub(crate) fn cast_u32_backend(self) -> u32x16 {
         pick! {
           if #[cfg(target_feature="avx512f")] {

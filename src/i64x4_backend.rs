@@ -77,6 +77,13 @@ impl i64x4 {
         let arr: [i64; 4] = cast(self);
         cast([arr[0] as f64, arr[1] as f64, arr[2] as f64, arr[3] as f64])
     }
+
+    #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x4 {
+      // Casting to a smaller integer behaves the same for signed and unsigned
+      // inputs.
+      self.cast_unsigned().cast::<u32>()
+    }
 }
 }
 

@@ -105,6 +105,13 @@ impl i32x8 {
           }
         }
     }
+
+    #[inline]
+    pub(crate) fn cast_u16_backend(self) -> u16x8 {
+      // Casting to a smaller integer behaves the same for signed and unsigned
+      // inputs.
+      self.cast_unsigned().cast::<u16>()
+    }
 }
 }
 
