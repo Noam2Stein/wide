@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_cast)]
 
-use wide::{f32x4, f32x8, f32x16, i8x16, i8x32, i16x8, i16x16, i32x4, i32x8, i32x16, u8x16, u16x8};
+use wide::{i8x16, i8x32, i16x8, i16x16, i32x8, u8x16, u16x8};
 
 use crate::utils::{for_simd_types, random_iter, simd_chunks};
 
@@ -1313,25 +1313,6 @@ fn test_mul_keep_high() {
 }
 
 #[test]
-fn test_from_big_truncate() {
-    // `from_{big}_truncate` is inconsistently missing from types.
-
-    let value = i16x16::from_array([
-        10000, 1001, 2, 3, 4, 5, 6, 32767, 10000, 1001, 2, 128, -129, -128, 127, 255,
-    ]);
-    let expected = i8x16::from_array([
-        16, -23, 2, 3, 4, 5, 6, -1, 16, -23, 2, -128, 127, -128, 127, -1,
-    ]);
-    let actual = i8x16::from_i16x16_truncate(value);
-    assert_eq!(actual, expected);
-
-    let value = i32x8::from_array([10000, 1001, 2, 3, 4, 5, -65536, 65536]);
-    let expected = i16x8::from_array([10000, 1001, 2, 3, 4, 5, 0, 0]);
-    let actual = i16x8::from_i32x8_truncate(value);
-    assert_eq!(actual, expected);
-}
-
-#[test]
 fn test_from_big_saturate() {
     // `from_{big}_saturate` is inconsistently missing from types.
 
@@ -1347,37 +1328,6 @@ fn test_from_big_saturate() {
     let value = i32x8::from_array([10000, 1001, 2, 3, 4, 5, -65535, 65536]);
     let expected = i16x8::from_array([10000, 1001, 2, 3, 4, 5, -32768, 32767]);
     let actual = i16x8::from_i32x8_saturate(value);
-    assert_eq!(actual, expected);
-}
-
-#[test]
-fn test_round_float() {
-    // `round_float` only exists for select types.
-
-    let value = i32x4::from_array([-1, 30, i32::MIN, i32::MAX]);
-    let expected = f32x4::from_array([-1.0, 30.0, i32::MIN as f32, i32::MAX as f32]);
-    let actual = value.round_float();
-    assert_eq!(actual, expected);
-
-    let value = i32x16::from_array([0, 1, 2, 3, 4, 5, 6, 7, -8, -7, -6, -5, -4, -3, -2, -1]);
-    let expected = f32x16::from_array([
-        0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, -8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0,
-    ]);
-    let actual = value.round_float();
-    assert_eq!(actual, expected);
-
-    let value = i32x8::from_array([-1, 30, i32::MIN, i32::MAX, 29, 35, -8, 0]);
-    let expected = f32x8::from_array([
-        -1.0,
-        30.0,
-        i32::MIN as f32,
-        i32::MAX as f32,
-        29.0,
-        35.0,
-        -8.0,
-        0.0,
-    ]);
-    let actual = value.round_float();
     assert_eq!(actual, expected);
 }
 

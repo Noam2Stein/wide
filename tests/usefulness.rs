@@ -13,10 +13,10 @@ fn unpack_modify_and_repack_rgba_values() {
     let input = u32x4::from([0xFF0000FF, 0x00FF00FF, 0x0000FFFF, 0x000000FF]);
 
     // unpack
-    let r_actual = cast::<_, i32x4>(input >> 24).round_float();
-    let g_actual = cast::<_, i32x4>((input >> 16) & mask).round_float();
-    let b_actual = cast::<_, i32x4>((input >> 8) & mask).round_float();
-    let a_actual = cast::<_, i32x4>(input & mask).round_float();
+    let r_actual = cast::<_, i32x4>(input >> 24).cast::<f32>();
+    let g_actual = cast::<_, i32x4>((input >> 16) & mask).cast::<f32>();
+    let b_actual = cast::<_, i32x4>((input >> 8) & mask).cast::<f32>();
+    let a_actual = cast::<_, i32x4>(input & mask).cast::<f32>();
     let r_expected = f32x4::from([255.0, 0.0, 0.0, 0.0]);
     let g_expected = f32x4::from([0.0, 255.0, 0.0, 0.0]);
     let b_expected = f32x4::from([0.0, 0.0, 255.0, 0.0]);

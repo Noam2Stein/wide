@@ -392,8 +392,8 @@ impl i32x16 {
           } else {
             let [a, b]: [i16x8; 2] = cast(v);
             Self(Inner {
-              lo: i32x8::from_i16x8(a),
-              hi: i32x8::from_i16x8(b),
+              lo: a.cast::<i32>(),
+              hi: b.cast::<i32>(),
             })
           }
         }
@@ -406,8 +406,8 @@ impl i32x16 {
             cast(_mm512_cvtepi32_ps(self.0))
           } else {
             f32x16(crate::f32x16_backend::Inner {
-              lo: self.0.lo.round_float(),
-              hi: self.0.hi.round_float(),
+              lo: self.0.lo.cast::<f32>(),
+              hi: self.0.hi.cast::<f32>(),
             })
           }
         }

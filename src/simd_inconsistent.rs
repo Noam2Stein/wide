@@ -1122,14 +1122,14 @@ impl From<i32x4> for f64x2 {
 impl From<i32x4> for f64x4 {
     #[inline]
     fn from(v: i32x4) -> Self {
-        Self::from_i32x4(v)
+        v.cast::<f64>()
     }
 }
 
 impl From<i32x8> for f64x8 {
     #[inline]
     fn from(v: i32x8) -> Self {
-        Self::from_i32x8(v)
+        v.cast::<f64>()
     }
 }
 
@@ -1137,7 +1137,7 @@ impl From<i8x16> for i16x16 {
     /// widen with sign extend from i8 to i16
     #[inline]
     fn from(i: i8x16) -> Self {
-        i16x16::from_i8x16(i)
+        i.cast::<i16>()
     }
 }
 
@@ -1153,21 +1153,21 @@ impl From<i8x32> for i16x32 {
     /// widen with sign extend from i8 to i16
     #[inline]
     fn from(i: i8x32) -> Self {
-        i16x32::from_i8x32(i)
+        i.cast::<i16>()
     }
 }
 
 impl From<i16x8> for i32x8 {
     #[inline]
     fn from(value: i16x8) -> Self {
-        i32x8::from_i16x8(value)
+        value.cast::<i32>()
     }
 }
 
 impl From<i16x16> for i32x16 {
     #[inline]
     fn from(value: i16x16) -> Self {
-        i32x16::from_i16x16(value)
+        value.cast::<i32>()
     }
 }
 

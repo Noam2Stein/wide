@@ -468,8 +468,8 @@ impl i32x8 {
             cast(_mm256_cvtepi32_ps(self.0))
           } else {
             cast([
-              self.0.lo.round_float(),
-              self.0.hi.round_float(),
+              self.0.lo.cast::<f32>(),
+              self.0.hi.cast::<f32>(),
             ])
           }
         }

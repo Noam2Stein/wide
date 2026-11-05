@@ -1,4 +1,4 @@
-use wide::{f32x4, f32x8, f32x16, f64x2, f64x4, f64x8, i32x4, i32x8, i32x16};
+use wide::{f64x2, i32x4};
 
 use crate::utils::{for_simd_types, random_iter, simd_chunks};
 
@@ -1922,43 +1922,6 @@ fn test_is_sign_negative() {
             );
         }
     });
-}
-
-#[test]
-fn test_from_signed() {
-    // `from_{signed}` is inconsistently missing from types.
-
-    let signed = i32x4::from_array([1, 2, 3, 4]);
-    let expected = f32x4::from_array([1.0, 2.0, 3.0, 4.0]);
-    let actual = f32x4::from_i32x4(signed);
-    assert_eq!(actual, expected);
-
-    let signed = i32x8::from_array([1, 2, 3, 4, 5, 6, 7, 8]);
-    let expected = f32x8::from_array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-    let actual = f32x8::from_i32x8(signed);
-    assert_eq!(actual, expected);
-
-    let signed = i32x16::from_array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
-    let expected = f32x16::from_array([
-        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
-    ]);
-    let actual = f32x16::from_i32x16(signed);
-    assert_eq!(actual, expected);
-}
-
-#[test]
-fn test_from_small_signed() {
-    // This only exists for `f64` types.
-
-    let value = i32x4::from([1, 2, 3, 4]);
-    let expected = f64x4::from([1.0, 2.0, 3.0, 4.0]);
-    assert_eq!(f64x4::from(value), expected);
-    assert_eq!(f64x4::from_i32x4(value), expected);
-
-    let value = i32x8::from([1, 2, 3, 4, 5, 6, 7, 8]);
-    let expected = f64x8::from([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-    assert_eq!(f64x8::from(value), expected);
-    assert_eq!(f64x8::from_i32x8(value), expected);
 }
 
 #[test]

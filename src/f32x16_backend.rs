@@ -1647,8 +1647,8 @@ impl f32x16 {
             Self(_mm512_cvtepi32_ps(v.0))
           } else {
             Self(Inner {
-              lo: f32x8::from_i32x8(v.0.lo),
-              hi: f32x8::from_i32x8(v.0.hi),
+              lo: v.0.lo.cast::<f32>(),
+              hi: v.0.hi.cast::<f32>(),
             })
           }
         }

@@ -358,8 +358,8 @@ impl i16x32 {
           } else {
             let [a, b]: [i8x16; 2] = cast(v);
             Self(Inner {
-              lo: i16x16::from_i8x16(a),
-              hi: i16x16::from_i8x16(b),
+              lo: a.cast::<i16>(),
+              hi: b.cast::<i16>(),
             })
           }
         }
