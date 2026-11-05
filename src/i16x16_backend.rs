@@ -71,6 +71,21 @@ impl i16x16 {
           }
         }
     }
+
+    #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x16 {
+        pick! {
+          if #[cfg(target_feature="avx512f")] {
+            u32x16(_mm512_cvtepi16_epi32(self.0))
+          } else {
+            let [a, b]: [i16x8; 2] = cast(self);
+            u32x16(crate::u32x16_backend::Inner {
+              lo: a.cast::<u32>(),
+              hi: b.cast::<u32>(),
+            })
+          }
+        }
+    }
 }
 }
 
@@ -352,45 +367,6 @@ impl i16x16 {
 safe_target_feature! {
 // Internal helpers and backend of inconsistent functions.
 impl i16x16 {
-    #[inline]
-    pub(crate) fn from_i8x16_backend(v: i8x16) -> Self {
-        pick! {
-          if #[cfg(target_feature="avx2")] {
-            i16x16(_mm256_cvtepi8_epi16(v.0))
-          } else if #[cfg(target_feature="sse4.1")] {
-            Self(Inner {
-              lo: i16x8(_mm_cvtepi8_epi16(v.0)),
-              hi: i16x8(_mm_cvtepi8_epi16(_mm_unpackhi_epi64(v.0, v.0)))
-            })
-          } else if #[cfg(target_feature="sse2")] {
-            Self(Inner {
-              lo: i16x8(_mm_srai_epi16::<8>( _mm_unpacklo_epi8(v.0, v.0))),
-              hi: i16x8(_mm_srai_epi16::<8>( _mm_unpackhi_epi8(v.0, v.0))),
-            })
-          } else {
-
-            i16x16::from_array([
-              v.as_array()[0] as i16,
-              v.as_array()[1] as i16,
-              v.as_array()[2] as i16,
-              v.as_array()[3] as i16,
-              v.as_array()[4] as i16,
-              v.as_array()[5] as i16,
-              v.as_array()[6] as i16,
-              v.as_array()[7] as i16,
-              v.as_array()[8] as i16,
-              v.as_array()[9] as i16,
-              v.as_array()[10] as i16,
-              v.as_array()[11] as i16,
-              v.as_array()[12] as i16,
-              v.as_array()[13] as i16,
-              v.as_array()[14] as i16,
-              v.as_array()[15] as i16,
-              ])
-          }
-        }
-    }
-
     #[inline]
     pub(crate) fn dot_backend(self, rhs: Self) -> i32x8 {
         pick! {

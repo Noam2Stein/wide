@@ -23,8 +23,8 @@ macro_rules! safe_target_feature {
             safe_target_feature! { Self = $Self, $body }
         }
     };
-    (impl $Trait:ident for $Self:ident $body:tt) => {
-        impl $Trait for $Self {
+    (impl $Trait:ident $(<$TraitParam:ty>)? for $Self:ident $body:tt) => {
+        impl $Trait $(<$TraitParam>)? for $Self {
             safe_target_feature! { Self = $Self, $body }
         }
     };

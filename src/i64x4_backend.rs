@@ -71,6 +71,12 @@ impl i64x4 {
           }
         }
     }
+
+    #[inline]
+    pub(crate) fn cast_f64_backend(self) -> f64x4 {
+        let arr: [i64; 4] = cast(self);
+        cast([arr[0] as f64, arr[1] as f64, arr[2] as f64, arr[3] as f64])
+    }
 }
 }
 
@@ -356,17 +362,6 @@ impl i64x4 {
                 })
             }
         }
-    }
-}
-}
-
-safe_target_feature! {
-// Internal helpers and backend of inconsistent functions.
-impl i64x4 {
-    #[inline]
-    pub(crate) fn round_float_backend(self) -> f64x4 {
-        let arr: [i64; 4] = cast(self);
-        cast([arr[0] as f64, arr[1] as f64, arr[2] as f64, arr[3] as f64])
     }
 }
 }

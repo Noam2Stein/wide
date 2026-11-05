@@ -98,6 +98,43 @@ impl i32x4 {
           }
         }
     }
+
+    #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x4 {
+        pick! {
+          if #[cfg(target_feature="sse2")] {
+            cast(_mm_cvtepi32_ps(self.0))
+          } else if #[cfg(target_feature="simd128")] {
+            cast(Self(f32x4_convert_i32x4(self.0)))
+          } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
+            cast(Self(vreinterpretq_s32_f32(vcvtq_f32_s32(self.0))))
+          } else {
+            let arr: [i32; 4] = cast(self);
+            cast([
+              arr[0] as f32,
+              arr[1] as f32,
+              arr[2] as f32,
+              arr[3] as f32,
+            ])
+          }
+        }
+    }
+
+    #[inline]
+    pub(crate) fn cast_f64_backend(self) -> f64x4 {
+        pick! {
+          if #[cfg(target_feature="avx")] {
+            f64x4(_mm256_cvtepi32_pd(self.0))
+          } else {
+            f64x4::from_array([
+              self.as_array()[0] as f64,
+              self.as_array()[1] as f64,
+              self.as_array()[2] as f64,
+              self.as_array()[3] as f64,
+            ])
+          }
+        }
+    }
 }
 }
 
@@ -535,32 +572,6 @@ impl i32x4 {
                 let (result, overflow) = self.overflowing_add_unsigned(rhs);
                 overflow.select(Self::MAX, result)
             }
-        }
-    }
-}
-}
-
-safe_target_feature! {
-// Internal helpers and backend of inconsistent functions.
-impl i32x4 {
-    #[inline]
-    pub(crate) fn round_float_backend(self) -> f32x4 {
-        pick! {
-          if #[cfg(target_feature="sse2")] {
-            cast(_mm_cvtepi32_ps(self.0))
-          } else if #[cfg(target_feature="simd128")] {
-            cast(Self(f32x4_convert_i32x4(self.0)))
-          } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
-            cast(Self(vreinterpretq_s32_f32(vcvtq_f32_s32(self.0))))
-          } else {
-            let arr: [i32; 4] = cast(self);
-            cast([
-              arr[0] as f32,
-              arr[1] as f32,
-              arr[2] as f32,
-              arr[3] as f32,
-            ])
-          }
         }
     }
 }

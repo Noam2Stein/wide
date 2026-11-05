@@ -98,6 +98,75 @@ impl u16x16 {
     }
 
     #[inline]
+    pub(crate) fn cast_u8_backend(self) -> u8x16 {
+        pick! {
+          if #[cfg(target_feature="avx2")] {
+            let a = _mm256_and_si256(self.0, _mm256_set1_epi16(0xff));
+            u8x16(_mm_packus_epi16( _mm256_extractf128_si256::<0>(a), _mm256_extractf128_si256::<1>(a)))
+          } else if #[cfg(target_feature="sse2")] {
+            let mask = _mm_set1_epi16(0xff);
+            u8x16(_mm_packus_epi16(_mm_and_si128(self.0.lo.0, mask), _mm_and_si128(self.0.hi.0, mask)))
+          } else {
+            // no super good intrinsics on other platforms... plain old codegen does a reasonable job
+            u8x16::from_array([
+              self.as_array()[0] as u8,
+              self.as_array()[1] as u8,
+              self.as_array()[2] as u8,
+              self.as_array()[3] as u8,
+              self.as_array()[4] as u8,
+              self.as_array()[5] as u8,
+              self.as_array()[6] as u8,
+              self.as_array()[7] as u8,
+              self.as_array()[8] as u8,
+              self.as_array()[9] as u8,
+              self.as_array()[10] as u8,
+              self.as_array()[11] as u8,
+              self.as_array()[12] as u8,
+              self.as_array()[13] as u8,
+              self.as_array()[14] as u8,
+              self.as_array()[15] as u8,
+            ])
+          }
+        }
+    }
+
+    #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x16 {
+        pick! {
+          if #[cfg(target_feature = "avx512f")] {
+            u32x16(_mm512_cvtepu16_epi32(self.0))
+          } else if #[cfg(target_feature = "avx2")] {
+            let lo: __m128i = _mm256_extractf128_si256::<0>(self.0);
+            let hi: __m128i = _mm256_extractf128_si256::<1>(self.0);
+            u32x16(Inner {
+              lo: u32x8(_mm256_cvtepu16_epi32(lo)),
+              hi: u32x8(_mm256_cvtepu16_epi32(hi)),
+            })
+          } else if #[cfg(target_feature = "sse2")] {
+            u32x16(crate::u32x16_backend::Inner {
+              lo: u32x8(crate::u32x8_backend::Inner {
+                lo: u32x4(_mm_srli_epi32::<16>(_mm_unpacklo_epi16(self.0.lo.0, self.0.lo.0))),
+                hi: u32x4(_mm_srli_epi32::<16>(_mm_unpackhi_epi16(self.0.lo.0, self.0.lo.0))),
+              }),
+              hi: u32x8(crate::u32x8_backend::Inner {
+                lo: u32x4(_mm_srli_epi32::<16>(_mm_unpacklo_epi16(self.0.hi.0, self.0.hi.0))),
+                hi: u32x4(_mm_srli_epi32::<16>(_mm_unpackhi_epi16(self.0.hi.0, self.0.hi.0))),
+              }),
+            })
+          } else {
+            // Portable fallback
+            let arr = self.as_array();
+            u32x16::from_array([
+              arr[0] as u32,  arr[1] as u32,  arr[2] as u32,  arr[3] as u32,
+              arr[4] as u32,  arr[5] as u32,  arr[6] as u32,  arr[7] as u32,
+              arr[8] as u32,  arr[9] as u32,  arr[10] as u32, arr[11] as u32,
+              arr[12] as u32, arr[13] as u32, arr[14] as u32, arr[15] as u32,
+            ])
+          }
+        }
+    }
+
+    #[inline]
     pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx2")] {
@@ -860,40 +929,6 @@ impl u16x16 {
         const WITHIN_LANE: u16x16 = u16x16::splat(u16::from_ne_bytes([0, 1]));
 
         cast::<u16x16, u8x32>(base | WITHIN_LANE)
-    }
-
-    #[inline]
-    pub(crate) fn from_u8x16_backend(v: u8x16) -> Self {
-        pick! {
-          if #[cfg(target_feature="avx2")] {
-            u16x16(_mm256_cvtepu8_epi16(v.0))
-          } else if #[cfg(target_feature="sse2")] {
-            Self(Inner {
-              lo: u16x8(_mm_srli_epi16::<8>(_mm_unpacklo_epi8(v.0, v.0))),
-              hi: u16x8(_mm_srli_epi16::<8>(_mm_unpackhi_epi8(v.0, v.0))),
-            })
-          } else {
-
-            u16x16::from_array([
-              v.as_array()[0] as u16,
-              v.as_array()[1] as u16,
-              v.as_array()[2] as u16,
-              v.as_array()[3] as u16,
-              v.as_array()[4] as u16,
-              v.as_array()[5] as u16,
-              v.as_array()[6] as u16,
-              v.as_array()[7] as u16,
-              v.as_array()[8] as u16,
-              v.as_array()[9] as u16,
-              v.as_array()[10] as u16,
-              v.as_array()[11] as u16,
-              v.as_array()[12] as u16,
-              v.as_array()[13] as u16,
-              v.as_array()[14] as u16,
-              v.as_array()[15] as u16,
-              ])
-          }
-        }
     }
 }
 }

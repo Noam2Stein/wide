@@ -351,21 +351,6 @@ safe_target_feature! {
 // Internal helpers and backend of inconsistent functions.
 impl i16x32 {
     #[inline]
-    pub(crate) fn from_i8x32_backend(v: i8x32) -> Self {
-        pick! {
-          if #[cfg(target_feature="avx512bw")] {
-            Self(_mm512_cvtepi8_epi16(cast(v)))
-          } else {
-            let [a, b]: [i8x16; 2] = cast(v);
-            Self(Inner {
-              lo: a.cast::<i16>(),
-              hi: b.cast::<i16>(),
-            })
-          }
-        }
-    }
-
-    #[inline]
     pub(crate) fn dot_backend(self, rhs: Self) -> i32x16 {
         pick! {
           if #[cfg(target_feature="avx512bw")] {

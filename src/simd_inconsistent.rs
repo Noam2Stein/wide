@@ -227,7 +227,7 @@ impl f64x8 {
     #[inline]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i32x8(v: i32x8) -> Self {
-        Self::from_i32x8_backend(v)
+        v.cast::<f64>()
     }
 
     /// Raises each element of the number `self` to the corresponding element
@@ -255,7 +255,7 @@ impl f64x4 {
     #[inline]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i32x4(v: i32x4) -> Self {
-        Self::from_i32x4_backend(v)
+        v.cast::<f64>()
     }
 }
 
@@ -282,7 +282,7 @@ impl i8x16 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i16x16_truncate(v: i16x16) -> i8x16 {
-        Self::from_i16x16_truncate_backend(v)
+        v.cast::<i8>()
     }
 
     /// Converts a slice to a SIMD vector, ignoring elements beyond the first 16.
@@ -433,7 +433,7 @@ impl i16x8 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i32x8_truncate(v: i32x8) -> Self {
-        Self::from_i32x8_truncate_backend(v)
+        v.cast::<i16>()
     }
 
     /// Converts a slice to a SIMD vector, ignoring elements beyond the first 8.
@@ -513,7 +513,7 @@ impl i16x16 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i8x16(v: i8x16) -> Self {
-        Self::from_i8x16_backend(v)
+        v.cast::<i16>()
     }
 
     /// Partially computes the dot product.
@@ -566,7 +566,7 @@ impl i16x32 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i8x32(v: i8x32) -> Self {
-        Self::from_i8x32_backend(v)
+        v.cast::<i16>()
     }
 
     /// Partially computes the dot product.
@@ -609,7 +609,7 @@ impl i32x4 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn round_float(self) -> f32x4 {
-        self.round_float_backend()
+        self.cast::<f32>()
     }
 
     /// Widening multiplication. Computes `self * rhs`, widening to a SIMD
@@ -640,7 +640,7 @@ impl i32x8 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i16x8(v: i16x8) -> Self {
-        Self::from_i16x8_backend(v)
+        v.cast::<i32>()
     }
 
     /// Converts each element from [`u16`] to [`i32`].
@@ -652,7 +652,7 @@ impl i32x8 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_u16x8(v: u16x8) -> Self {
-        Self::from_u16x8_backend(v)
+        v.cast::<i32>()
     }
 
     /// Converts each element from [`i32`] to [`f32`].
@@ -664,7 +664,7 @@ impl i32x8 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn round_float(self) -> f32x8 {
-        self.round_float_backend()
+        self.cast::<f32>()
     }
 }
 
@@ -680,7 +680,7 @@ impl i32x16 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn from_i16x16(v: i16x16) -> Self {
-        Self::from_i16x16_backend(v)
+        v.cast::<i32>()
     }
 
     /// Converts each element from [`i32`] to [`f32`].
@@ -692,7 +692,7 @@ impl i32x16 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn round_float(self) -> f32x16 {
-        self.round_float_backend()
+        self.cast::<f32>()
     }
 }
 
@@ -722,7 +722,7 @@ impl i64x2 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn round_float(self) -> f64x2 {
-        self.round_float_backend()
+        self.cast::<f64>()
     }
 }
 
@@ -738,7 +738,7 @@ impl i64x4 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn round_float(self) -> f64x4 {
-        self.round_float_backend()
+        self.cast::<f64>()
     }
 }
 
@@ -754,7 +754,7 @@ impl i64x8 {
     #[must_use]
     #[deprecated(since = "1.0.0", note = "replaced by the `cast` method")]
     pub fn round_float(self) -> f64x8 {
-        self.round_float_backend()
+        self.cast::<f64>()
     }
 }
 
@@ -1175,7 +1175,7 @@ impl From<u8x16> for u16x16 {
     /// widens and sign extends to u16x16
     #[inline]
     fn from(v: u8x16) -> Self {
-        Self::from_u8x16_backend(v)
+        v.cast::<u16>()
     }
 }
 
@@ -1183,7 +1183,7 @@ impl From<u16x8> for u32x8 {
     /// widens and zero extends to u32x8
     #[inline]
     fn from(v: u16x8) -> Self {
-        Self::from_u16x8_backend(v)
+        v.cast::<u32>()
     }
 }
 
@@ -1191,6 +1191,6 @@ impl From<u16x16> for u32x16 {
     /// Widens and zero-extends each u16 lane to u32
     #[inline]
     fn from(v: u16x16) -> Self {
-        Self::from_u16x16_backend(v)
+        v.cast::<u32>()
     }
 }

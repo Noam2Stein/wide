@@ -1838,21 +1838,5 @@ impl f64x4 {
     fn nan_pow() -> Self {
         cast::<_, f64x4>(i64x4::splat(0x7FF8000000000000 | 0x101 << 29))
     }
-
-    #[inline]
-    pub(crate) fn from_i32x4_backend(v: i32x4) -> Self {
-        pick! {
-          if #[cfg(target_feature="avx")] {
-            Self(_mm256_cvtepi32_pd(v.0))
-          } else {
-            Self::from_array([
-              v.as_array()[0] as f64,
-              v.as_array()[1] as f64,
-              v.as_array()[2] as f64,
-              v.as_array()[3] as f64,
-            ])
-          }
-        }
-    }
 }
 }

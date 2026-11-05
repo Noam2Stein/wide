@@ -146,6 +146,45 @@ impl i8x16 {
           }
         }
     }
+
+    #[inline]
+    pub(crate) fn cast_u16_backend(self) -> u16x16 {
+        pick! {
+          if #[cfg(target_feature="avx2")] {
+            u16x16(_mm256_cvtepi8_epi16(self.0))
+          } else if #[cfg(target_feature="sse4.1")] {
+            u16x16(crate::u16x16_backend::Inner {
+              lo: u16x8(_mm_cvtepi8_epi16(self.0)),
+              hi: u16x8(_mm_cvtepi8_epi16(_mm_unpackhi_epi64(self.0, self.0)))
+            })
+          } else if #[cfg(target_feature="sse2")] {
+            u16x16(crate::u16x16_backend::Inner {
+              lo: u16x8(_mm_srai_epi16::<8>( _mm_unpacklo_epi8(self.0, self.0))),
+              hi: u16x8(_mm_srai_epi16::<8>( _mm_unpackhi_epi8(self.0, self.0))),
+            })
+          } else {
+
+            u16x16::from_array([
+              self.as_array()[0] as i16,
+              self.as_array()[1] as i16,
+              self.as_array()[2] as i16,
+              self.as_array()[3] as i16,
+              self.as_array()[4] as i16,
+              self.as_array()[5] as i16,
+              self.as_array()[6] as i16,
+              self.as_array()[7] as i16,
+              self.as_array()[8] as i16,
+              self.as_array()[9] as i16,
+              self.as_array()[10] as i16,
+              self.as_array()[11] as i16,
+              self.as_array()[12] as i16,
+              self.as_array()[13] as i16,
+              self.as_array()[14] as i16,
+              self.as_array()[15] as i16,
+              ])
+          }
+        }
+    }
 }
 }
 
@@ -820,39 +859,6 @@ impl i8x16 {
               clamp(v.as_array()[13]),
               clamp(v.as_array()[14]),
               clamp(v.as_array()[15]),
-            ])
-          }
-        }
-    }
-
-    #[inline]
-    pub(crate) fn from_i16x16_truncate_backend(v: i16x16) -> i8x16 {
-        pick! {
-          if #[cfg(target_feature="avx2")] {
-            let a = _mm256_and_si256(v.0, _mm256_set1_epi16(0xff));
-            i8x16(_mm_packus_epi16( _mm256_extractf128_si256::<0>(a), _mm256_extractf128_si256::<1>(a)))
-          } else if #[cfg(target_feature="sse2")] {
-            let mask = _mm_set1_epi16(0xff);
-            i8x16(_mm_packus_epi16(_mm_and_si128(v.0.lo.0, mask), _mm_and_si128(v.0.hi.0, mask)))
-          } else {
-            // no super good intrinsics on other platforms... plain old codegen does a reasonable job
-            i8x16::from_array([
-              v.as_array()[0] as i8,
-              v.as_array()[1] as i8,
-              v.as_array()[2] as i8,
-              v.as_array()[3] as i8,
-              v.as_array()[4] as i8,
-              v.as_array()[5] as i8,
-              v.as_array()[6] as i8,
-              v.as_array()[7] as i8,
-              v.as_array()[8] as i8,
-              v.as_array()[9] as i8,
-              v.as_array()[10] as i8,
-              v.as_array()[11] as i8,
-              v.as_array()[12] as i8,
-              v.as_array()[13] as i8,
-              v.as_array()[14] as i8,
-              v.as_array()[15] as i8,
             ])
           }
         }

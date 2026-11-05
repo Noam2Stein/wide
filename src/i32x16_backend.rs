@@ -83,6 +83,20 @@ impl i32x16 {
           }
         }
     }
+
+    #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x16 {
+        pick! {
+          if #[cfg(target_feature="avx512f")] {
+            cast(_mm512_cvtepi32_ps(self.0))
+          } else {
+            f32x16(crate::f32x16_backend::Inner {
+              lo: self.0.lo.cast::<f32>(),
+              hi: self.0.hi.cast::<f32>(),
+            })
+          }
+        }
+    }
 }
 }
 
@@ -376,40 +390,6 @@ impl i32x16 {
                     hi: self.0.hi.saturating_add_unsigned(rhs.0.hi),
                 })
             }
-        }
-    }
-}
-}
-
-safe_target_feature! {
-// Internal helpers and backend of inconsistent functions.
-impl i32x16 {
-    #[inline]
-    pub(crate) fn from_i16x16_backend(v: i16x16) -> Self {
-        pick! {
-          if #[cfg(target_feature="avx512f")] {
-            Self(_mm512_cvtepi16_epi32(v.0))
-          } else {
-            let [a, b]: [i16x8; 2] = cast(v);
-            Self(Inner {
-              lo: a.cast::<i32>(),
-              hi: b.cast::<i32>(),
-            })
-          }
-        }
-    }
-
-    #[inline]
-    pub(crate) fn round_float_backend(self) -> f32x16 {
-        pick! {
-          if #[cfg(target_feature="avx512f")] {
-            cast(_mm512_cvtepi32_ps(self.0))
-          } else {
-            f32x16(crate::f32x16_backend::Inner {
-              lo: self.0.lo.cast::<f32>(),
-              hi: self.0.hi.cast::<f32>(),
-            })
-          }
         }
     }
 }

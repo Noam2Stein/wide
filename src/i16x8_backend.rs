@@ -114,6 +114,31 @@ impl i16x8 {
           }
         }
     }
+
+    #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x8 {
+        pick! {
+          if #[cfg(target_feature="avx2")] {
+            u32x8(_mm256_cvtepi16_epi32(self.0))
+          } else if #[cfg(target_feature="sse2")] {
+            u32x8(crate::u32x8_backend::Inner {
+              lo: u32x4(_mm_srai_epi32::<16>( _mm_unpacklo_epi16(self.0, self.0))),
+              hi: u32x4(_mm_srai_epi32::<16>( _mm_unpackhi_epi16(self.0, self.0))),
+            })
+          } else {
+            u32x8::from_array([
+              u32::from(self.as_array()[0]),
+              u32::from(self.as_array()[1]),
+              u32::from(self.as_array()[2]),
+              u32::from(self.as_array()[3]),
+              u32::from(self.as_array()[4]),
+              u32::from(self.as_array()[5]),
+              u32::from(self.as_array()[6]),
+              u32::from(self.as_array()[7]),
+            ])
+          }
+        }
+    }
 }
 }
 
@@ -703,32 +728,6 @@ impl i16x8 {
               clamp(v.as_array()[6]),
               clamp(v.as_array()[7]),
             ])
-          }
-        }
-    }
-
-    #[inline]
-    pub(crate) fn from_i32x8_truncate_backend(v: i32x8) -> Self {
-        pick! {
-          if #[cfg(target_feature="avx2")] {
-            let a = _mm256_and_si256(v.0, _mm256_set1_epi32(0xffff));
-            i16x8(_mm_packus_epi32( _mm256_extractf128_si256::<0>(a), _mm256_extractf128_si256::<1>(a) ))
-          } else if #[cfg(target_feature="sse2")] {
-            let a = _mm_srai_epi32::<16>(_mm_slli_epi32::<16>(v.0.lo.0));
-            let b = _mm_srai_epi32::<16>(_mm_slli_epi32::<16>(v.0.hi.0));
-
-            i16x8(_mm_packs_epi32( a, b))
-          } else {
-          i16x8::from_array([
-            v.as_array()[0] as i16,
-            v.as_array()[1] as i16,
-            v.as_array()[2] as i16,
-            v.as_array()[3] as i16,
-            v.as_array()[4] as i16,
-            v.as_array()[5] as i16,
-            v.as_array()[6] as i16,
-            v.as_array()[7] as i16,
-          ])
           }
         }
     }

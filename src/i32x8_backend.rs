@@ -71,6 +71,40 @@ impl i32x8 {
           }
         }
     }
+
+    #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x8 {
+        pick! {
+          if #[cfg(target_feature="avx2")] {
+            cast(_mm256_cvtepi32_ps(self.0))
+          } else {
+            cast([
+              self.0.lo.cast::<f32>(),
+              self.0.hi.cast::<f32>(),
+            ])
+          }
+        }
+    }
+
+    #[inline]
+    pub(crate) fn cast_f64_backend(self) -> f64x8 {
+        pick! {
+          if #[cfg(target_feature="avx512f")] {
+            f64x8(_mm512_cvtepi32_pd(self.0))
+          } else {
+            f64x8::from_array([
+              self.as_array()[0] as f64,
+              self.as_array()[1] as f64,
+              self.as_array()[2] as f64,
+              self.as_array()[3] as f64,
+              self.as_array()[4] as f64,
+              self.as_array()[5] as f64,
+              self.as_array()[6] as f64,
+              self.as_array()[7] as f64,
+            ])
+          }
+        }
+    }
 }
 }
 
@@ -403,75 +437,6 @@ impl i32x8 {
                     hi: self.0.hi.saturating_add_unsigned(rhs.0.hi),
                 })
             }
-        }
-    }
-}
-}
-
-safe_target_feature! {
-// Internal helpers and backend of inconsistent functions.
-impl i32x8 {
-    #[inline]
-    pub(crate) fn from_i16x8_backend(v: i16x8) -> Self {
-        pick! {
-          if #[cfg(target_feature="avx2")] {
-            i32x8(_mm256_cvtepi16_epi32(v.0))
-          } else if #[cfg(target_feature="sse2")] {
-            Self(Inner {
-              lo: i32x4(_mm_srai_epi32::<16>( _mm_unpacklo_epi16(v.0, v.0))),
-              hi: i32x4(_mm_srai_epi32::<16>( _mm_unpackhi_epi16(v.0, v.0))),
-            })
-          } else {
-            i32x8::from_array([
-              i32::from(v.as_array()[0]),
-              i32::from(v.as_array()[1]),
-              i32::from(v.as_array()[2]),
-              i32::from(v.as_array()[3]),
-              i32::from(v.as_array()[4]),
-              i32::from(v.as_array()[5]),
-              i32::from(v.as_array()[6]),
-              i32::from(v.as_array()[7]),
-            ])
-          }
-        }
-    }
-
-    #[inline]
-    pub(crate) fn from_u16x8_backend(v: u16x8) -> Self {
-        pick! {
-          if #[cfg(target_feature="avx2")] {
-            i32x8(_mm256_cvtepu16_epi32(v.0))
-          } else if #[cfg(target_feature="sse2")] {
-            Self(Inner {
-              lo: i32x4(_mm_srli_epi32::<16>( _mm_unpacklo_epi16(v.0, v.0))),
-              hi: i32x4(_mm_srli_epi32::<16>( _mm_unpackhi_epi16(v.0, v.0))),
-            })
-          } else {
-            i32x8::from_array([
-              i32::from(v.as_array()[0]),
-              i32::from(v.as_array()[1]),
-              i32::from(v.as_array()[2]),
-              i32::from(v.as_array()[3]),
-              i32::from(v.as_array()[4]),
-              i32::from(v.as_array()[5]),
-              i32::from(v.as_array()[6]),
-              i32::from(v.as_array()[7]),
-            ])
-          }
-        }
-    }
-
-    #[inline]
-    pub(crate) fn round_float_backend(self) -> f32x8 {
-        pick! {
-          if #[cfg(target_feature="avx2")] {
-            cast(_mm256_cvtepi32_ps(self.0))
-          } else {
-            cast([
-              self.0.lo.cast::<f32>(),
-              self.0.hi.cast::<f32>(),
-            ])
-          }
         }
     }
 }

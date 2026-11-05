@@ -152,6 +152,31 @@ impl u16x8 {
     }
 
     #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x8 {
+        pick! {
+          if #[cfg(target_feature="avx2")] {
+            u32x8(_mm256_cvtepu16_epi32(self.0))
+          } else if #[cfg(target_feature="sse2")] {
+            u32x8(crate::u32x8_backend::Inner {
+              lo: u32x4(_mm_srli_epi32::<16>( _mm_unpacklo_epi16(self.0, self.0))),
+              hi: u32x4(_mm_srli_epi32::<16>( _mm_unpackhi_epi16(self.0, self.0))),
+            })
+          } else {
+            u32x8::from_array([
+              u32::from(self.as_array()[0]),
+              u32::from(self.as_array()[1]),
+              u32::from(self.as_array()[2]),
+              u32::from(self.as_array()[3]),
+              u32::from(self.as_array()[4]),
+              u32::from(self.as_array()[5]),
+              u32::from(self.as_array()[6]),
+              u32::from(self.as_array()[7]),
+            ])
+          }
+        }
+    }
+
+    #[inline]
     pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse4.1")] {

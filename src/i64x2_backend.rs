@@ -99,6 +99,12 @@ impl i64x2 {
           }
         }
     }
+
+    #[inline]
+    pub(crate) fn cast_f64_backend(self) -> f64x2 {
+        let arr: [i64; 2] = cast(self);
+        cast([arr[0] as f64, arr[1] as f64])
+    }
 }
 }
 
@@ -394,17 +400,6 @@ impl i64x2 {
                 overflow.select(Self::MAX, result)
             }
         }
-    }
-}
-}
-
-safe_target_feature! {
-// Internal helpers and backend of inconsistent functions.
-impl i64x2 {
-    #[inline]
-    pub(crate) fn round_float_backend(self) -> f64x2 {
-        let arr: [i64; 2] = cast(self);
-        cast([arr[0] as f64, arr[1] as f64])
     }
 }
 }

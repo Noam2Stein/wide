@@ -878,42 +878,6 @@ safe_target_feature! {
 // Internal helpers and backend of inconsistent functions.
 impl u32x16 {
     #[inline]
-    pub(crate) fn from_u16x16_backend(v: u16x16) -> Self {
-        pick! {
-          if #[cfg(target_feature = "avx512f")] {
-            Self(_mm512_cvtepu16_epi32(v.0))
-          } else if #[cfg(target_feature = "avx2")] {
-            let lo: __m128i = _mm256_extractf128_si256::<0>(v.0);
-            let hi: __m128i = _mm256_extractf128_si256::<1>(v.0);
-            Self(Inner {
-              lo: u32x8(_mm256_cvtepu16_epi32(lo)),
-              hi: u32x8(_mm256_cvtepu16_epi32(hi)),
-            })
-          } else if #[cfg(target_feature = "sse2")] {
-            Self(Inner {
-              lo: u32x8(crate::u32x8_backend::Inner {
-                lo: u32x4(_mm_srli_epi32::<16>(_mm_unpacklo_epi16(v.0.lo.0, v.0.lo.0))),
-                hi: u32x4(_mm_srli_epi32::<16>(_mm_unpackhi_epi16(v.0.lo.0, v.0.lo.0))),
-              }),
-              hi: u32x8(crate::u32x8_backend::Inner {
-                lo: u32x4(_mm_srli_epi32::<16>(_mm_unpacklo_epi16(v.0.hi.0, v.0.hi.0))),
-                hi: u32x4(_mm_srli_epi32::<16>(_mm_unpackhi_epi16(v.0.hi.0, v.0.hi.0))),
-              }),
-            })
-          } else {
-            // Portable fallback
-            let arr = v.as_array();
-            Self::from_array([
-              arr[0] as u32,  arr[1] as u32,  arr[2] as u32,  arr[3] as u32,
-              arr[4] as u32,  arr[5] as u32,  arr[6] as u32,  arr[7] as u32,
-              arr[8] as u32,  arr[9] as u32,  arr[10] as u32, arr[11] as u32,
-              arr[12] as u32, arr[13] as u32, arr[14] as u32, arr[15] as u32,
-            ])
-          }
-        }
-    }
-
-    #[inline]
     pub(crate) fn add_mul_lo_backend<const W: u32>(self, a: Self, b: Self) -> Self {
         if W <= 16 {
             let mask = Self::splat(add_mul_operand_mask_u32::<W>());

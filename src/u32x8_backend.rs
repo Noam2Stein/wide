@@ -77,6 +77,32 @@ impl u32x8 {
     }
 
     #[inline]
+    pub(crate) fn cast_u16_backend(self) -> u16x8 {
+        pick! {
+          if #[cfg(target_feature="avx2")] {
+            let a = _mm256_and_si256(self.0, _mm256_set1_epi32(0xffff));
+            u16x8(_mm_packus_epi32( _mm256_extractf128_si256::<0>(a), _mm256_extractf128_si256::<1>(a) ))
+          } else if #[cfg(target_feature="sse2")] {
+            let a = _mm_srai_epi32::<16>(_mm_slli_epi32::<16>(self.0.lo.0));
+            let b = _mm_srai_epi32::<16>(_mm_slli_epi32::<16>(self.0.hi.0));
+
+            u16x8(_mm_packs_epi32( a, b))
+          } else {
+          u16x8::from_array([
+            self.as_array()[0] as i16,
+            self.as_array()[1] as i16,
+            self.as_array()[2] as i16,
+            self.as_array()[3] as i16,
+            self.as_array()[4] as i16,
+            self.as_array()[5] as i16,
+            self.as_array()[6] as i16,
+            self.as_array()[7] as i16,
+          ])
+          }
+        }
+    }
+
+    #[inline]
     pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx2")] {
@@ -914,31 +940,6 @@ impl u32x8 {
         const WITHIN_LANE: u32x8 = u32x8::splat(u32::from_ne_bytes([0, 1, 2, 3]));
 
         cast::<u32x8, u8x32>(base | WITHIN_LANE)
-    }
-
-    #[inline]
-    pub(crate) fn from_u16x8_backend(v: u16x8) -> Self {
-        pick! {
-          if #[cfg(target_feature="avx2")] {
-            Self(_mm256_cvtepu16_epi32(v.0))
-          } else if #[cfg(target_feature="sse2")] {
-            Self(Inner {
-              lo: u32x4(_mm_srli_epi32::<16>( _mm_unpacklo_epi16(v.0, v.0))),
-              hi: u32x4(_mm_srli_epi32::<16>( _mm_unpackhi_epi16(v.0, v.0))),
-            })
-          } else {
-            u32x8::from_array([
-              u32::from(v.as_array()[0]),
-              u32::from(v.as_array()[1]),
-              u32::from(v.as_array()[2]),
-              u32::from(v.as_array()[3]),
-              u32::from(v.as_array()[4]),
-              u32::from(v.as_array()[5]),
-              u32::from(v.as_array()[6]),
-              u32::from(v.as_array()[7]),
-            ])
-          }
-        }
     }
 
     #[inline]

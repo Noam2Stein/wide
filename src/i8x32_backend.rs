@@ -62,6 +62,21 @@ impl i8x32 {
           }
         }
     }
+
+    #[inline]
+    pub(crate) fn cast_u16_backend(self) -> u16x32 {
+        pick! {
+          if #[cfg(target_feature="avx512bw")] {
+            u16x32(_mm512_cvtepi8_epi16(cast(self)))
+          } else {
+            let [a, b]: [i8x16; 2] = cast(self);
+            u16x32(crate::u16x32_backend::Inner {
+              lo: a.cast::<u16>(),
+              hi: b.cast::<u16>(),
+            })
+          }
+        }
+    }
 }
 }
 
