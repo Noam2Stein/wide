@@ -333,6 +333,17 @@ where
     }
 }
 
+/// An internal trait used for the [`cast`](f32x4::cast) method.
+///
+/// This is intentionally not exposed publicly, as its design may change when
+/// general generics support is added to the library.
+#[doc(hidden)]
+pub trait Cast<U> {
+    type Output;
+
+    fn cast(self) -> Self::Output;
+}
+
 trait Sealed {}
 
 macro_rules! define_simd {
@@ -897,6 +908,23 @@ macro_rules! define_simd {
         self.extract_const_backend::<INDEX>()
       }
 
+      /// Casts each element of `self` to a different element type with the
+      /// semantics of [`as` conversions].
+      ///
+      /// The `Cast` trait is intentionally not exposed publicly. This function
+      /// supports casting between all existing types that have the same lane
+      /// count.
+      ///
+      /// [`as` conversions]: https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions
+      #[inline]
+      #[must_use]
+      pub fn cast<U>(self) -> <Self as Cast<U>>::Output
+      where
+        Self: Cast<U>,
+      {
+        Cast::<U>::cast(self)
+      }
+
       /// Lanewise SIMD selection.
       ///
       /// For each lane:
@@ -1424,6 +1452,67 @@ macro_rules! simd_backend_unsigned_autofill {
         // There are currently no such functions.
     };
 }
+
+/// Implements [`Cast`] for all input-output combinations based on a list of
+/// SIMD types.
+///
+/// All provided SIMD types must have the same lane count.
+macro_rules! cast_group {
+    ($(($T:ident, $Simd:ident, $cast_t_backend:ident)),* $(,)?) => {
+        macro_rules! input {
+            ($Input:ident) => {$(
+                impl Cast<$T> for $Input {
+                    type Output = $Simd;
+
+                    #[inline]
+                    fn cast(self) -> Self::Output {
+                        self.$cast_t_backend()
+                    }
+                }
+            )*};
+        }
+        $(input!($Simd);)*
+    };
+}
+cast_group!(
+    (f64, f64x2, cast_f64_backend),
+    (i64, i64x2, cast_i64_backend),
+    (u64, u64x2, cast_u64_backend)
+);
+cast_group!(
+    (f32, f32x4, cast_f32_backend),
+    (f64, f64x4, cast_f64_backend),
+    (i32, i32x4, cast_i32_backend),
+    (i64, i64x4, cast_i64_backend),
+    (u32, u32x4, cast_u32_backend),
+    (u64, u64x4, cast_u64_backend)
+);
+cast_group!(
+    (f32, f32x8, cast_f32_backend),
+    (f64, f64x8, cast_f64_backend),
+    (i16, i16x8, cast_i16_backend),
+    (i32, i32x8, cast_i32_backend),
+    (i64, i64x8, cast_i64_backend),
+    (u16, u16x8, cast_u16_backend),
+    (u32, u32x8, cast_u32_backend),
+    (u64, u64x8, cast_u64_backend)
+);
+cast_group!(
+    (f32, f32x16, cast_f32_backend),
+    (i8, i8x16, cast_i8_backend),
+    (i16, i16x16, cast_i16_backend),
+    (i32, i32x16, cast_i32_backend),
+    (u8, u8x16, cast_u8_backend),
+    (u16, u16x16, cast_u16_backend),
+    (u32, u32x16, cast_u32_backend)
+);
+cast_group!(
+    (i8, i8x32, cast_i8_backend),
+    (i16, i16x32, cast_i16_backend),
+    (u8, u8x32, cast_u8_backend),
+    (u16, u16x32, cast_u16_backend)
+);
+cast_group!((i8, i8x64, cast_i8_backend), (u8, u8x64, cast_u8_backend));
 
 impl<Simd, const N: usize> Sealed for [Simd; N] {}
 
