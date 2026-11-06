@@ -152,7 +152,23 @@ impl f64x2 {
 
     #[inline]
     pub(crate) fn cast_u64_backend(self) -> u64x2 {
-        todo!()
+        pick! {
+          if #[cfg(all(target_feature="avx512dq", target_feature="avx512vl"))] {
+            // Based on: https://github.com/v8/v8/blob/210987a552a2bf2a854b0baa9588a5959ff3979d/src/codegen/shared-ia32-x64/macro-assembler-shared-ia32-x64.h#L489-L504
+            let non_nan_mask = self.simd_eq(self);
+            let non_nan = self & non_nan_mask;
+            let flip_to_max = self.simd_ge(Self::splat(9223372036854775808.0)).to_bits();
+
+            let result = i64x2(_mm_cvttpd_epu64(non_nan.0));
+            result ^ flip_to_max
+          } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
+            u64x2(vcvtq_u64_f64(self.0))
+          } else {
+            // There does not seem to be an intrinsic for `wasm32`.
+            let self_array = self.to_array();
+            cast([self_array[0] as u64, self_array[1] as u64])
+          }
+        }
     }
 
     #[inline]
