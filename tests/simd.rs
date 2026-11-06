@@ -3,9 +3,9 @@ use std::{convert::identity, iter::once};
 
 use bytemuck::cast;
 use wide::{
-    AlignTo, ShuffleExt, f32x4, f32x8, f32x16, f64x2, f64x4, f64x8, i8x16, i8x32, i16x8, i16x16,
-    i16x32, i32x4, i32x8, i32x16, i64x2, i64x4, i64x8, u8x16, u8x32, u8x64, u16x8, u16x16, u16x32,
-    u32x4, u32x8, u32x16, u64x2, u64x4, u64x8,
+    AlignTo, ShuffleExt, f32x4, f32x8, f32x16, f64x2, f64x4, f64x8, i8x16, i8x32, i8x64, i16x8,
+    i16x16, i16x32, i32x4, i32x8, i32x16, i64x2, i64x4, i64x8, u8x16, u8x32, u8x64, u16x8, u16x16,
+    u16x32, u32x4, u32x8, u32x16, u64x2, u64x4, u64x8,
 };
 
 use crate::utils::{for_simd_types, random_iter, simd_chunks};
@@ -2420,6 +2420,58 @@ fn test_extract_const() {
     test_type!(u64, 2, u64x2);
     test_type!(u64, 4, u64x4);
     test_type!(u64, 8, u64x8);
+}
+
+#[test]
+fn test_cast() {
+    macro_rules! lane_count {
+        ($N:literal, $(($T:ident, $Simd:ident)),* $(,)?) => {
+            macro_rules! input {
+                ($InputT:ident, $InputSimd:ident) => {
+                    for value in random_iter::<[$InputT; $N]>() {$(
+                        let expected = $Simd::from_array(value.map(|x| x as $T));
+                        let actual = $InputSimd::from_array(value).cast::<$T>();
+
+                        assert_eq!(actual, expected, "value: {value:?}");
+                    )*}
+                };
+            }
+            $(input!($T, $Simd);)*
+        };
+    }
+    lane_count!(2, (f64, f64x2), (i64, i64x2), (u64, u64x2));
+    lane_count!(
+        4,
+        (f32, f32x4),
+        (f64, f64x4),
+        (i32, i32x4),
+        (i64, i64x4),
+        (u32, u32x4),
+        (u64, u64x4)
+    );
+    lane_count!(
+        8,
+        (f32, f32x8),
+        (f64, f64x8),
+        (i16, i16x8),
+        (i32, i32x8),
+        (i64, i64x8),
+        (u16, u16x8),
+        (u32, u32x8),
+        (u64, u64x8)
+    );
+    lane_count!(
+        16,
+        (f32, f32x16),
+        (i8, i8x16),
+        (i16, i16x16),
+        (i32, i32x16),
+        (u8, u8x16),
+        (u16, u16x16),
+        (u32, u32x16)
+    );
+    lane_count!(32, (i8, i8x32), (i16, i16x32), (u8, u8x32), (u16, u16x32));
+    lane_count!(64, (i8, i8x64), (u8, u8x64));
 }
 
 #[test]
