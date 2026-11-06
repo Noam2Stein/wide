@@ -232,6 +232,11 @@ impl u8x16 {
     }
 
     #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x16 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn cast_u16_backend(self) -> u16x16 {
         pick! {
           if #[cfg(target_feature="avx2")] {
@@ -262,6 +267,56 @@ impl u8x16 {
               self.as_array()[15] as u16,
               ])
           }
+        }
+    }
+
+    #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x16 {
+        pick! {
+            if #[cfg(target_feature = "avx512f")] {
+                u32x16(_mm512_cvtepu8_epi32(self.0))
+            } else if #[cfg(target_feature = "avx2")] {
+                u32x16(crate::u32x16_backend::Inner {
+                    lo: u32x8(__mm256_cvtepu8_epi32(self.0)),
+                    #[cfg(target_endian = "little")]
+                    hi: u32x8(__mm256_cvtepu8_epi32(_mm_srli_si128::<8>(self.0))),
+                    #[cfg(target_endian = "big")]
+                    hi: u32x8(__mm256_cvtepu8_epi32(_mm_slli_si128::<8>(self.0))),
+                })
+            } else if #[cfg(all(target_feature = "sse4.1", target_endian = "little"))] {
+                cast([
+                    __mm256_cvtepu8_epi32(self.0),
+                    __mm256_cvtepu8_epi32(_mm_srli_si128::<4>(self.0)),
+                    __mm256_cvtepu8_epi32(_mm_srli_si128::<8>(self.0)),
+                    __mm256_cvtepu8_epi32(_mm_srli_si128::<12>(self.0)),
+                ])
+            } else if #[cfg(all(target_feature = "sse4.1", target_endian = "big"))] {
+                cast([
+                    __mm256_cvtepu8_epi32(self.0),
+                    __mm256_cvtepu8_epi32(_mm_slli_si128::<4>(self.0)),
+                    __mm256_cvtepu8_epi32(_mm_slli_si128::<8>(self.0)),
+                    __mm256_cvtepu8_epi32(_mm_slli_si128::<12>(self.0)),
+                ])
+            } else {
+                u32x16::from_array([
+                    self.as_array()[0] as u32,
+                    self.as_array()[1] as u32,
+                    self.as_array()[2] as u32,
+                    self.as_array()[3] as u32,
+                    self.as_array()[4] as u32,
+                    self.as_array()[5] as u32,
+                    self.as_array()[6] as u32,
+                    self.as_array()[7] as u32,
+                    self.as_array()[8] as u32,
+                    self.as_array()[9] as u32,
+                    self.as_array()[10] as u32,
+                    self.as_array()[11] as u32,
+                    self.as_array()[12] as u32,
+                    self.as_array()[13] as u32,
+                    self.as_array()[14] as u32,
+                    self.as_array()[15] as u32,
+                ])
+            }
         }
     }
 

@@ -73,6 +73,11 @@ impl i16x16 {
     }
 
     #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x16 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn cast_u8_backend(self) -> u8x16 {
       // Casting to a smaller integer behaves the same for signed and unsigned
       // inputs.

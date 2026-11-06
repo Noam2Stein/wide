@@ -119,6 +119,21 @@ impl u32x16 {
     }
 
     #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x16 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u8_backend(self) -> u8x16 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u16_backend(self) -> u16x16 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512bw")] {

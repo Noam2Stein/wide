@@ -119,6 +119,22 @@ impl u16x32 {
     }
 
     #[inline]
+    pub(crate) fn cast_u8_backend(self) -> u8x32 {
+        pick! {
+            if #[cfg(target_feature="avx2")] {
+                let masked = self & const { Self::splat(0x00ff) };
+                let [lo, hi] = cast::<u16x32, [u16x16; 2]>(masked);
+                u8x32(_mm256_packus_epi16(lo, hi))
+            } else {
+                u8x32(crate::u8x32_backend::Inner {
+                   lo: self.0.lo.cast::<u8>(),
+                   hi: self.0.hi.cast::<u8>(),
+                })
+            }
+        }
+    }
+
+    #[inline]
     pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512bw")] {

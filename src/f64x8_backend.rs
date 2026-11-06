@@ -119,6 +119,21 @@ impl f64x8 {
     }
 
     #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x8 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_i16_backend(self) -> i16x8 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_i32_backend(self) -> i32x8 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn cast_i64_backend(self) -> i64x8 {
         pick! {
           if #[cfg(target_feature="avx512dq")] {
@@ -137,6 +152,21 @@ impl f64x8 {
             ])
           }
         }
+    }
+
+    #[inline]
+    pub(crate) fn cast_u16_backend(self) -> u16x8 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x8 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u64_backend(self) -> u64x8 {
+        todo!()
     }
 
     #[inline]

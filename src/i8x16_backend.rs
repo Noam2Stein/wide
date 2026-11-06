@@ -148,6 +148,11 @@ impl i8x16 {
     }
 
     #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x16 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn cast_u16_backend(self) -> u16x16 {
         pick! {
           if #[cfg(target_feature="avx2")] {
@@ -184,6 +189,11 @@ impl i8x16 {
               ])
           }
         }
+    }
+
+    #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x16 {
+        todo!()
     }
 }
 }

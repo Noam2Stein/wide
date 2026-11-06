@@ -119,6 +119,16 @@ impl f32x16 {
     }
 
     #[inline]
+    pub(crate) fn cast_i8_backend(self) -> i8x16 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_i16_backend(self) -> i16x16 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn cast_i32_backend(self) -> i32x16 {
         pick! {
             if #[cfg(target_feature="avx512f")] {
@@ -135,6 +145,21 @@ impl f32x16 {
             ])
           }
         }
+    }
+
+    #[inline]
+    pub(crate) fn cast_u8_backend(self) -> u8x16 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u16_backend(self) -> u16x16 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x16 {
+        todo!()
     }
 
     #[inline]

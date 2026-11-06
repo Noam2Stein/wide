@@ -135,6 +135,24 @@ impl i32x4 {
           }
         }
     }
+
+    #[inline]
+    pub(crate) fn cast_u64_backend(self) -> u64x4 {
+        pick! {
+            if #[cfg(target_feature="avx2")] {
+                u64x4(_mm256_cvtepi32_epi64(self.0))
+            } else if #[cfg(target_feature="sse2")] {
+                todo!()
+            } else {
+                u64x4::from_array([
+                  u64::from(self.as_array()[0]),
+                  u64::from(self.as_array()[1]),
+                  u64::from(self.as_array()[2]),
+                  u64::from(self.as_array()[3]),
+                ])
+            }
+        }
+    }
 }
 }
 

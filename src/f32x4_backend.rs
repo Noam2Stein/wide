@@ -140,6 +140,11 @@ impl f32x4 {
     }
 
     #[inline]
+    pub(crate) fn cast_f64_backend(self) -> f64x4 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn cast_i32_backend(self) -> i32x4 {
         pick! {
           if #[cfg(target_feature="sse2")] {
@@ -163,6 +168,21 @@ impl f32x4 {
             ])
           }
         }
+    }
+
+    #[inline]
+    pub(crate) fn cast_i64_backend(self) -> i64x4 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x4 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u64_backend(self) -> u64x4 {
+        todo!()
     }
 
     #[inline]

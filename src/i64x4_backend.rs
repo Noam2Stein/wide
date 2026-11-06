@@ -73,6 +73,11 @@ impl i64x4 {
     }
 
     #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x4 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn cast_f64_backend(self) -> f64x4 {
         let arr: [i64; 4] = cast(self);
         cast([arr[0] as f64, arr[1] as f64, arr[2] as f64, arr[3] as f64])

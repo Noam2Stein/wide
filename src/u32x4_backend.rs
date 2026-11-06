@@ -128,6 +128,37 @@ impl u32x4 {
     }
 
     #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x4 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_f64_backend(self) -> f64x4 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u64_backend(self) -> u64x4 {
+        pick! {
+            if #[cfg(target_feature="avx2")] {
+                u64x4(_mm256_cvtepu32_epi64(self.0))
+            } else if #[cfg(target_feature="sse2")] {
+                u64x4(crate::u64x4_backend::Inner {
+                  lo: u64x2(_mm_srli_epi64::<32>( _mm_unpacklo_epi32(self.0, self.0))),
+                  hi: u64x2(_mm_srli_epi64::<32>( _mm_unpackhi_epi32(self.0, self.0))),
+                })
+            } else {
+                u64x4::from_array([
+                  u64::from(self.as_array()[0]),
+                  u64::from(self.as_array()[1]),
+                  u64::from(self.as_array()[2]),
+                  u64::from(self.as_array()[3]),
+                ])
+            }
+        }
+    }
+
+    #[inline]
     pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse4.1")] {

@@ -101,6 +101,16 @@ impl f64x4 {
     }
 
     #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x4 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_i32_backend(self) -> i32x4 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn cast_i64_backend(self) -> i64x4 {
         pick! {
           if #[cfg(all(target_feature="avx512dq", target_feature="avx512vl"))] {
@@ -116,6 +126,16 @@ impl f64x4 {
             cast([a.trunc_int(), b.trunc_int()])
           }
         }
+    }
+
+    #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x4 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u64_backend(self) -> u64x4 {
+        todo!()
     }
 
     #[inline]

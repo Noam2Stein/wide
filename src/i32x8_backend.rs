@@ -112,6 +112,11 @@ impl i32x8 {
       // inputs.
       self.cast_unsigned().cast::<u16>()
     }
+
+    #[inline]
+    pub(crate) fn cast_u64_backend(self) -> u64x8 {
+        todo!()
+    }
 }
 }
 

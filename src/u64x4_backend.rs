@@ -95,6 +95,55 @@ impl u64x4 {
     }
 
     #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x4 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_f64_backend(self) -> f64x4 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x4 {
+        pick! {
+            if #[cfg(target_feature="avx2")] {
+                let truncated = self & const { Self::splat(0x0000_0000_ffff_ffff) };
+
+                #[cfg(target_endian = "little")]
+                let lo_hi = _mm256_shuffle_epi32::<0x_00_00_10_00>(truncated.0);
+                #[cfg(target_endian = "big")]
+                let lo_hi = _mm256_shuffle_epi32::<0x_00_00_11_01>(truncated.0);
+
+                let [lo, hi] = cast::<__256i, [__m128i; 2]>(lo_hi);
+                u32x4(_mm_unpacklo_epi64(lo, hi))
+            } else if #[cfg(target_feature="sse2")] {
+                let truncated = self & const { Self::splat(0x0000_0000_ffff_ffff) };
+
+                #[cfg(target_endian = "little")]
+                let [lo, hi] = [
+                  _mm_shuffle_epi32::<0x_00_00_10_00>(truncated.0.lo.0),
+                  _mm_shuffle_epi32::<0x_00_00_10_00>(truncated.0.hi.0),
+                ];
+                #[cfg(target_endian = "big")]
+                let [lo, hi] = [
+                  _mm_shuffle_epi32::<0x_00_00_11_01>(truncated.0.lo.0),
+                  _mm_shuffle_epi32::<0x_00_00_11_01>(truncated.0.hi.0),
+                ];
+
+                u32x4(_mm_unpacklo_epi64(lo, hi))
+            } else {
+                u32x4::from_array([
+                    self.as_array()[0] as u32,
+                    self.as_array()[1] as u32,
+                    self.as_array()[2] as u32,
+                    self.as_array()[3] as u32,
+                ])
+            }
+        }
+    }
+
+    #[inline]
     pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx2")] {

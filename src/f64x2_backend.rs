@@ -151,6 +151,11 @@ impl f64x2 {
     }
 
     #[inline]
+    pub(crate) fn cast_u64_backend(self) -> u64x2 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse4.1")] {

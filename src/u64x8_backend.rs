@@ -119,6 +119,26 @@ impl u64x8 {
     }
 
     #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x8 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_f64_backend(self) -> f64x8 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u16_backend(self) -> u16x8 {
+        todo!()
+    }
+
+    #[inline]
+    pub(crate) fn cast_u32_backend(self) -> u32x8 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512bw")] {

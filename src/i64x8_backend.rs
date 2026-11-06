@@ -85,6 +85,11 @@ impl i64x8 {
     }
 
     #[inline]
+    pub(crate) fn cast_f32_backend(self) -> f32x8 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn cast_f64_backend(self) -> f64x8 {
         let arr: [i64; 8] = cast(self);
         cast([

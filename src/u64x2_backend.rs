@@ -123,6 +123,11 @@ impl u64x2 {
     }
 
     #[inline]
+    pub(crate) fn cast_f64_backend(self) -> f64x2 {
+        todo!()
+    }
+
+    #[inline]
     pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse4.1")] {
