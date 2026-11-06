@@ -140,6 +140,32 @@ impl f32x4 {
     }
 
     #[inline]
+    pub(crate) fn cast_i32_backend(self) -> i32x4 {
+        pick! {
+          if #[cfg(target_feature="sse2")] {
+            // Based on: https://github.com/v8/v8/blob/210987a552a2bf2a854b0baa9588a5959ff3979d/src/codegen/shared-ia32-x64/macro-assembler-shared-ia32-x64.h#L489-L504
+            let non_nan_mask = self.simd_eq(self);
+            let non_nan = self & non_nan_mask;
+            let flip_to_max: i32x4 = cast(self.simd_ge(Self::splat(2147483648.0)));
+            let cast: i32x4 = cast(_mm_cvttps_epi32(non_nan.0));
+            flip_to_max ^ cast
+          } else if #[cfg(target_feature="simd128")] {
+            cast(Self(i32x4_trunc_sat_f32x4(self.0)))
+          } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
+            cast(Self(vreinterpretq_f32_s32(vcvtq_s32_f32(self.0))))
+          } else {
+            let n: [f32;4] = cast(self);
+            cast([
+              n[0] as i32,
+              n[1] as i32,
+              n[2] as i32,
+              n[3] as i32,
+            ])
+          }
+        }
+    }
+
+    #[inline]
     pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="sse4.1")] {
@@ -1108,32 +1134,6 @@ impl f32x4 {
 
             // Reset the sign bit of the mask to preverse the sign of `self`.
             bounds_mask.abs().select(result, self)
-          }
-        }
-    }
-
-    #[inline]
-    pub(crate) fn trunc_int_backend(self) -> i32x4 {
-        pick! {
-          if #[cfg(target_feature="sse2")] {
-            // Based on: https://github.com/v8/v8/blob/210987a552a2bf2a854b0baa9588a5959ff3979d/src/codegen/shared-ia32-x64/macro-assembler-shared-ia32-x64.h#L489-L504
-            let non_nan_mask = self.simd_eq(self);
-            let non_nan = self & non_nan_mask;
-            let flip_to_max: i32x4 = cast(self.simd_ge(Self::splat(2147483648.0)));
-            let cast: i32x4 = cast(_mm_cvttps_epi32(non_nan.0));
-            flip_to_max ^ cast
-          } else if #[cfg(target_feature="simd128")] {
-            cast(Self(i32x4_trunc_sat_f32x4(self.0)))
-          } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
-            cast(Self(vreinterpretq_f32_s32(vcvtq_s32_f32(self.0))))
-          } else {
-            let n: [f32;4] = cast(self);
-            cast([
-              n[0] as i32,
-              n[1] as i32,
-              n[2] as i32,
-              n[3] as i32,
-            ])
           }
         }
     }

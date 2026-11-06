@@ -16,6 +16,7 @@ macro_rules! impl_simd_float {
   (
       T = $T:ident,
       Simd = $Simd:ident,
+      SignedT = $SignedT:ident,
       SignedSimd = $SignedSimd:ident,
       UnsignedT = $UnsignedT:ident,
       UnsignedSimd = $UnsignedSimd:ident,
@@ -1007,7 +1008,7 @@ macro_rules! impl_simd_float {
       #[inline]
       #[must_use]
       pub fn trunc_int(self) -> $SignedSimd {
-        self.trunc_int_backend()
+        self.cast::<$SignedT>()
       }
 
       /// Returns the integer part of each input element. This means that
@@ -1558,6 +1559,7 @@ macro_rules! impl_simd_float {
 impl_simd_float!(
     T = f32,
     Simd = f32x4,
+    SignedT = i32,
     SignedSimd = i32x4,
     UnsignedT = u32,
     UnsignedSimd = u32x4,
@@ -1565,6 +1567,7 @@ impl_simd_float!(
 impl_simd_float!(
     T = f32,
     Simd = f32x8,
+    SignedT = i32,
     SignedSimd = i32x8,
     UnsignedT = u32,
     UnsignedSimd = u32x8,
@@ -1572,6 +1575,7 @@ impl_simd_float!(
 impl_simd_float!(
     T = f32,
     Simd = f32x16,
+    SignedT = i32,
     SignedSimd = i32x16,
     UnsignedT = u32,
     UnsignedSimd = u32x16,
@@ -1579,6 +1583,7 @@ impl_simd_float!(
 impl_simd_float!(
     T = f64,
     Simd = f64x2,
+    SignedT = i64,
     SignedSimd = i64x2,
     UnsignedT = u64,
     UnsignedSimd = u64x2,
@@ -1586,6 +1591,7 @@ impl_simd_float!(
 impl_simd_float!(
     T = f64,
     Simd = f64x4,
+    SignedT = i64,
     SignedSimd = i64x4,
     UnsignedT = u64,
     UnsignedSimd = u64x4,
@@ -1593,6 +1599,7 @@ impl_simd_float!(
 impl_simd_float!(
     T = f64,
     Simd = f64x8,
+    SignedT = i64,
     SignedSimd = i64x8,
     UnsignedT = u64,
     UnsignedSimd = u64x8,

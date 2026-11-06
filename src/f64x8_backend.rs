@@ -119,6 +119,27 @@ impl f64x8 {
     }
 
     #[inline]
+    pub(crate) fn cast_i64_backend(self) -> i64x8 {
+        pick! {
+          if #[cfg(target_feature="avx512dq")] {
+            // Based on: https://github.com/v8/v8/blob/210987a552a2bf2a854b0baa9588a5959ff3979d/src/codegen/shared-ia32-x64/macro-assembler-shared-ia32-x64.h#L489-L504
+            let non_nan_mask = self.simd_eq(self);
+            let non_nan = self & non_nan_mask;
+            let flip_to_max: i64x8 = cast(self.simd_ge(Self::splat(9223372036854775808.0)));
+
+            let cast: i64x8 = cast(_mm512_cvttpd_epi64(non_nan.0));
+            flip_to_max ^ cast
+          } else {
+            let [a,b]: [f64x4;2] = cast(self);
+            cast([
+              a.trunc_int(),
+              b.trunc_int(),
+            ])
+          }
+        }
+    }
+
+    #[inline]
     pub(crate) fn select_backend(self, if_true: Self, if_false: Self) -> Self {
         pick! {
           if #[cfg(target_feature="avx512dq")] {
@@ -713,27 +734,6 @@ impl f64x8 {
               lo: self.0.lo.trunc(),
               hi: self.0.hi.trunc(),
             })
-          }
-        }
-    }
-
-    #[inline]
-    pub(crate) fn trunc_int_backend(self) -> i64x8 {
-        pick! {
-          if #[cfg(target_feature="avx512dq")] {
-            // Based on: https://github.com/v8/v8/blob/210987a552a2bf2a854b0baa9588a5959ff3979d/src/codegen/shared-ia32-x64/macro-assembler-shared-ia32-x64.h#L489-L504
-            let non_nan_mask = self.simd_eq(self);
-            let non_nan = self & non_nan_mask;
-            let flip_to_max: i64x8 = cast(self.simd_ge(Self::splat(9223372036854775808.0)));
-
-            let cast: i64x8 = cast(_mm512_cvttpd_epi64(non_nan.0));
-            flip_to_max ^ cast
-          } else {
-            let [a,b]: [f64x4;2] = cast(self);
-            cast([
-              a.trunc_int(),
-              b.trunc_int(),
-            ])
           }
         }
     }
