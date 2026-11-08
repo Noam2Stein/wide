@@ -134,18 +134,24 @@ impl f64x2 {
         pick! {
           if #[cfg(all(target_feature="avx512dq", target_feature="avx512vl"))] {
             // Based on: https://github.com/v8/v8/blob/210987a552a2bf2a854b0baa9588a5959ff3979d/src/codegen/shared-ia32-x64/macro-assembler-shared-ia32-x64.h#L489-L504
-            let non_nan_mask = self.simd_eq(self);
-            let non_nan = self & non_nan_mask;
-            let flip_to_max: i64x2 = cast(self.simd_ge(Self::splat(9223372036854775808.0)));
 
-            let cast: i64x2 = cast(_mm_cvttpd_epi64(non_nan.0));
-            flip_to_max ^ cast
-          } else if #[cfg(all(target_feature="neon",target_arch="aarch64"))]{
-            cast(Self(vreinterpretq_f64_s64(vcvtq_s64_f64(self.0))))
+            // `_mm_cvttpd_epi64` returns `i64::MIN` for out of range values (both positive and
+            // negative), `+-INFINITY` and NaNs. Thus we need to manually zero the result for NaNs
+            // and flip from `i64::MIN` to `i64::MAX` for positive out of range and `+INFINITY`.
+            let result = i64x2(_mm_cvttpd_epi64(adjusted_self.0));
+
+            // `_mm_cvttpd_epi64` returns `i64::MIN` for NaN inputs, while we need to return `0`
+            let is_not_nan = self.simd_eq(self);
+            let result = result & cast(is_not_nan);
+
+            let flip_to_max = self.simd_ge(const { Self::splat(9223372036854775808.0) });
+            result ^ cast(flip_to_max)
+          } else if #[cfg(all(target_feature = "neon", target_arch = "aarch64"))] {
+            i64x2(vcvtq_s64_f64(self.0))
           } else {
-            // There does not seem to be an intrinsic for `wasm32`.
-            let n: [f64;2] = cast(self);
-            cast([n[0] as i64, n[1] as i64])
+            // There is no `wasm32` intrinsic for this.
+            let self_array = self.to_array();
+            i64x2::from_array([self_array[0] as i64, self_array[1] as i64])
           }
         }
     }
