@@ -4,7 +4,7 @@
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Rem, Shl, ShlAssign, Shr, ShrAssign, Sub};
 
 use crate::{
-    HasDoubleWidth, PrimitiveInteger, Simd, SimdElement, SupportedSimd,
+    HasDoubleWidth, PrimitiveInteger, Simd, SimdElement, SupportedSimd, SupportsLaneCount,
     primitive_traits::NotPrimitiveInteger,
     simd::{SimdAssociatedTypes, SupportSimdOf},
 };
@@ -23,11 +23,8 @@ macro_rules! impl_shift_operator {
   ) => {
     impl<T, const N: usize, Rhs> $Op<Simd<Rhs, N>> for Simd<T, N>
     where
-        T: PrimitiveInteger,
-        Simd<T, N>: SupportedSimd,
-        Simd<T::Unsigned, N>: SupportedSimd,
-        Rhs: PrimitiveInteger<Unsigned = T::Unsigned>,
-        Simd<Rhs, N>: SupportedSimd,
+        T: PrimitiveInteger + SupportsLaneCount<N>,
+        Rhs: PrimitiveInteger<Unsigned = T::Unsigned> + SupportsLaneCount<N>,
     {
       type Output = Self;
 
@@ -46,11 +43,8 @@ macro_rules! impl_shift_operator {
 
     impl<T, const N: usize, Rhs> $OpAssign<Simd<Rhs, N>> for Simd<T, N>
     where
-        T: PrimitiveInteger,
-        Simd<T, N>: SupportedSimd,
-        Simd<T::Unsigned, N>: SupportedSimd,
-        Rhs: PrimitiveInteger<Unsigned = T::Unsigned>,
-        Simd<Rhs, N>: SupportedSimd,
+        T: PrimitiveInteger + SupportsLaneCount<N>,
+        Rhs: PrimitiveInteger<Unsigned = T::Unsigned> + SupportsLaneCount<N>,
     {
       $(#[$doc])*
       #[inline]
@@ -61,11 +55,8 @@ macro_rules! impl_shift_operator {
 
     impl<T, const N: usize, Rhs> $Op<&Simd<Rhs, N>> for Simd<T, N>
     where
-        T: PrimitiveInteger,
-        Simd<T, N>: SupportedSimd,
-        Simd<T::Unsigned, N>: SupportedSimd,
-        Rhs: PrimitiveInteger<Unsigned = T::Unsigned>,
-        Simd<Rhs, N>: SupportedSimd,
+        T: PrimitiveInteger + SupportsLaneCount<N>,
+        Rhs: PrimitiveInteger<Unsigned = T::Unsigned> + SupportsLaneCount<N>,
     {
       type Output = Self;
 
@@ -78,11 +69,8 @@ macro_rules! impl_shift_operator {
 
     impl<T, const N: usize, Rhs> $OpAssign<&Simd<Rhs, N>> for Simd<T, N>
     where
-        T: PrimitiveInteger,
-        Simd<T, N>: SupportedSimd,
-        Simd<T::Unsigned, N>: SupportedSimd,
-        Rhs: PrimitiveInteger<Unsigned = T::Unsigned>,
-        Simd<Rhs, N>: SupportedSimd,
+        T: PrimitiveInteger + SupportsLaneCount<N>,
+        Rhs: PrimitiveInteger<Unsigned = T::Unsigned> + SupportsLaneCount<N>,
     {
       $(#[$doc])*
       #[inline]
@@ -93,11 +81,8 @@ macro_rules! impl_shift_operator {
 
     impl<T, const N: usize, Rhs> $Op<Simd<Rhs, N>> for &Simd<T, N>
     where
-        T: PrimitiveInteger,
-        Simd<T, N>: SupportedSimd,
-        Simd<T::Unsigned, N>: SupportedSimd,
-        Rhs: PrimitiveInteger<Unsigned = T::Unsigned>,
-        Simd<Rhs, N>: SupportedSimd,
+        T: PrimitiveInteger + SupportsLaneCount<N>,
+        Rhs: PrimitiveInteger<Unsigned = T::Unsigned> + SupportsLaneCount<N>,
     {
       type Output = Simd<T, N>;
 
@@ -110,11 +95,8 @@ macro_rules! impl_shift_operator {
 
     impl<T, const N: usize, Rhs> $Op<&Simd<Rhs, N>> for &Simd<T, N>
     where
-        T: PrimitiveInteger,
-        Simd<T, N>: SupportedSimd,
-        Simd<T::Unsigned, N>: SupportedSimd,
-        Rhs: PrimitiveInteger<Unsigned = T::Unsigned>,
-        Simd<Rhs, N>: SupportedSimd,
+        T: PrimitiveInteger + SupportsLaneCount<N>,
+        Rhs: PrimitiveInteger<Unsigned = T::Unsigned> + SupportsLaneCount<N>,
     {
       type Output = Simd<T, N>;
 
@@ -129,8 +111,7 @@ macro_rules! impl_shift_operator {
       ($T:ident) => {
         impl<T, const N: usize> $Op<$T> for Simd<T, N>
         where
-          T: PrimitiveInteger,
-          Simd<T, N>: SupportedSimd,
+          T: PrimitiveInteger + SupportsLaneCount<N>,
         {
           type Output = Self;
 
@@ -143,10 +124,8 @@ macro_rules! impl_shift_operator {
 
         impl<const N: usize, Rhs> $Op<Simd<Rhs, N>> for $T
         where
-            Simd<$T, N>: SupportedSimd,
-            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd,
-            Rhs: PrimitiveInteger<Unsigned = <$T as SimdElement>::Unsigned>,
-            Simd<Rhs, N>: SupportedSimd,
+            $T: SupportsLaneCount<N>,
+            Rhs: PrimitiveInteger<Unsigned = <$T as SimdElement>::Unsigned> + SupportsLaneCount<N>,
         {
           type Output = Simd<$T, N>;
 
@@ -159,8 +138,7 @@ macro_rules! impl_shift_operator {
 
         impl<T, const N: usize> $OpAssign<$T> for Simd<T, N>
         where
-          T: PrimitiveInteger,
-          Simd<T, N>: SupportedSimd,
+          T: PrimitiveInteger + SupportsLaneCount<N>,
         {
           $(#[$doc_scalar])*
           #[inline]
@@ -171,8 +149,7 @@ macro_rules! impl_shift_operator {
 
         impl<T, const N: usize> $Op<&$T> for Simd<T, N>
         where
-          T: PrimitiveInteger,
-          Simd<T, N>: SupportedSimd,
+          T: PrimitiveInteger + SupportsLaneCount<N>,
         {
           type Output = Self;
 
@@ -185,10 +162,8 @@ macro_rules! impl_shift_operator {
 
         impl<const N: usize, Rhs> $Op<&Simd<Rhs, N>> for $T
         where
-            Simd<$T, N>: SupportedSimd,
-            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd,
-            Rhs: PrimitiveInteger<Unsigned = <$T as SimdElement>::Unsigned>,
-            Simd<Rhs, N>: SupportedSimd,
+            $T: SupportsLaneCount<N>,
+            Rhs: PrimitiveInteger<Unsigned = <$T as SimdElement>::Unsigned> + SupportsLaneCount<N>,
         {
           type Output = Simd<$T, N>;
 
@@ -201,8 +176,7 @@ macro_rules! impl_shift_operator {
 
         impl<T, const N: usize> $OpAssign<&$T> for Simd<T, N>
         where
-          T: PrimitiveInteger,
-          Simd<T, N>: SupportedSimd,
+          T: PrimitiveInteger + SupportsLaneCount<N>,
         {
           $(#[$doc_scalar])*
           #[inline]
@@ -213,8 +187,7 @@ macro_rules! impl_shift_operator {
 
         impl<T, const N: usize> $Op<$T> for &Simd<T, N>
         where
-          T: PrimitiveInteger,
-          Simd<T, N>: SupportedSimd,
+          T: PrimitiveInteger + SupportsLaneCount<N>,
         {
           type Output = Simd<T, N>;
 
@@ -227,10 +200,8 @@ macro_rules! impl_shift_operator {
 
         impl<const N: usize, Rhs> $Op<Simd<Rhs, N>> for &$T
         where
-            Simd<$T, N>: SupportedSimd,
-            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd,
-            Rhs: PrimitiveInteger<Unsigned = <$T as SimdElement>::Unsigned>,
-            Simd<Rhs, N>: SupportedSimd,
+            $T: SupportsLaneCount<N>,
+            Rhs: PrimitiveInteger<Unsigned = <$T as SimdElement>::Unsigned> + SupportsLaneCount<N>,
         {
           type Output = Simd<$T, N>;
 
@@ -243,8 +214,7 @@ macro_rules! impl_shift_operator {
 
         impl<T, const N: usize> $Op<&$T> for &Simd<T, N>
         where
-          T: PrimitiveInteger,
-          Simd<T, N>: SupportedSimd,
+          T: PrimitiveInteger + SupportsLaneCount<N>,
         {
           type Output = Simd<T, N>;
 
@@ -257,10 +227,8 @@ macro_rules! impl_shift_operator {
 
         impl<const N: usize, Rhs> $Op<&Simd<Rhs, N>> for &$T
         where
-            Simd<$T, N>: SupportedSimd,
-            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd,
-            Rhs: PrimitiveInteger<Unsigned = <$T as SimdElement>::Unsigned>,
-            Simd<Rhs, N>: SupportedSimd,
+            $T: SupportsLaneCount<N>,
+            Rhs: PrimitiveInteger<Unsigned = <$T as SimdElement>::Unsigned> + SupportsLaneCount<N>,
         {
           type Output = Simd<$T, N>;
 
@@ -528,8 +496,8 @@ impl_binary_operator!(
 
 impl<T, const N: usize, Rhs> core::iter::Sum<Rhs> for Simd<T, N>
 where
-    T: PrimitiveInteger,
-    Simd<T, N>: SupportedSimd + AddAssign<Rhs>,
+    T: PrimitiveInteger + SupportsLaneCount<N>,
+    Simd<T, N>: AddAssign<Rhs>,
 {
     #[inline]
     fn sum<I: Iterator<Item = Rhs>>(iter: I) -> Self {
@@ -543,8 +511,8 @@ where
 
 impl<T, const N: usize, Rhs> core::iter::Product<Rhs> for Simd<T, N>
 where
-    T: PrimitiveInteger,
-    Simd<T, N>: SupportedSimd + MulAssign<Rhs>,
+    T: PrimitiveInteger + SupportsLaneCount<N>,
+    Simd<T, N>: MulAssign<Rhs>,
 {
     #[inline]
     fn product<I: Iterator<Item = Rhs>>(iter: I) -> Self {
@@ -560,8 +528,7 @@ macro_rules! impl_formatting_trait {
     ($Trait:path) => {
         impl<T, const N: usize> $Trait for Simd<T, N>
         where
-            T: PrimitiveInteger,
-            Simd<T, N>: SupportedSimd,
+            T: PrimitiveInteger + SupportsLaneCount<N>,
         {
             #[allow(clippy::missing_inline_in_public_items)]
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -740,11 +707,7 @@ macro_rules! conflicting_items {
 
 impl<T, const N: usize> Simd<T, N>
 where
-    T: PrimitiveInteger,
-    Simd<T, N>: SupportedSimd,
-    // TODO(generics): Try to make these bounds implicit
-    Simd<T::Unsigned, N>: SupportedSimd,
-    Simd<T::Signed, N>: SupportedSimd,
+    T: PrimitiveInteger + SupportsLaneCount<N>,
 {
     // Because `rustdoc` does not enforce the "no conflicting implementations"
     // rule, we show conflicting items in documentation in the generic `impl`
@@ -1081,8 +1044,7 @@ where
     #[must_use]
     pub fn widening_mul(self, rhs: Self) -> Simd<T::DoubleWidth, N>
     where
-        T: HasDoubleWidth,
-        Simd<T::DoubleWidth, N>: SupportedSimd,
+        T: HasDoubleWidth<DoubleWidth: SupportsLaneCount<N>>,
     {
         self.widening_mul_backend(rhs)
     }
@@ -1129,7 +1091,7 @@ macro_rules! integer {
         #[cfg(not(doc))]
         impl<const N: usize> Simd<$T, N>
         where
-            Simd<$T, N>: SupportedSimd,
+            $T: SupportsLaneCount<N>,
         {
             conflicting_items!($T);
         }
@@ -1600,8 +1562,7 @@ macro_rules! simd_integer_backend_unsigned_autofill {
 /// non-integers that fills functions with [`unreachable!`].
 impl<T, const N: usize> SimdIntegerBackend for Simd<T, N>
 where
-    T: SimdElement + NotPrimitiveInteger,
-    Simd<T, N>: SupportedSimd,
+    T: SimdElement + SupportsLaneCount<N> + NotPrimitiveInteger,
 {
     fn add_backend(self, _: Self) -> Self {
         unreachable!()

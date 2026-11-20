@@ -3,7 +3,7 @@
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Rem, Sub};
 
 use crate::{
-    PrimitiveFloat, Simd, SimdElement, SupportedSimd,
+    PrimitiveFloat, Simd, SimdElement, SupportedSimd, SupportsLaneCount,
     primitive_traits::NotPrimitiveFloat,
     simd::{SimdAssociatedTypes, SupportSimdOf},
 };
@@ -178,8 +178,8 @@ impl_binary_operator!(
 
 impl<T, const N: usize, Rhs> core::iter::Sum<Rhs> for Simd<T, N>
 where
-    T: PrimitiveFloat,
-    Simd<T, N>: SupportedSimd + AddAssign<Rhs>,
+    T: PrimitiveFloat + SupportsLaneCount<N>,
+    Simd<T, N>: AddAssign<Rhs>,
 {
     /// Computes the sum of multiple SIMD vectors for each lane.
     ///
@@ -196,8 +196,8 @@ where
 
 impl<T, const N: usize, Rhs> core::iter::Product<Rhs> for Simd<T, N>
 where
-    T: PrimitiveFloat,
-    Simd<T, N>: SupportedSimd + MulAssign<Rhs>,
+    T: PrimitiveFloat + SupportsLaneCount<N>,
+    Simd<T, N>: MulAssign<Rhs>,
 {
     /// Computes the product of multiple SIMD vectors for each lane.
     ///
@@ -216,8 +216,7 @@ macro_rules! impl_formatting_trait {
     ($Trait:path) => {
         impl<T, const N: usize> $Trait for Simd<T, N>
         where
-            T: PrimitiveFloat,
-            Simd<T, N>: SupportedSimd,
+            T: PrimitiveFloat + SupportsLaneCount<N>,
         {
             #[allow(clippy::missing_inline_in_public_items)]
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -241,11 +240,7 @@ impl_formatting_trait!(core::fmt::UpperHex);
 
 impl<T, const N: usize> Simd<T, N>
 where
-    T: PrimitiveFloat,
-    Simd<T, N>: SupportedSimd,
-    // TODO(generics): Try to make these bounds implicit
-    Simd<T::Unsigned, N>: SupportedSimd,
-    Simd<T::Signed, N>: SupportedSimd,
+    T: PrimitiveFloat + SupportsLaneCount<N>,
 {
     /// The size of this SIMD vector in bits.
     pub const BITS: u16 = (size_of::<Self>() * 8) as u16;
@@ -1737,8 +1732,7 @@ pub(crate) trait SimdFloatBackend: Sized {
 /// non-floats that fills functions with [`unreachable!`].
 impl<T, const N: usize> SimdFloatBackend for Simd<T, N>
 where
-    T: SimdElement + NotPrimitiveFloat,
-    Simd<T, N>: SupportedSimd,
+    T: SimdElement + SupportsLaneCount<N> + NotPrimitiveFloat,
 {
     fn abs_backend(self) -> Self {
         unreachable!()

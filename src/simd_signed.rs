@@ -1,7 +1,7 @@
 //! Defines APIs applicable to SIMD vectors of signed integers.
 
 use crate::{
-    PrimitiveSigned, Simd, SimdElement, SupportedSimd,
+    PrimitiveSigned, Simd, SimdElement, SupportsLaneCount,
     primitive_traits::NotPrimitiveSigned,
     simd::{SimdAssociatedTypes, SupportSimdOf},
 };
@@ -45,10 +45,7 @@ macro_rules! conflicting_items {
 
 impl<T, const N: usize> Simd<T, N>
 where
-    T: PrimitiveSigned,
-    Simd<T, N>: SupportedSimd,
-    // TODO(generics): Try make this implicit bound
-    Simd<T::Unsigned, N>: SupportedSimd,
+    T: PrimitiveSigned + SupportsLaneCount<N>,
 {
     // Because `rustdoc` does not enforce the "no conflicting implementations"
     // rule, we show conflicting items in documentation in the generic `impl`
@@ -235,9 +232,7 @@ macro_rules! signed {
         #[cfg(not(doc))]
         impl<const N: usize> Simd<$T, N>
         where
-            Simd<$T, N>: SupportedSimd,
-            // TODO(generics): Try make this bound implicit
-            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd,
+            $T: SupportsLaneCount<N>,
         {
             conflicting_items!($T);
         }
@@ -282,8 +277,7 @@ pub(crate) trait SimdSignedBackend {
 /// non-signed-integers that fills functions with [`unreachable!`].
 impl<T, const N: usize> SimdSignedBackend for Simd<T, N>
 where
-    T: SimdElement + NotPrimitiveSigned,
-    Simd<T, N>: SupportedSimd,
+    T: SimdElement + SupportsLaneCount<N> + NotPrimitiveSigned,
 {
     fn abs_backend(self) -> Self {
         unreachable!()

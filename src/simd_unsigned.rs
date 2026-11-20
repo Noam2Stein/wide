@@ -1,17 +1,14 @@
 //! Defines APIs applicable to SIMD vectors of unsigned integers.
 
 use crate::{
-    PrimitiveUnsigned, Simd, SimdElement, SupportedSimd,
+    PrimitiveUnsigned, Simd, SimdElement, SupportsLaneCount,
     primitive_traits::NotPrimitiveUnsigned,
     simd::{SimdAssociatedTypes, SupportSimdOf},
 };
 
 impl<T, const N: usize> Simd<T, N>
 where
-    T: PrimitiveUnsigned,
-    Simd<T, N>: SupportedSimd,
-    // TODO(generics): Try to make this bound implicit
-    Simd<T::Signed, N>: SupportedSimd,
+    T: PrimitiveUnsigned + SupportsLaneCount<N>,
 {
     /// Returns the bit patterns of `self` reinterpreted as signed integers of
     /// the same size.
@@ -113,8 +110,7 @@ pub(crate) trait SimdUnsignedBackend {
 /// non-unsigned-integers that fills functions with [`unreachable!`].
 impl<T, const N: usize> SimdUnsignedBackend for Simd<T, N>
 where
-    T: SimdElement + NotPrimitiveUnsigned,
-    Simd<T, N>: SupportedSimd,
+    T: SimdElement + SupportsLaneCount<N> + NotPrimitiveUnsigned,
 {
     fn saturating_add_signed_backend(self, _: <Self as SimdAssociatedTypes>::SignedSimd) -> Self
     where
