@@ -48,6 +48,40 @@ pub trait SimdElement: Sealed + Copy {
     type Signed: PrimitiveSigned<Unsigned = Self::Unsigned>;
 }
 
+pub use supports_lane_count::SupportsLaneCount;
+
+mod supports_lane_count {
+    use crate::{Simd, SimdElement, SupportedSimd, utils::Imply};
+
+    /// A marker trait for [`SimdElement`] types that support a certain lane
+    /// count.
+    ///
+    /// Due to Rust language limitations, [`Simd<T, N>`] only supports certain
+    /// combinations of `T` and `N`. The trait bound `T: SupportsLaneCount<N>`
+    /// must be used in generic contexts to make sure [`Simd<T, N>`] is
+    /// supported.
+    #[expect(private_bounds)]
+    pub trait SupportsLaneCount<const N: usize>: SimdElement + InternalBounds<N> {}
+
+    trait InternalBounds<const N: usize>:
+        SimdElement
+        + Imply<Simd<Self, N>, Is: SupportedSimd>
+        + Imply<Simd<Self::Unsigned, N>, Is: SupportedSimd>
+        + Imply<Simd<Self::Signed, N>, Is: SupportedSimd>
+    {
+    }
+
+    impl<T, const N: usize> SupportsLaneCount<N> for T where T: SimdElement + InternalBounds<N> {}
+
+    impl<T, const N: usize> InternalBounds<N> for T where
+        T: SimdElement
+            + Imply<Simd<Self, N>, Is: SupportedSimd>
+            + Imply<Simd<Self::Unsigned, N>, Is: SupportedSimd>
+            + Imply<Simd<Self::Signed, N>, Is: SupportedSimd>
+    {
+    }
+}
+
 /// A trait for [`Simd<T, N>`] types that are actually supported.
 ///
 /// Due to Rust language limitations, [`Simd<T, N>`] only supports certain
