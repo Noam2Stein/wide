@@ -145,6 +145,11 @@ macro_rules! safe_target_feature {
             safe_target_feature! { Self = $Self, $body }
         }
     };
+    (impl $Trait:ident<$Arg0:tt, $Arg1:tt> for $Self:ident $body:tt) => {
+        impl $Trait<$Arg0, $Arg1> for $Self {
+            safe_target_feature! { Self = $Self, $body }
+        }
+    };
 
     (
         Self = $Self:ty,
@@ -261,7 +266,7 @@ macro_rules! impl_unary_operator {
     impl<T, const N: usize> $Op for Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       type Output = Self;
 
@@ -275,7 +280,7 @@ macro_rules! impl_unary_operator {
     impl<T, const N: usize> $Op for &Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       type Output = Simd<T, N>;
 
@@ -307,7 +312,7 @@ macro_rules! impl_binary_operator {
     impl<T, const N: usize> $Op for Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       type Output = Self;
 
@@ -321,7 +326,7 @@ macro_rules! impl_binary_operator {
     impl<T, const N: usize> $Op<T> for Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       type Output = Self;
 
@@ -335,7 +340,7 @@ macro_rules! impl_binary_operator {
     impl<T, const N: usize> $OpAssign for Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       $(#[$doc])*
       #[inline]
@@ -347,7 +352,7 @@ macro_rules! impl_binary_operator {
     impl<T, const N: usize> $OpAssign<T> for Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       $(#[$doc_scalar])*
       #[inline]
@@ -359,7 +364,7 @@ macro_rules! impl_binary_operator {
     impl<T, const N: usize> $Op<&Self> for Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       type Output = Self;
 
@@ -373,7 +378,7 @@ macro_rules! impl_binary_operator {
     impl<T, const N: usize> $Op<&T> for Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       type Output = Self;
 
@@ -387,7 +392,7 @@ macro_rules! impl_binary_operator {
     impl<T, const N: usize> $OpAssign<&Self> for Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       $(#[$doc])*
       #[inline]
@@ -399,7 +404,7 @@ macro_rules! impl_binary_operator {
     impl<T, const N: usize> $OpAssign<&T> for Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       $(#[$doc_scalar])*
       #[inline]
@@ -411,7 +416,7 @@ macro_rules! impl_binary_operator {
     impl<T, const N: usize> $Op<Simd<T, N>> for &Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       type Output = Simd<T, N>;
 
@@ -425,7 +430,7 @@ macro_rules! impl_binary_operator {
     impl<T, const N: usize> $Op<T> for &Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       type Output = Simd<T, N>;
 
@@ -439,7 +444,7 @@ macro_rules! impl_binary_operator {
     impl<T, const N: usize> $Op<&Simd<T, N>> for &Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       type Output = Simd<T, N>;
 
@@ -453,7 +458,7 @@ macro_rules! impl_binary_operator {
     impl<T, const N: usize> $Op<&T> for &Simd<T, N>
     where
         T: $ElementBound,
-        Simd<T, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
     {
       type Output = Simd<T, N>;
 
@@ -491,7 +496,7 @@ macro_rules! impl_binary_operator_for_scalar {
   ) => {
     impl<const N: usize> $Op<Simd<$T, N>> for $T
     where
-        Simd<$T, N>: SupportedSimd,
+        Simd<$T, N>: SupportedSimd<$T, N>,
     {
       type Output = Simd<$T, N>;
 
@@ -504,7 +509,7 @@ macro_rules! impl_binary_operator_for_scalar {
 
     impl<const N: usize> $Op<&Simd<$T, N>> for $T
     where
-        Simd<$T, N>: SupportedSimd,
+        Simd<$T, N>: SupportedSimd<$T, N>,
     {
       type Output = Simd<$T, N>;
 
@@ -517,7 +522,7 @@ macro_rules! impl_binary_operator_for_scalar {
 
     impl<const N: usize> $Op<Simd<$T, N>> for &$T
     where
-        Simd<$T, N>: SupportedSimd,
+        Simd<$T, N>: SupportedSimd<$T, N>,
     {
       type Output = Simd<$T, N>;
 
@@ -530,7 +535,7 @@ macro_rules! impl_binary_operator_for_scalar {
 
     impl<const N: usize> $Op<&Simd<$T, N>> for &$T
     where
-        Simd<$T, N>: SupportedSimd,
+        Simd<$T, N>: SupportedSimd<$T, N>,
     {
       type Output = Simd<$T, N>;
 

@@ -24,10 +24,10 @@ macro_rules! impl_shift_operator {
     impl<T, const N: usize, Rhs> $Op<Simd<Rhs, N>> for Simd<T, N>
     where
         T: PrimitiveInteger,
-        Simd<T, N>: SupportedSimd,
-        Simd<T::Unsigned, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
+        Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
         Rhs: PrimitiveInteger<Unsigned = T::Unsigned>,
-        Simd<Rhs, N>: SupportedSimd,
+        Simd<Rhs, N>: SupportedSimd<Rhs, N>,
     {
       type Output = Self;
 
@@ -47,10 +47,10 @@ macro_rules! impl_shift_operator {
     impl<T, const N: usize, Rhs> $OpAssign<Simd<Rhs, N>> for Simd<T, N>
     where
         T: PrimitiveInteger,
-        Simd<T, N>: SupportedSimd,
-        Simd<T::Unsigned, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
+        Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
         Rhs: PrimitiveInteger<Unsigned = T::Unsigned>,
-        Simd<Rhs, N>: SupportedSimd,
+        Simd<Rhs, N>: SupportedSimd<Rhs, N>,
     {
       $(#[$doc])*
       #[inline]
@@ -62,10 +62,10 @@ macro_rules! impl_shift_operator {
     impl<T, const N: usize, Rhs> $Op<&Simd<Rhs, N>> for Simd<T, N>
     where
         T: PrimitiveInteger,
-        Simd<T, N>: SupportedSimd,
-        Simd<T::Unsigned, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
+        Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
         Rhs: PrimitiveInteger<Unsigned = T::Unsigned>,
-        Simd<Rhs, N>: SupportedSimd,
+        Simd<Rhs, N>: SupportedSimd<Rhs, N>,
     {
       type Output = Self;
 
@@ -79,10 +79,10 @@ macro_rules! impl_shift_operator {
     impl<T, const N: usize, Rhs> $OpAssign<&Simd<Rhs, N>> for Simd<T, N>
     where
         T: PrimitiveInteger,
-        Simd<T, N>: SupportedSimd,
-        Simd<T::Unsigned, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
+        Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
         Rhs: PrimitiveInteger<Unsigned = T::Unsigned>,
-        Simd<Rhs, N>: SupportedSimd,
+        Simd<Rhs, N>: SupportedSimd<Rhs, N>,
     {
       $(#[$doc])*
       #[inline]
@@ -94,10 +94,10 @@ macro_rules! impl_shift_operator {
     impl<T, const N: usize, Rhs> $Op<Simd<Rhs, N>> for &Simd<T, N>
     where
         T: PrimitiveInteger,
-        Simd<T, N>: SupportedSimd,
-        Simd<T::Unsigned, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
+        Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
         Rhs: PrimitiveInteger<Unsigned = T::Unsigned>,
-        Simd<Rhs, N>: SupportedSimd,
+        Simd<Rhs, N>: SupportedSimd<Rhs, N>,
     {
       type Output = Simd<T, N>;
 
@@ -111,10 +111,10 @@ macro_rules! impl_shift_operator {
     impl<T, const N: usize, Rhs> $Op<&Simd<Rhs, N>> for &Simd<T, N>
     where
         T: PrimitiveInteger,
-        Simd<T, N>: SupportedSimd,
-        Simd<T::Unsigned, N>: SupportedSimd,
+        Simd<T, N>: SupportedSimd<T, N>,
+        Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
         Rhs: PrimitiveInteger<Unsigned = T::Unsigned>,
-        Simd<Rhs, N>: SupportedSimd,
+        Simd<Rhs, N>: SupportedSimd<Rhs, N>,
     {
       type Output = Simd<T, N>;
 
@@ -130,7 +130,7 @@ macro_rules! impl_shift_operator {
         impl<T, const N: usize> $Op<$T> for Simd<T, N>
         where
           T: PrimitiveInteger,
-          Simd<T, N>: SupportedSimd,
+          Simd<T, N>: SupportedSimd<T, N>,
         {
           type Output = Self;
 
@@ -143,10 +143,10 @@ macro_rules! impl_shift_operator {
 
         impl<const N: usize, Rhs> $Op<Simd<Rhs, N>> for $T
         where
-            Simd<$T, N>: SupportedSimd,
-            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd,
+            Simd<$T, N>: SupportedSimd<$T, N>,
+            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd<<$T as SimdElement>::Unsigned, N>,
             Rhs: PrimitiveInteger<Unsigned = <$T as SimdElement>::Unsigned>,
-            Simd<Rhs, N>: SupportedSimd,
+            Simd<Rhs, N>: SupportedSimd<Rhs, N>,
         {
           type Output = Simd<$T, N>;
 
@@ -160,7 +160,7 @@ macro_rules! impl_shift_operator {
         impl<T, const N: usize> $OpAssign<$T> for Simd<T, N>
         where
           T: PrimitiveInteger,
-          Simd<T, N>: SupportedSimd,
+          Simd<T, N>: SupportedSimd<T, N>,
         {
           $(#[$doc_scalar])*
           #[inline]
@@ -172,7 +172,7 @@ macro_rules! impl_shift_operator {
         impl<T, const N: usize> $Op<&$T> for Simd<T, N>
         where
           T: PrimitiveInteger,
-          Simd<T, N>: SupportedSimd,
+          Simd<T, N>: SupportedSimd<T, N>,
         {
           type Output = Self;
 
@@ -185,10 +185,10 @@ macro_rules! impl_shift_operator {
 
         impl<const N: usize, Rhs> $Op<&Simd<Rhs, N>> for $T
         where
-            Simd<$T, N>: SupportedSimd,
-            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd,
+            Simd<$T, N>: SupportedSimd<$T, N>,
+            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd<<$T as SimdElement>::Unsigned, N>,
             Rhs: PrimitiveInteger<Unsigned = <$T as SimdElement>::Unsigned>,
-            Simd<Rhs, N>: SupportedSimd,
+            Simd<Rhs, N>: SupportedSimd<Rhs, N>,
         {
           type Output = Simd<$T, N>;
 
@@ -202,7 +202,7 @@ macro_rules! impl_shift_operator {
         impl<T, const N: usize> $OpAssign<&$T> for Simd<T, N>
         where
           T: PrimitiveInteger,
-          Simd<T, N>: SupportedSimd,
+          Simd<T, N>: SupportedSimd<T, N>,
         {
           $(#[$doc_scalar])*
           #[inline]
@@ -214,7 +214,7 @@ macro_rules! impl_shift_operator {
         impl<T, const N: usize> $Op<$T> for &Simd<T, N>
         where
           T: PrimitiveInteger,
-          Simd<T, N>: SupportedSimd,
+          Simd<T, N>: SupportedSimd<T, N>,
         {
           type Output = Simd<T, N>;
 
@@ -227,10 +227,10 @@ macro_rules! impl_shift_operator {
 
         impl<const N: usize, Rhs> $Op<Simd<Rhs, N>> for &$T
         where
-            Simd<$T, N>: SupportedSimd,
-            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd,
+            Simd<$T, N>: SupportedSimd<$T, N>,
+            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd<<$T as SimdElement>::Unsigned, N>,
             Rhs: PrimitiveInteger<Unsigned = <$T as SimdElement>::Unsigned>,
-            Simd<Rhs, N>: SupportedSimd,
+            Simd<Rhs, N>: SupportedSimd<Rhs, N>,
         {
           type Output = Simd<$T, N>;
 
@@ -244,7 +244,7 @@ macro_rules! impl_shift_operator {
         impl<T, const N: usize> $Op<&$T> for &Simd<T, N>
         where
           T: PrimitiveInteger,
-          Simd<T, N>: SupportedSimd,
+          Simd<T, N>: SupportedSimd<T, N>,
         {
           type Output = Simd<T, N>;
 
@@ -257,10 +257,10 @@ macro_rules! impl_shift_operator {
 
         impl<const N: usize, Rhs> $Op<&Simd<Rhs, N>> for &$T
         where
-            Simd<$T, N>: SupportedSimd,
-            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd,
+            Simd<$T, N>: SupportedSimd<$T, N>,
+            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd<<$T as SimdElement>::Unsigned, N>,
             Rhs: PrimitiveInteger<Unsigned = <$T as SimdElement>::Unsigned>,
-            Simd<Rhs, N>: SupportedSimd,
+            Simd<Rhs, N>: SupportedSimd<Rhs, N>,
         {
           type Output = Simd<$T, N>;
 
@@ -529,7 +529,7 @@ impl_binary_operator!(
 impl<T, const N: usize, Rhs> core::iter::Sum<Rhs> for Simd<T, N>
 where
     T: PrimitiveInteger,
-    Simd<T, N>: SupportedSimd + AddAssign<Rhs>,
+    Simd<T, N>: SupportedSimd<T, N> + AddAssign<Rhs>,
 {
     #[inline]
     fn sum<I: Iterator<Item = Rhs>>(iter: I) -> Self {
@@ -544,7 +544,7 @@ where
 impl<T, const N: usize, Rhs> core::iter::Product<Rhs> for Simd<T, N>
 where
     T: PrimitiveInteger,
-    Simd<T, N>: SupportedSimd + MulAssign<Rhs>,
+    Simd<T, N>: SupportedSimd<T, N> + MulAssign<Rhs>,
 {
     #[inline]
     fn product<I: Iterator<Item = Rhs>>(iter: I) -> Self {
@@ -561,7 +561,7 @@ macro_rules! impl_formatting_trait {
         impl<T, const N: usize> $Trait for Simd<T, N>
         where
             T: PrimitiveInteger,
-            Simd<T, N>: SupportedSimd,
+            Simd<T, N>: SupportedSimd<T, N>,
         {
             #[allow(clippy::missing_inline_in_public_items)]
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -690,11 +690,13 @@ macro_rules! conflicting_items {
         /// [`to_ne_bytes`]: Self::to_ne_bytes
         #[inline]
         #[must_use]
-        pub const fn from_ne_bytes(bytes: <Self as SupportedSimd>::Bytes) -> Self {
+        pub const fn from_ne_bytes(bytes: <Self as SupportedSimd<$T, N>>::Bytes) -> Self {
             // SAFETY: `Simd<$T, N>` accepts all bit-patterns and only contains
             // initialized memory, and the byte array has the same size.
             unsafe {
-                core::mem::transmute_copy::<<Self as SupportedSimd>::Bytes, Simd<$T, N>>(&bytes)
+                core::mem::transmute_copy::<<Self as SupportedSimd<$T, N>>::Bytes, Simd<$T, N>>(
+                    &bytes,
+                )
             }
         }
 
@@ -709,11 +711,13 @@ macro_rules! conflicting_items {
         /// [`from_ne_bytes`]: Self::from_ne_bytes
         #[inline]
         #[must_use]
-        pub const fn to_ne_bytes(self) -> <Self as SupportedSimd>::Bytes {
+        pub const fn to_ne_bytes(self) -> <Self as SupportedSimd<$T, N>>::Bytes {
             // SAFETY: `Simd<$T, N>` accepts all bit-patterns and only contains
             // initialized memory, and the byte array has the same size.
             unsafe {
-                core::mem::transmute_copy::<Simd<$T, N>, <Self as SupportedSimd>::Bytes>(&self)
+                core::mem::transmute_copy::<Simd<$T, N>, <Self as SupportedSimd<$T, N>>::Bytes>(
+                    &self,
+                )
             }
         }
 
@@ -741,10 +745,10 @@ macro_rules! conflicting_items {
 impl<T, const N: usize> Simd<T, N>
 where
     T: PrimitiveInteger,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
     // TODO(generics): Try to make these bounds implicit
-    Simd<T::Unsigned, N>: SupportedSimd,
-    Simd<T::Signed, N>: SupportedSimd,
+    Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
+    Simd<T::Signed, N>: SupportedSimd<T::Signed, N>,
 {
     // Because `rustdoc` does not enforce the "no conflicting implementations"
     // rule, we show conflicting items in documentation in the generic `impl`
@@ -1082,7 +1086,7 @@ where
     pub fn widening_mul(self, rhs: Self) -> Simd<T::DoubleWidth, N>
     where
         T: HasDoubleWidth,
-        Simd<T::DoubleWidth, N>: SupportedSimd,
+        Simd<T::DoubleWidth, N>: SupportedSimd<T::DoubleWidth, N>,
     {
         self.widening_mul_backend(rhs)
     }
@@ -1129,7 +1133,7 @@ macro_rules! integer {
         #[cfg(not(doc))]
         impl<const N: usize> Simd<$T, N>
         where
-            Simd<$T, N>: SupportedSimd,
+            Simd<$T, N>: SupportedSimd<$T, N>,
         {
             conflicting_items!($T);
         }
@@ -1245,7 +1249,7 @@ integer!(usize);
 
 /// Defines the internal implementations of functions applicable to SIMD vectors
 /// of integers (both signed and unsigned).
-pub(crate) trait SimdIntegerBackend: Sized {
+pub(crate) trait SimdIntegerBackend<T, const N: usize>: Sized {
     fn neg_backend(self) -> Self;
 
     fn not_backend(self) -> Self;
@@ -1598,10 +1602,10 @@ macro_rules! simd_integer_backend_unsigned_autofill {
 /// This means that non-integers do need some implementation of
 /// [`SimdIntegerBackend`]. This block is a dummy implementation for all
 /// non-integers that fills functions with [`unreachable!`].
-impl<T, const N: usize> SimdIntegerBackend for Simd<T, N>
+impl<T, const N: usize> SimdIntegerBackend<T, N> for Simd<T, N>
 where
     T: SimdElement + NotPrimitiveInteger,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     fn add_backend(self, _: Self) -> Self {
         unreachable!()

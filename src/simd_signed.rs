@@ -46,9 +46,9 @@ macro_rules! conflicting_items {
 impl<T, const N: usize> Simd<T, N>
 where
     T: PrimitiveSigned,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
     // TODO(generics): Try make this implicit bound
-    Simd<T::Unsigned, N>: SupportedSimd,
+    Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
 {
     // Because `rustdoc` does not enforce the "no conflicting implementations"
     // rule, we show conflicting items in documentation in the generic `impl`
@@ -235,9 +235,9 @@ macro_rules! signed {
         #[cfg(not(doc))]
         impl<const N: usize> Simd<$T, N>
         where
-            Simd<$T, N>: SupportedSimd,
+            Simd<$T, N>: SupportedSimd<$T, N>,
             // TODO(generics): Try make this bound implicit
-            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd,
+            Simd<<$T as SimdElement>::Unsigned, N>: SupportedSimd<<$T as SimdElement>::Unsigned, N>,
         {
             conflicting_items!($T);
         }
@@ -252,7 +252,7 @@ signed!(isize);
 
 /// Defines the internal implementations of functions applicable to SIMD vectors
 /// of signed integers.
-pub(crate) trait SimdSignedBackend {
+pub(crate) trait SimdSignedBackend<T, const N: usize> {
     fn abs_backend(self) -> Self;
 
     #[expect(clippy::wrong_self_convention)]
@@ -280,10 +280,10 @@ pub(crate) trait SimdSignedBackend {
 /// This means that non-signed-integers do need some implementation of
 /// [`SimdSignedBackend`]. This block is a dummy implementation for all
 /// non-signed-integers that fills functions with [`unreachable!`].
-impl<T, const N: usize> SimdSignedBackend for Simd<T, N>
+impl<T, const N: usize> SimdSignedBackend<T, N> for Simd<T, N>
 where
     T: SimdElement + NotPrimitiveSigned,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     fn abs_backend(self) -> Self {
         unreachable!()

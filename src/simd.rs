@@ -20,10 +20,10 @@ use crate::{
 /// alignment, what about non-power-of-two lane counts).
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct Simd<T, const N: usize>(pub(crate) <Self as SimdBackend>::Inner)
+pub struct Simd<T, const N: usize>(pub(crate) <Self as SimdBackend<T, N>>::Inner)
 where
     T: SimdElement,
-    Simd<T, N>: SupportedSimd;
+    Simd<T, N>: SupportedSimd<T, N>;
 
 /// A trait for types that can be used as SIMD vector elements.
 ///
@@ -51,7 +51,7 @@ pub trait SimdElement: Sealed + Copy {
 /// A trait for [`Simd<T, N>`] types that are actually supported.
 ///
 /// Due to Rust language limitations, [`Simd<T, N>`] only supports certain
-/// combinations of `T` and `N`. The trait bound `Simd<T, N>: SupportedSimd`
+/// combinations of `T` and `N`. The trait bound `Simd<T, N>: SupportedSimd<T, N>`
 /// must be used in generic contexts to make sure the given SIMD type is
 /// supported.
 ///
@@ -59,13 +59,13 @@ pub trait SimdElement: Sealed + Copy {
 /// [`Simd<T, N>`] would support all combinations of `T` and `N`, the trait
 /// bound would be removed and this trait would be deprecated.
 #[expect(private_bounds)]
-pub trait SupportedSimd:
+pub trait SupportedSimd<T, const N: usize>:
     Sealed
-    + SimdBackend
-    + SimdFloatBackend
-    + SimdIntegerBackend
-    + SimdSignedBackend
-    + SimdUnsignedBackend
+    + SimdBackend<T, N>
+    + SimdFloatBackend<T, N>
+    + SimdIntegerBackend<T, N>
+    + SimdSignedBackend<T, N>
+    + SimdUnsignedBackend<T, N>
 {
     /// The unsigned integer used in [`Simd::to_bitmask`].
     ///
@@ -515,11 +515,11 @@ macro_rules! define_simd {
     /// `{simd-type}(Inner)`. Wait until the generics API is ready to be merged
     /// onto `main`, only then remove this function if decided so (wait to avoid
     /// merge conflicts with `main`).
-    pub(crate) fn $Simd(inner: <$Simd as SimdBackend>::Inner) -> $Simd {
+    pub(crate) fn $Simd(inner: <$Simd as SimdBackend<$T, $N>>::Inner) -> $Simd {
       Simd(inner)
     }
 
-    impl SupportedSimd for Simd<$T, $N> {
+    impl SupportedSimd<$T, $N> for Simd<$T, $N> {
       type Bitmask = $Bitmask;
 
       type Bytes = [u8; size_of::<Self>()];
@@ -952,7 +952,7 @@ define_simd!(
 impl<T, const N: usize> PartialEq for Simd<T, N>
 where
     T: SimdElement + PartialEq,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
@@ -965,14 +965,14 @@ where
 impl<T, const N: usize> Eq for Simd<T, N>
 where
     T: SimdElement + Eq,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
 }
 
 impl<T, const N: usize> Default for Simd<T, N>
 where
     T: SimdElement + Default,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     #[inline]
     fn default() -> Self {
@@ -987,7 +987,7 @@ where
 impl<T, const N: usize> From<[T; N]> for Simd<T, N>
 where
     T: SimdElement,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     /// Converts an array to a SIMD vector.
     #[inline]
@@ -999,7 +999,7 @@ where
 impl<T, const N: usize> From<Simd<T, N>> for [T; N]
 where
     T: SimdElement,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     /// Converts a SIMD vector to an array.
     #[inline]
@@ -1011,7 +1011,7 @@ where
 impl<T, const N: usize> From<T> for Simd<T, N>
 where
     T: SimdElement,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     /// Converts a single value to a SIMD vector by setting all elements to
     /// that value.
@@ -1024,7 +1024,7 @@ where
 impl<T, const N: usize> From<&[T]> for Simd<T, N>
 where
     T: SimdElement + Default,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     /// Converts a slice to a SIMD vector, filling in [`Default::default()`] if
     /// there are not enough elements, and panicking if there are too many
@@ -1063,7 +1063,7 @@ macro_rules! impl_formatting_trait {
         impl<T, const N: usize> $Trait for Simd<T, N>
         where
             T: SimdElement + $Trait,
-            Simd<T, N>: SupportedSimd,
+            Simd<T, N>: SupportedSimd<T, N>,
         {
             #[allow(clippy::missing_inline_in_public_items)]
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -1087,9 +1087,9 @@ impl_formatting_trait!(core::fmt::UpperExp);
 impl<T, const N: usize, U> Select<Simd<U, N>> for Simd<T, N>
 where
     T: SimdElement + MaskOps,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
     U: SimdElement<Unsigned = T::Unsigned> + MaskOps,
-    Simd<U, N>: SupportedSimd,
+    Simd<U, N>: SupportedSimd<U, N>,
 {
     #[inline]
     fn select(self, if_true: Simd<U, N>, if_false: Simd<U, N>) -> Simd<U, N> {
@@ -1106,8 +1106,8 @@ where
 impl<T, const N: usize> ShuffleExt for [Simd<T, N>; 2]
 where
     T: SimdElement,
-    Simd<T, N>: SupportedSimd,
-    Simd<T::Unsigned, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
+    Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
 {
     type Indices = Simd<T::Unsigned, N>;
     type Output = Simd<T, N>;
@@ -1131,8 +1131,8 @@ where
 impl<T, const N: usize> ShuffleExt for [Simd<T, N>; 3]
 where
     T: SimdElement,
-    Simd<T, N>: SupportedSimd,
-    Simd<T::Unsigned, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
+    Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
 {
     type Indices = Simd<T::Unsigned, N>;
     type Output = Simd<T, N>;
@@ -1156,8 +1156,8 @@ where
 impl<T, const N: usize> ShuffleExt for [Simd<T, N>; 4]
 where
     T: SimdElement,
-    Simd<T, N>: SupportedSimd,
-    Simd<T::Unsigned, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
+    Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
 {
     type Indices = Simd<T::Unsigned, N>;
     type Output = Simd<T, N>;
@@ -1182,7 +1182,7 @@ where
 impl<T, const N: usize> CmpEq for Simd<T, N>
 where
     T: SimdElement + PartialEq,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Output = Self;
 
@@ -1196,7 +1196,7 @@ where
 impl<T, const N: usize> CmpEq<T> for Simd<T, N>
 where
     T: SimdElement + PartialEq,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Output = Self;
 
@@ -1210,7 +1210,7 @@ where
 impl<T, const N: usize> CmpNe for Simd<T, N>
 where
     T: SimdElement + PartialEq,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Output = Self;
 
@@ -1224,7 +1224,7 @@ where
 impl<T, const N: usize> CmpNe<T> for Simd<T, N>
 where
     T: SimdElement + PartialEq,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Output = Self;
 
@@ -1238,7 +1238,7 @@ where
 impl<T, const N: usize> CmpLt for Simd<T, N>
 where
     T: SimdElement + PartialOrd,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Output = Self;
 
@@ -1252,7 +1252,7 @@ where
 impl<T, const N: usize> CmpLt<T> for Simd<T, N>
 where
     T: SimdElement + PartialOrd,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Output = Self;
 
@@ -1266,7 +1266,7 @@ where
 impl<T, const N: usize> CmpGt for Simd<T, N>
 where
     T: SimdElement + PartialOrd,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Output = Self;
 
@@ -1280,7 +1280,7 @@ where
 impl<T, const N: usize> CmpGt<T> for Simd<T, N>
 where
     T: SimdElement + PartialOrd,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Output = Self;
 
@@ -1294,7 +1294,7 @@ where
 impl<T, const N: usize> CmpLe for Simd<T, N>
 where
     T: SimdElement + PartialOrd,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Output = Self;
 
@@ -1308,7 +1308,7 @@ where
 impl<T, const N: usize> CmpLe<T> for Simd<T, N>
 where
     T: SimdElement + PartialOrd,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Output = Self;
 
@@ -1322,7 +1322,7 @@ where
 impl<T, const N: usize> CmpGe for Simd<T, N>
 where
     T: SimdElement + PartialOrd,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Output = Self;
 
@@ -1336,7 +1336,7 @@ where
 impl<T, const N: usize> CmpGe<T> for Simd<T, N>
 where
     T: SimdElement + PartialOrd,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Output = Self;
 
@@ -1349,7 +1349,7 @@ where
 impl<T, const N: usize> AlignTo for Simd<T, N>
 where
     T: SimdElement + Pod + Default + PartialEq,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type Elem = T;
 }
@@ -1357,7 +1357,7 @@ where
 impl<T, const N: usize> Simd<T, N>
 where
     T: SimdElement,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     /// The number of elements in this SIMD vector.
     pub const LANES: u16 = N as u16;
@@ -1580,7 +1580,7 @@ where
     #[inline]
     #[must_use]
     #[doc(alias("movemask", "move_mask"))]
-    pub fn to_bitmask(self) -> <Self as SupportedSimd>::Bitmask
+    pub fn to_bitmask(self) -> <Self as SupportedSimd<T, N>>::Bitmask
     where
         T: MaskOps,
     {
@@ -1680,7 +1680,7 @@ where
     #[must_use]
     pub fn shuffle(self, indices: Simd<T::Unsigned, N>) -> Self
     where
-        Simd<T::Unsigned, N>: SupportedSimd,
+        Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
     {
         self.shuffle_backend(indices)
     }
@@ -1698,7 +1698,7 @@ where
     #[must_use]
     pub fn shuffle_zeroing(self, indices: Simd<T::Unsigned, N>) -> Self
     where
-        Simd<T::Unsigned, N>: SupportedSimd,
+        Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
     {
         self.shuffle_zeroing_backend(indices)
     }
@@ -1714,7 +1714,7 @@ where
     #[must_use]
     pub fn shuffle_wrapping(self, indices: Simd<T::Unsigned, N>) -> Self
     where
-        Simd<T::Unsigned, N>: SupportedSimd,
+        Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
     {
         self.shuffle_wrapping_backend(indices)
     }
@@ -1805,7 +1805,7 @@ where
 unsafe impl<T, const N: usize> Zeroable for Simd<T, N>
 where
     T: SimdElement + Zeroable,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
 }
 
@@ -1814,7 +1814,7 @@ where
 unsafe impl<T, const N: usize> Pod for Simd<T, N>
 where
     T: SimdElement + Pod,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
 }
 
@@ -1822,7 +1822,7 @@ where
 impl<T, const N: usize> Serialize for Simd<T, N>
 where
     T: SimdElement + Serialize,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -1842,7 +1842,7 @@ where
 impl<'de, T, const N: usize> Deserialize<'de> for Simd<T, N>
 where
     T: SimdElement + Deserialize<'de>,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -1904,7 +1904,7 @@ where
 
 /// Defines the `Inner` type (the type contained inside `Simd<T, N>`) and the
 /// internal implementations of functions applicable to arbitrary SIMD vectors.
-pub(crate) trait SimdBackend: Sized {
+pub(crate) trait SimdBackend<T, const N: usize>: Sized {
     type Inner: Copy;
 
     fn simd_eq_backend(self, other: Self) -> Self;
@@ -1923,7 +1923,7 @@ pub(crate) trait SimdBackend: Sized {
 
     fn to_bitmask_backend(self) -> Self::Bitmask
     where
-        Self: SupportedSimd;
+        Self: SupportedSimd<T, N>;
 
     fn any_backend(self) -> bool;
 
@@ -2229,7 +2229,7 @@ macro_rules! simd_backend_signed_autofill {
         }
 
         #[inline]
-        fn to_bitmask_backend(self) -> <Self as SupportedSimd>::Bitmask {
+        fn to_bitmask_backend(self) -> <Self as SupportedSimd<$T, $N>>::Bitmask {
             self.cast_unsigned().to_bitmask()
         }
 
@@ -2386,7 +2386,7 @@ macro_rules! simd_backend_signed_autofill {
 impl<T, const N: usize> SimdAssociatedTypes for Simd<T, N>
 where
     T: SimdElement,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     type T = T;
     type ArrayOf<U> = [U; N];
@@ -2411,9 +2411,9 @@ where
 impl<T, const N: usize, U> SupportSimdOf<U> for Simd<T, N>
 where
     T: SimdElement,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
     U: SimdElement,
-    Simd<U, N>: SupportedSimd,
+    Simd<U, N>: SupportedSimd<U, N>,
 {
     type SimdOfU = Simd<U, N>;
 }
@@ -2438,6 +2438,6 @@ impl<T, const N: usize> Sealed for [T; N] {}
 impl<T, const N: usize> Sealed for Simd<T, N>
 where
     T: SimdElement,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
 }

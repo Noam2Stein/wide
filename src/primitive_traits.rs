@@ -25,9 +25,9 @@ use crate::{
 /// fn example<T, const N: usize>(x: Simd<T, N>) -> Simd<T, N>
 /// where
 ///     T: PrimitiveFloat,
-///     Simd<T, N>: SupportedSimd,
-///     Simd<T::Unsigned, N>: SupportedSimd,
-///     Simd<T::Signed, N>: SupportedSimd,
+///     Simd<T, N>: SupportedSimd<T, N>,
+///     Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
+///     Simd<T::Signed, N>: SupportedSimd<T::Signed, N>,
 /// {
 ///     // Use SIMD float functionality
 ///     x.sin().abs().acos() + x
@@ -65,9 +65,9 @@ pub trait PrimitiveFloat:
 /// fn example<T, const N: usize>(x: Simd<T, N>) -> Simd<T, N>
 /// where
 ///     T: PrimitiveInteger,
-///     Simd<T, N>: SupportedSimd,
-///     Simd<T::Unsigned, N>: SupportedSimd,
-///     Simd<T::Signed, N>: SupportedSimd,
+///     Simd<T, N>: SupportedSimd<T, N>,
+///     Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
+///     Simd<T::Signed, N>: SupportedSimd<T::Signed, N>,
 /// {
 ///     // Use SIMD integer functionality
 ///     x.saturating_add(x) * x
@@ -127,9 +127,9 @@ pub trait HasDoubleWidth: PrimitiveInteger {
 /// fn example<T, const N: usize>(x: Simd<T, N>) -> Simd<T, N>
 /// where
 ///     T: PrimitiveSigned,
-///     Simd<T, N>: SupportedSimd,
-///     Simd<T::Unsigned, N>: SupportedSimd,
-///     Simd<T::Signed, N>: SupportedSimd,
+///     Simd<T, N>: SupportedSimd<T, N>,
+///     Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
+///     Simd<T::Signed, N>: SupportedSimd<T::Signed, N>,
 /// {
 ///     // Use SIMD signed integer functionality
 ///     x.saturating_abs().add_unsigned(x.cast_unsigned())
@@ -172,9 +172,9 @@ pub trait PrimitiveSigned:
 /// fn example<T, const N: usize>(x: Simd<T, N>) -> Simd<T, N>
 /// where
 ///     T: PrimitiveUnsigned,
-///     Simd<T, N>: SupportedSimd,
-///     Simd<T::Unsigned, N>: SupportedSimd,
-///     Simd<T::Signed, N>: SupportedSimd,
+///     Simd<T, N>: SupportedSimd<T, N>,
+///     Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
+///     Simd<T::Signed, N>: SupportedSimd<T::Signed, N>,
 /// {
 ///     // Use SIMD signed integer functionality
 ///     x.saturating_add_signed(x.cast_signed())

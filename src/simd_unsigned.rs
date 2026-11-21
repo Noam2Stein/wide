@@ -9,9 +9,9 @@ use crate::{
 impl<T, const N: usize> Simd<T, N>
 where
     T: PrimitiveUnsigned,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
     // TODO(generics): Try to make this bound implicit
-    Simd<T::Signed, N>: SupportedSimd,
+    Simd<T::Signed, N>: SupportedSimd<T::Signed, N>,
 {
     /// Returns the bit patterns of `self` reinterpreted as signed integers of
     /// the same size.
@@ -95,7 +95,7 @@ where
 
 /// Defines the internal implementations of functions applicable to SIMD vectors
 /// of unsigned integers.
-pub(crate) trait SimdUnsignedBackend {
+pub(crate) trait SimdUnsignedBackend<T, const N: usize> {
     fn saturating_add_signed_backend(self, rhs: Self::SignedSimd) -> Self
     where
         Self: SimdAssociatedTypes + SupportSimdOf<Self::SignedT>;
@@ -111,10 +111,10 @@ pub(crate) trait SimdUnsignedBackend {
 /// This means that non-unsigned-integers do need some implementation of
 /// [`SimdUnsignedBackend`]. This block is a dummy implementation for all
 /// non-unsigned-integers that fills functions with [`unreachable!`].
-impl<T, const N: usize> SimdUnsignedBackend for Simd<T, N>
+impl<T, const N: usize> SimdUnsignedBackend<T, N> for Simd<T, N>
 where
     T: SimdElement + NotPrimitiveUnsigned,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     fn saturating_add_signed_backend(self, _: <Self as SimdAssociatedTypes>::SignedSimd) -> Self
     where

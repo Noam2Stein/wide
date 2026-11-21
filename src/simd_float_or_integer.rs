@@ -299,7 +299,7 @@ impl_binary_operator!(
 impl<T, const N: usize, Rhs> core::iter::Sum<Rhs> for Simd<T, N>
 where
     T: PrimitiveFloatOrInteger,
-    Simd<T, N>: SupportedSimd + AddAssign<Rhs>,
+    Simd<T, N>: SupportedSimd<T, N> + AddAssign<Rhs>,
 {
     /// Computes the sum of multiple SIMD vectors for each lane.
     ///
@@ -322,7 +322,7 @@ where
 impl<T, const N: usize, Rhs> core::iter::Product<Rhs> for Simd<T, N>
 where
     T: PrimitiveFloatOrInteger,
-    Simd<T, N>: SupportedSimd + MulAssign<Rhs>,
+    Simd<T, N>: SupportedSimd<T, N> + MulAssign<Rhs>,
 {
     /// Computes the product of multiple SIMD vectors for each lane.
     ///
@@ -351,7 +351,7 @@ macro_rules! impl_formatting_trait {
         impl<T, const N: usize> $Trait for Simd<T, N>
         where
             T: PrimitiveFloatOrInteger,
-            Simd<T, N>: SupportedSimd,
+            Simd<T, N>: SupportedSimd<T, N>,
         {
             #[allow(clippy::missing_inline_in_public_items)]
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -384,7 +384,7 @@ impl_formatting_trait!(core::fmt::UpperHex);
 impl<T, const N: usize> Simd<T, N>
 where
     T: PrimitiveFloatOrInteger,
-    Simd<T, N>: SupportedSimd,
+    Simd<T, N>: SupportedSimd<T, N>,
 {
     #[inline]
     fn neg_backend(self) -> Self {
