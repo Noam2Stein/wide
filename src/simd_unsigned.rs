@@ -1,9 +1,7 @@
 //! Defines APIs applicable to SIMD vectors of unsigned integers.
 
 use crate::{
-    PrimitiveUnsigned, Simd, SimdElement, SupportedSimd,
-    primitive_traits::NotPrimitiveUnsigned,
-    simd::{SimdAssociatedTypes, SupportSimdOf},
+    PrimitiveUnsigned, Simd, SimdElement, SupportedSimd, primitive_traits::NotPrimitiveUnsigned,
 };
 
 impl<T, const N: usize> Simd<T, N>
@@ -95,10 +93,13 @@ where
 
 /// Defines the internal implementations of functions applicable to SIMD vectors
 /// of unsigned integers.
-pub(crate) trait SimdUnsignedBackend<T, const N: usize> {
-    fn saturating_add_signed_backend(self, rhs: Self::SignedSimd) -> Self
+pub(crate) trait SimdUnsignedBackend<T, const N: usize>
+where
+    T: SimdElement,
+{
+    fn saturating_add_signed_backend(self, rhs: Simd<T::Signed, N>) -> Self
     where
-        Self: SimdAssociatedTypes + SupportSimdOf<Self::SignedT>;
+        Simd<T::Signed, N>: SupportedSimd<T::Signed, N>;
 }
 
 /// In order for the generic SIMD unsigned integer API to work,
@@ -116,9 +117,9 @@ where
     T: SimdElement + NotPrimitiveUnsigned,
     Simd<T, N>: SupportedSimd<T, N>,
 {
-    fn saturating_add_signed_backend(self, _: <Self as SimdAssociatedTypes>::SignedSimd) -> Self
+    fn saturating_add_signed_backend(self, _: Simd<T::Signed, N>) -> Self
     where
-        Self: SimdAssociatedTypes + SupportSimdOf<<Self as SimdAssociatedTypes>::SignedT>,
+        Simd<T::Signed, N>: SupportedSimd<T::Signed, N>,
     {
         unreachable!()
     }

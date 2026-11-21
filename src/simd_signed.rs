@@ -1,9 +1,7 @@
 //! Defines APIs applicable to SIMD vectors of signed integers.
 
 use crate::{
-    PrimitiveSigned, Simd, SimdElement, SupportedSimd,
-    primitive_traits::NotPrimitiveSigned,
-    simd::{SimdAssociatedTypes, SupportSimdOf},
+    PrimitiveSigned, Simd, SimdElement, SupportedSimd, primitive_traits::NotPrimitiveSigned,
 };
 
 /// Contains SIMD signed items whose name conflicts with a SIMD float item's
@@ -252,7 +250,10 @@ signed!(isize);
 
 /// Defines the internal implementations of functions applicable to SIMD vectors
 /// of signed integers.
-pub(crate) trait SimdSignedBackend<T, const N: usize> {
+pub(crate) trait SimdSignedBackend<T, const N: usize>
+where
+    T: SimdElement,
+{
     fn abs_backend(self) -> Self;
 
     #[expect(clippy::wrong_self_convention)]
@@ -265,9 +266,9 @@ pub(crate) trait SimdSignedBackend<T, const N: usize> {
 
     fn saturating_abs_backend(self) -> Self;
 
-    fn saturating_add_unsigned_backend(self, rhs: Self::UnsignedSimd) -> Self
+    fn saturating_add_unsigned_backend(self, rhs: Simd<T::Unsigned, N>) -> Self
     where
-        Self: SimdAssociatedTypes + SupportSimdOf<Self::UnsignedT>;
+        Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>;
 }
 
 /// In order for the generic SIMD signed integer API to work,
@@ -297,9 +298,9 @@ where
     fn saturating_abs_backend(self) -> Self {
         unreachable!()
     }
-    fn saturating_add_unsigned_backend(self, _: <Self as SimdAssociatedTypes>::UnsignedSimd) -> Self
+    fn saturating_add_unsigned_backend(self, _: Simd<T::Unsigned, N>) -> Self
     where
-        Self: SimdAssociatedTypes + SupportSimdOf<<Self as SimdAssociatedTypes>::UnsignedT>,
+        Simd<T::Unsigned, N>: SupportedSimd<T::Unsigned, N>,
     {
         unreachable!()
     }
