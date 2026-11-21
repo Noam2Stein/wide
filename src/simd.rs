@@ -61,6 +61,7 @@ pub trait SimdElement: Sealed + Copy {
 #[expect(private_bounds)]
 pub trait SupportedSimd<T, const N: usize>:
     Sealed
+    + SimdAssociatedTypes<T, N>
     + SimdBackend<T, N>
     + SimdFloatBackend<T, N>
     + SimdIntegerBackend<T, N>
@@ -69,15 +70,26 @@ pub trait SupportedSimd<T, const N: usize>:
 where
     T: SimdElement,
 {
+}
+
+/// Provides types used in public generic [`Simd<T, N>`] functions that cannot
+/// be expressed directly in generic contexts.
+///
+/// These types are intentionaly not exposed publicly, such that functions using
+/// them can only be used in non-generic contexts.
+#[doc(hidden)]
+pub trait SimdAssociatedTypes<T, const N: usize> {
     /// The unsigned integer used in [`Simd::to_bitmask`].
     ///
     /// For most SIMD types, this is [`u32`]. For [`u8x64`] and [`i8x64`], this
     /// is [`u64`].
+    #[doc(hidden)]
     type Bitmask: PrimitiveUnsigned;
 
     /// A type equal to `[u8; size_of::<Self>()]`.
     ///
     /// This exists since that type cannot be expressed in generic contexts.
+    #[doc(hidden)]
     type Bytes: Copy;
 }
 
@@ -521,10 +533,12 @@ macro_rules! define_simd {
       Simd(inner)
     }
 
-    impl SupportedSimd<$T, $N> for Simd<$T, $N> {
-      type Bitmask = $Bitmask;
+    impl SupportedSimd<$T, $N> for Simd<$T, $N> {}
 
-      type Bytes = [u8; size_of::<Self>()];
+    impl SimdAssociatedTypes<$T, $N> for Simd<$T, $N> {
+        type Bitmask = $Bitmask;
+
+        type Bytes = [u8; size_of::<Self>()];
     }
 
     $(
@@ -1582,7 +1596,7 @@ where
     #[inline]
     #[must_use]
     #[doc(alias("movemask", "move_mask"))]
-    pub fn to_bitmask(self) -> <Self as SupportedSimd<T, N>>::Bitmask
+    pub fn to_bitmask(self) -> <Self as SimdAssociatedTypes<T, N>>::Bitmask
     where
         T: MaskOps,
     {
@@ -2166,7 +2180,7 @@ macro_rules! simd_backend_signed_autofill {
         }
 
         #[inline]
-        fn to_bitmask_backend(self) -> <Self as SupportedSimd<$T, $N>>::Bitmask {
+        fn to_bitmask_backend(self) -> <Self as SimdAssociatedTypes<$T, $N>>::Bitmask {
             self.cast_unsigned().to_bitmask()
         }
 

@@ -266,9 +266,9 @@ mod backend_imports {
     )]
     pub use crate::utils::software_sqrt;
     pub(crate) use crate::{
-        ShuffleExt, Simd, SimdElement, SupportedSimd, f32x4, f32x8, f32x16, f64x2, f64x4, f64x8,
-        i8x16, i8x32, i8x64, i16x8, i16x16, i16x32, i32x4, i32x8, i32x16, i64x2, i64x4, i64x8,
-        simd::SimdBackend,
+        ShuffleExt, Simd, SimdElement, f32x4, f32x8, f32x16, f64x2, f64x4, f64x8, i8x16, i8x32,
+        i8x64, i16x8, i16x16, i16x32, i32x4, i32x8, i32x16, i64x2, i64x4, i64x8,
+        simd::{SimdAssociatedTypes, SimdBackend},
         simd_float::SimdFloatBackend,
         simd_integer::SimdIntegerBackend,
         simd_signed::SimdSignedBackend,

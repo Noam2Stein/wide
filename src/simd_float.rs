@@ -4,6 +4,7 @@ use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Rem, Sub};
 
 use crate::{
     PrimitiveFloat, Simd, SimdElement, SupportedSimd, primitive_traits::NotPrimitiveFloat,
+    simd::SimdAssociatedTypes,
 };
 
 /*
@@ -696,10 +697,12 @@ where
     /// [`to_ne_bytes`]: Self::to_ne_bytes
     #[inline]
     #[must_use]
-    pub const fn from_ne_bytes(bytes: <Self as SupportedSimd<T, N>>::Bytes) -> Self {
+    pub const fn from_ne_bytes(bytes: <Self as SimdAssociatedTypes<T, N>>::Bytes) -> Self {
         // SAFETY: `Self` accepts all bit-patterns and only contains
         // initialized memory, and the byte array has the same size.
-        unsafe { core::mem::transmute_copy::<<Self as SupportedSimd<T, N>>::Bytes, Self>(&bytes) }
+        unsafe {
+            core::mem::transmute_copy::<<Self as SimdAssociatedTypes<T, N>>::Bytes, Self>(&bytes)
+        }
     }
 
     /// Returns the raw memory representation of `self` as a native-endian
@@ -713,10 +716,12 @@ where
     /// [`from_ne_bytes`]: Self::from_ne_bytes
     #[inline]
     #[must_use]
-    pub const fn to_ne_bytes(self) -> <Self as SupportedSimd<T, N>>::Bytes {
+    pub const fn to_ne_bytes(self) -> <Self as SimdAssociatedTypes<T, N>>::Bytes {
         // SAFETY: `Self` accepts all bit-patterns and only contains
         // initialized memory, and the byte array has the same size.
-        unsafe { core::mem::transmute_copy::<Self, <Self as SupportedSimd<T, N>>::Bytes>(&self) }
+        unsafe {
+            core::mem::transmute_copy::<Self, <Self as SimdAssociatedTypes<T, N>>::Bytes>(&self)
+        }
     }
 
     /// Bitwise selection.

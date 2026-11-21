@@ -5,7 +5,7 @@ use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Rem, Shl, ShlAssign, Shr, 
 
 use crate::{
     HasDoubleWidth, PrimitiveInteger, Simd, SimdElement, SupportedSimd,
-    primitive_traits::NotPrimitiveInteger,
+    primitive_traits::NotPrimitiveInteger, simd::SimdAssociatedTypes,
 };
 
 macro_rules! impl_shift_operator {
@@ -689,11 +689,11 @@ macro_rules! conflicting_items {
         /// [`to_ne_bytes`]: Self::to_ne_bytes
         #[inline]
         #[must_use]
-        pub const fn from_ne_bytes(bytes: <Self as SupportedSimd<$T, N>>::Bytes) -> Self {
+        pub const fn from_ne_bytes(bytes: <Self as SimdAssociatedTypes<$T, N>>::Bytes) -> Self {
             // SAFETY: `Simd<$T, N>` accepts all bit-patterns and only contains
             // initialized memory, and the byte array has the same size.
             unsafe {
-                core::mem::transmute_copy::<<Self as SupportedSimd<$T, N>>::Bytes, Simd<$T, N>>(
+                core::mem::transmute_copy::<<Self as SimdAssociatedTypes<$T, N>>::Bytes, Simd<$T, N>>(
                     &bytes,
                 )
             }
@@ -710,11 +710,11 @@ macro_rules! conflicting_items {
         /// [`from_ne_bytes`]: Self::from_ne_bytes
         #[inline]
         #[must_use]
-        pub const fn to_ne_bytes(self) -> <Self as SupportedSimd<$T, N>>::Bytes {
+        pub const fn to_ne_bytes(self) -> <Self as SimdAssociatedTypes<$T, N>>::Bytes {
             // SAFETY: `Simd<$T, N>` accepts all bit-patterns and only contains
             // initialized memory, and the byte array has the same size.
             unsafe {
-                core::mem::transmute_copy::<Simd<$T, N>, <Self as SupportedSimd<$T, N>>::Bytes>(
+                core::mem::transmute_copy::<Simd<$T, N>, <Self as SimdAssociatedTypes<$T, N>>::Bytes>(
                     &self,
                 )
             }
